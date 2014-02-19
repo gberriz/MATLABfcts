@@ -1,4 +1,6 @@
 function cell2csv(filename,data,delimiter)
+%  cell2csv(filename,data,delimiter)
+%       default delimiter = ','
 
 if ~exist('delimiter','var')
     delimiter = ',';
