@@ -1,6 +1,6 @@
 function h = quantileplot(T, data, color, quantiles, alpha)
 % h = quantileplot(T, data, color, quantiles, alpha)
-%
+%   plot the quantiles of a trajectory with transparancy alpha
  
 ish = ishold;
 

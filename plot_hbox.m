@@ -1,8 +1,8 @@
 function h = plot_hbox(y,values,color,quantiles,opt)
 % h = plot_hbox(y,values,color,quantiles,opt)
-%   quantiles = [.05 .25 .5 .75 .95];
-%   color = Plotting_parameters.gray;
-%   opt = {'linewidth' 'color' 'Outcolor' 'xwidth'}
+%   quantiles; default = [.05 .25 .5 .75 .95];
+%   color; default = Plotting_parameters.gray;
+%   opt = {'linewidth' 'xwidth' 'Outcolor' 'BoxLine'}
 
 global Plotting_parameters
 Generate_Plotting_parameters

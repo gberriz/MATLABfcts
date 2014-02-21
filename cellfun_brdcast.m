@@ -1,4 +1,7 @@
-function output = cellfun_dispatch(fct, varargin)
+function output = cellfun_brdcast(fct, varargin)
+% output = cellfun_brdcast(fct, varargin)
+%   rewritten cellfun to broadcast any single cell input
+%
 
 assert(isa(fct, 'function_handle'))
 

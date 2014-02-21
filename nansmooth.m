@@ -1,5 +1,6 @@
 function smoothed = nansmooth(input,step,method)
-
+% smoothed = nansmooth(input,step,method)
+%   rewritten smooth function to discard NaN
 
 if ~exist('method','var')
     method = 'rlowess';

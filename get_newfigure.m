@@ -1,12 +1,14 @@
-function fhandle = get_newfigure(number, holded)
-% fhandle = get_newfigure(number, holded)
+function fhandle = get_newfigure(number, position, varargin)
+% fhandle = get_newfigure(number, position, varargin)
+%   get a clean new figure
+
+if ~exist('position','var')
+    position = [100 80 600 450];
+end
 
 if nargout==0
-    figure(number);
+    figure(number, 'position', position, varargin{:});
 else
-    fhandle = figure(number);
+    fhandle = figure(number, 'position', position, varargin{:});
 end
 clf
-if exist('holded','var') && holded
-    hold on
-end

@@ -1,5 +1,7 @@
 function xlsOverwrite(fileName, data, sheet)
 % xlsOverwrite(fileName, data, sheet)
+%   write data (cell array) in a Excel spreadsheet, overwrite existing
+%   data by clearing the spreadsheet
 
 if ~exist('sheet','var')
     sheet = 'data';

@@ -1,8 +1,8 @@
 function h = plot_vbox(x,values,color,quantiles,opt)
 % h = plot_vbox(x,values,color,quantiles,opt)
-%   quantiles = [.05 .25 .5 .75 .95];
-%   color = Plotting_parameters.gray;
-%   opt = {'linewidth' 'color' 'xwidth' 'Outcolor'}
+%   quantiles; default = [.05 .25 .5 .75 .95];
+%   color; default = Plotting_parameters.gray;
+%   opt = {'linewidth' 'xwidth' 'Outcolor' 'BoxLine'}
 
 global Plotting_parameters
 Generate_Plotting_parameters
@@ -57,7 +57,7 @@ linewidth = 1.5;
 xwidth = .4;
 BoxLine = 'none';
 if exist('opt','var')
-    vars = {'linewidth' 'color' 'xwidth' 'Outcolor' 'BoxLine'};
+    vars = {'linewidth' 'xwidth' 'Outcolor' 'BoxLine'};
     for i=1:length(vars)
         if isfield(opt,vars{i})
             eval([vars{i}  ' = opt.' vars{i} ';'])
