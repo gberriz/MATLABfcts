@@ -7,8 +7,9 @@ if ~exist('position','var')
 end
 
 if nargout==0
-    figure(number, 'position', position, varargin{:});
+    figure(number)    
 else
-    fhandle = figure(number, 'position', position, varargin{:});
+    fhandle = figure(number);
 end
 clf
+set(gcf, 'position', position, varargin{:});
