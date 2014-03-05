@@ -2,8 +2,12 @@ function cell2csv(filename,data,delimiter)
 %  cell2csv(filename,data,delimiter)
 %       default delimiter = ','
 
+
 if ~exist('delimiter','var')
     delimiter = ',';
+end
+if delimiter==' '
+    error('not working, needs to be corrected')
 end
 
 numidx = cellfun(@isnumeric,data(:));
