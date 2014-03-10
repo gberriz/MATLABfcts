@@ -20,7 +20,7 @@ total_output(1,2:end) = num2cell(num_label');
 for i=1:length(drugs_struct)
     temp_out = cell(19,25);
     temp_out{1,1} = drugs_struct(i).name;
-    temp_out{1,2} = num2str(drugs_struct(i).conc);
+    temp_out{1,2} = num2str(drugs_struct(i).nominal_conc);
     temp_out{1,3} = 'mM';
     
     temp_out(3:end-1,1) = num2cell(letter_label);
@@ -43,8 +43,8 @@ for i=1:length(drugs_struct)
         end
     end
     
-    temp = {drugs_struct(i).name 'Stock (mM)=' drugs_struct(i).conc ...
-        'Volume (nl)=' drugs_struct(i).volume };
+    temp = {drugs_struct(i).name 'Stock (mM)=' drugs_struct(i).nominal_conc ...
+        'Volume (nl)=' drugs_struct(i).volume 'Well volume (ul)=' drugs_struct(i).well_volume*1e6 };
     temp(2,1:(length(drugs_struct(i).Doses)+1)) = [{'Combo Doses (uM)='} ...
         num2cell(drugs_struct(i).Doses)];
     temp(3,1:(length(drugs_struct(i).SingleDoses)+1)) = [{'Single Doses (uM)='} ...
@@ -73,12 +73,12 @@ else
     if exist(filename, 'file')
         [~,sheets] = xlsfinfo(filename);
         if ismember(sheet, sheets)
-            warning('Deleting sheet %s in file %s', sheet, filename)
+            fprintf('!! Deleting sheet %s in file %s\n', sheet, filename)
             [~,~,dumb] = xlsread(filename, sheet);
             xlswrite(filename, cell(size(dumb)), sheet);
         end
         if ismember([sheet '_total'], sheets)
-            warning('Deleting sheet %s in file %s', [sheet '_total'], filename)
+            fprintf('!! Deleting sheet %s in file %s\n', [sheet '_total'], filename)
             [~,~,dumb] = xlsread(filename, [sheet '_total']);
             xlswrite(filename, cell(size(dumb)), [sheet '_total']);
         end

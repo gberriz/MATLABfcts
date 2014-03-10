@@ -13,8 +13,8 @@ well_volume = 6e-5;
 
 % conc in mM
 
-drugs_struct = struct('name', [PrimaryDrugs;SecondaryDrugs], 'conc', 10, ...
-    'layout',zeros(16,24));
+drugs_struct = struct('name', [PrimaryDrugs;SecondaryDrugs], 'nominal_conc', 10, ...
+    'layout',zeros(16,24), 'well_volume', well_volume);
 
 
 total_cnt = length(PrimaryDrugs)*length(PrimarySingleDoses) + ...
@@ -24,22 +24,26 @@ total_cnt = length(PrimaryDrugs)*length(PrimarySingleDoses) + ...
 
 for iPD = 1:length(PrimaryDrugs)
     drugs_struct(iPD).Primary = true;
-    drugs_struct(iPD).Doses = PrimaryDoses(iPD,:);
-    drugs_struct(iPD).SingleDoses = PrimarySingleDoses(iPD,:);
+    drugs_struct(iPD).Doses = round_to_minConc(PrimaryDoses(iPD,:), ...
+        drugs_struct(iPD).nominal_conc);
+    drugs_struct(iPD).SingleDoses = round_to_minConc(PrimarySingleDoses(iPD,:), ...
+        drugs_struct(iPD).nominal_conc);
     assert(all(ismember(PrimaryDoses(iPD,:), PrimarySingleDoses(iPD,:))),...
         'Dose in the combo not found in the titration for %s',PrimaryDrugs{iPD})
 end
 for iSD = 1:length(SecondaryDrugs)
     drugs_struct(length(PrimaryDrugs)+iSD).Primary = false;
-    drugs_struct(length(PrimaryDrugs)+iSD).SingleDoses = SecondarySingleDoses(iSD,:);
-    drugs_struct(length(PrimaryDrugs)+iSD).Doses = SecondaryDoses(iSD,:);
+    drugs_struct(length(PrimaryDrugs)+iSD).SingleDoses = ...
+        round_to_minConc(SecondarySingleDoses(iSD,:),drugs_struct(length(PrimaryDrugs)+iSD).nominal_conc);
+    drugs_struct(length(PrimaryDrugs)+iSD).Doses = ...
+        round_to_minConc(SecondaryDoses(iSD,:),drugs_struct(length(PrimaryDrugs)+iSD).nominal_conc);
     if size(SecondarySingleDoses,2)>0
         assert(all(ismember(SecondaryDoses(iSD,:), SecondarySingleDoses(iSD,:))),...
             'Dose in the combo not found in the titration for %s',SecondaryDrugs{iSD})
     end
 end
 
-        
+
 fprintf('Number of test wells: %i\n',total_cnt);
 assert(total_cnt<384)
 
@@ -48,7 +52,7 @@ ctrl_cnt = 384 - total_cnt;
 if edge_ctrl
     assert(ctrl_cnt>=12, 'For controls on the edge, need at least 12 controls')
     ctrlpos = zeros(16,24);
-        
+    
     if ctrl_cnt<14 % only 6 controls on the edge
         disp('Only 6 control on the edge, would be better with at least 14 controls')
         ctrlpos([1 4 12 16],[7 18])=1;
@@ -62,17 +66,18 @@ if edge_ctrl
         ctrlpos([1 end], [1 end]) = 1;
     end
     
-    % complete the number of control with randomized positions
-    temp = [ 384*ones(1,24); ...
-        384*ones(14,1) reshape(randperm(14*22),14,22) 384*ones(14,1);
-        384*ones(1,24)];
-    temp(ctrlpos==1) = 384;
-    
-    cutoff = sort(temp(:));
-    cutoff = cutoff(ctrl_cnt-sum(ctrlpos(:)));
-    ctrlpos(temp<=cutoff) = 1;
+    if ctrl_cnt>sum(ctrlpos(:))
+        % complete the number of control with randomized positions
+        temp = [ 384*ones(1,24); ...
+            384*ones(14,1) reshape(randperm(14*22),14,22) 384*ones(14,1);
+            384*ones(1,24)];
+        temp(ctrlpos==1) = 384;
+        
+        cutoff = sort(temp(:));
+        cutoff = cutoff(ctrl_cnt-sum(ctrlpos(:)));
+        ctrlpos(temp<=cutoff) = 1;
+    end
     ctrlidx = find(ctrlpos);
-    
     assert(ctrl_cnt==length(ctrlidx));
 else
     ctrlidx = find(reshape(randperm(16*24),16,24)<=(ctrl_cnt));
@@ -122,9 +127,9 @@ for iPD = 1:length(PrimaryDrugs)
         
     end
 end
-        
 
-for iSD = 1:length(SecondaryDrugs)    
+
+for iSD = 1:length(SecondaryDrugs)
     % titration
     for iSSDo = 1:length(drugs_struct(length(PrimaryDrugs)+iSD).SingleDoses)
         drugs_struct(length(PrimaryDrugs)+iSD).layout(trtidx(cnt)) = ...
@@ -144,7 +149,7 @@ for iPD = 1:length(PrimaryDrugs)
         length(drugs_struct(iPD).SingleDoses)))
     % volume in nl from stock (conc in mM)
     drugs_struct(iPD).volume = 1e9*well_volume*sum(drugs_struct(iPD).layout(:))/...
-        (1e3*drugs_struct(iPD).conc);
+        (1e3*drugs_struct(iPD).nominal_conc);
 end
 
 for iSD = 1:length(SecondaryDrugs)
@@ -154,5 +159,26 @@ for iSD = 1:length(SecondaryDrugs)
         length(drugs_struct(length(PrimaryDrugs)+iSD).SingleDoses)))
     drugs_struct(length(PrimaryDrugs)+iSD).volume = ...
         1e9*well_volume*sum(drugs_struct(length(PrimaryDrugs)+iSD).layout(:))/...
-        (1e3*drugs_struct(length(PrimaryDrugs)+iSD).conc);
+        (1e3*drugs_struct(length(PrimaryDrugs)+iSD).nominal_conc);
+end
+
+
+    function new_Doses = round_to_minConc(old_Doses, nominal_conc)
+        
+        dose_step = 1e3*nominal_conc *10e-12/well_volume;
+        temp_d = old_Doses;
+        if any(temp_d<2*dose_step)
+            disp(['!! Doses below minimal conc (' num2str(2*dose_step) ')'])
+            disp(['       at doses : ' num2str(temp_d(temp_d<2*dose_step))])
+            temp_d = max(temp_d, 2*dose_step);
+        end
+        if any(temp_d<50*dose_step)
+            idx = temp_d<50*dose_step;
+            disp(['former doses: ' num2str(temp_d(idx))])
+            temp_d(idx) = dose_step*round(temp_d(idx)/dose_step);
+            disp(['      now as: ' num2str(temp_d(idx))])
+        end
+        new_Doses = temp_d;
+    end
+
 end

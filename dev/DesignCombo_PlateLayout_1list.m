@@ -1,20 +1,32 @@
 function drugs_struct = DesignCombo_PlateLayout_1list(Drugs, Doses, SingleDoses, ...
-    randomize, edge_ctrl)
+    randomize, edge_ctrl, nominal_conc)
 % function drugs_struct = plate_design_combo(Drugs, Doses, SingleDoses, ...
-%     randomize, edge_ctrl)
+%     randomize, edge_ctrl, nominal_conc)
+%
+%   Doses are in uM
+%   nominal_conc in mM
+%   default volume is 60 uL
+%   minimal dispensed volume is 20 pL, step of 10pL
 %
 
-if ~exist('edge_ctrl','var')
+if ~exist('edge_ctrl','var') || isempty(edge_ctrl)
     edge_ctrl = true;
+end
+
+
+% conc in mM
+if ~exist('nominal_conc','var')
+    nominal_conc = 10;
+elseif isvector(nominal_conc)
+    nominal_conc = num2cell(ToColumn(nominal_conc));
 end
 
 % well volume
 well_volume = 6e-5;
 
-% conc in mM
 
-drugs_struct = struct('name', Drugs, 'conc', 10, ...
-    'layout',zeros(16,24));
+drugs_struct = struct('name', Drugs, 'nominal_conc', nominal_conc, ...
+    'layout',zeros(16,24), 'well_volume', well_volume);
 
 
 total_cnt = length(Drugs)*length(SingleDoses) + ...
@@ -22,7 +34,38 @@ total_cnt = length(Drugs)*length(SingleDoses) + ...
 
 
 for iD = 1:length(Drugs)
-    drugs_struct(iD).Primary = true;
+    
+    dose_step = 1e3*drugs_struct(iD).nominal_conc *10e-12/well_volume;
+    temp_d = Doses(iD,:);
+    if any(temp_d<2*dose_step)
+        disp(['!! Doses below minimal conc (' num2str(2*dose_step) ') for ' Drugs{iD}])
+        disp(['       at doses : ' num2str(temp_d(temp_d<2*dose_step))])
+        temp_d = max(temp_d, 2*dose_step);
+    end
+    if any(temp_d<50*dose_step)
+        idx = temp_d<50*dose_step;
+        disp(['Rouding doses for ' Drugs{iD}])
+        disp(['former doses: ' num2str(temp_d(idx))])
+        temp_d(idx) = dose_step*round(temp_d(idx)/dose_step);
+        disp(['      now as: ' num2str(temp_d(idx))])
+    end
+    Doses(iD,:) = temp_d;
+    
+    temp_d = SingleDoses(iD,:);
+    if any(temp_d<2*dose_step)
+        disp(['!! Doses below minimal conc (' num2str(2*dose_step) ') for ' Drugs{iD}])
+        disp(['       at doses : ' num2str(temp_d(temp_d<2*dose_step))])
+        temp_d = max(temp_d, 2*dose_step);
+    end
+    if any(temp_d<50*dose_step)
+        idx = temp_d<50*dose_step;
+        disp(['Rouding doses for ' Drugs{iD}])
+        disp(['former doses: ' num2str(temp_d(idx))])
+        temp_d(idx) = dose_step*round(temp_d(idx)/dose_step);
+        disp(['      now as: ' num2str(temp_d(idx))])
+    end
+    SingleDoses(iD,:) = temp_d;
+    
     drugs_struct(iD).Doses = Doses(iD,:);
     drugs_struct(iD).SingleDoses = SingleDoses(iD,:);
     assert(all(ismember(Doses(iD,:), SingleDoses(iD,:))),...
@@ -68,7 +111,7 @@ else
     ctrlidx = find(reshape(randperm(16*24),16,24)<=(ctrl_cnt));
 end
 
-if ~exist('randomize','var') || randomize
+if ~exist('randomize','var') || isempty(randomize) || randomize
     trtidx = randperm(384);
     trtidx = trtidx(~ismember(trtidx,ctrlidx));
 else
@@ -120,5 +163,5 @@ for iD = 1:length(Drugs)
         length(drugs_struct(iD).SingleDoses)))
     % volume in nl from stock (conc in mM)
     drugs_struct(iD).volume = 1e9*well_volume*sum(drugs_struct(iD).layout(:))/...
-        (1e3*drugs_struct(iD).conc);
+        (1e3*drugs_struct(iD).nominal_conc);
 end
