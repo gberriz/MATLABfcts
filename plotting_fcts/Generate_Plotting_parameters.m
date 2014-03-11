@@ -1,4 +1,4 @@
-function Generate_Plotting_parameters
+% function Generate_Plotting_parameters
 % global Plotting_parameters
 
 
@@ -60,11 +60,11 @@ Plotting_parameters.colors = [
     256 256 190
     0 0 0]/256;
     
-for i=1:size(Plotting_parameters.colors,1)
-Plotting_parameters.Lightcolors(i,:) = ...
-    min([1 1 1;(Plotting_parameters.colors(i,:)+.15).^.8]);
-Plotting_parameters.Darkcolors(i,:) = ...
-    max([0 0 0;(Plotting_parameters.colors(i,:)-.15)]).^1.2;
+for iColorsInPlotting=1:size(Plotting_parameters.colors,1)
+Plotting_parameters.Lightcolors(iColorsInPlotting,:) = ...
+    min([1 1 1;(Plotting_parameters.colors(iColorsInPlotting,:)+.15).^.8]);
+Plotting_parameters.Darkcolors(iColorsInPlotting,:) = ...
+    max([0 0 0;(Plotting_parameters.colors(iColorsInPlotting,:)-.15)]).^1.2;
 end
 Plotting_parameters.Lightcolors(3,:) = ...
     min([1 1 1;(Plotting_parameters.colors(3,:)+.05).^.9]);
@@ -75,4 +75,4 @@ Plotting_parameters.ProfilesColorsIdx = [3 5 4];
 
 
 
-end
+clear iColorsInPlotting
