@@ -96,9 +96,7 @@ if edge_ctrl
     end
     
     % complete the number of control with randomized positions
-    temp = [ 384*ones(1,24); ...
-        384*ones(14,1) reshape(randperm(14*22),14,22) 384*ones(14,1);
-        384*ones(1,24)];
+    temp = reshape(randperm(16*24),16,24);    
     temp(ctrlpos==1) = 384;
     
     cutoff = sort(temp(:));
@@ -151,8 +149,6 @@ for iD = 1:length(Drugs)
     end
 end
         
-
-
 assert( cnt==length(trtidx)+1)
 
 for iD = 1:length(Drugs)

@@ -1,5 +1,5 @@
 %
-% function [xI50, Hill, Emax, r2, fit_final, p, log] = ...
+% function [xI50, Hill, Emax, Area, r2, fit_final, p, log] = ...
 %     ICcurve_fit(Conc, Growth, opt)
 %
 %   IC50 => Growth is relative to control (end/ctrl)
@@ -8,9 +8,9 @@
 %           Growth should not comprise the control value; each replicate is
 %           a column
 %
-%
+%   %%%%%% AREA: check formula!!
 
-function [xI50, Hill, Emax, r2, fit_final, p, log] = ...
+function [xI50, Hill, Emax, Area, r2, fit_final, p, log] = ...
     ICcurve_fit(Conc, Growth, fit_type, opt)
 
 
@@ -53,7 +53,7 @@ switch fitting
         g = mean(Growth,2)';
     case 'individual'
         for i=1:size(Growth,2)
-            [xI50(i), Hill(i), Emax(i), r2(i), fit_final{i}, p(i), log{i}] = ...
+            [xI50(i), Hill(i), Emax(i), Area(i), r2(i), fit_final{i}, p(i), log{i}] = ...
                 ICcurve_fit(Conc, Growth(:,i)', fit_type, opt);
         end
         return
@@ -91,6 +91,8 @@ if p>=.05
     log = ['**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
     fit_final = fit_res_flat;
     
+    Area = 0;
+    
 else
     log = ['r2 = ' num2str(gof.rsquare,'%.2f')];
     
@@ -99,6 +101,9 @@ else
     Emax = fit_res.b;
     Hill = fit_res.d;
     fit_final = fit_res;
+    
+    %%%%%% AREA: check formula!!
+    Area = 0;%diff(log10(Conc)) * (1-mean([g(1:end-1); g(2:end)])');
     
     switch fit_type
         

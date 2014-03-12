@@ -135,7 +135,19 @@ for iCL=1:length(CellLines)
             'SingleDoses',{drugs_struct.SingleDoses});
     end
         
-    t_CL{iCL} = [t_CL{iCL} array2table([DrugDoses all(DrugDoses==0,2)], ...
+    CtrlIdx = all(DrugDoses==0,2);
+    for iR = setdiff(unique(t_CL{iCL}.Replicate), 0)'
+        % remove corner as control to avoid bias (only the case if more
+        % than 20 controls overall (enough control remain)
+        CornerIdx = find(t_CL{iCL}.Replicate==iR & ...
+            ismember(t_CL{iCL}.Well,{'A1' 'A24' 'P1' 'P24'}));
+        assert(length(CornerIdx)==4)
+        if all(CtrlIdx(CornerIdx)==1)
+            CtrlIdx(CornerIdx)=0;
+        end
+    end
+    
+    t_CL{iCL} = [t_CL{iCL} array2table([DrugDoses CtrlIdx], ...
         'VariableNames',{Drugs{iCL}.DrugName 'Ctrl'})];
         
     t_CL{iCL} = sortrows(t_CL{iCL},{'Replicate' 'Column' 'Untrt' ...
