@@ -1,5 +1,18 @@
-function [IC50, Hill, Emax, r2, fit_final, p, log] = ...
-    ICcurve_fit(Conc, RelativeGrowth, opt)
+%
+% function [xI50, Hill, Emax, r2, fit_final, p, log] = ...
+%     ICcurve_fit(Conc, Growth, opt)
+%
+%   IC50 => Growth is relative to control (end/ctrl)
+%   GI50 => Growth is relative to growth of the control:
+%               (end-day0)/(ctrl-day0)
+%           Growth should not comprise the control value; each replicate is
+%           a column
+%
+%
+
+function [xI50, Hill, Emax, r2, fit_final, p, log] = ...
+    ICcurve_fit(Conc, Growth, fit_type, opt)
+
 
 % parameters : E0 Emax EC50 HS (all in uM, in log10 domain)
 priors = [1 .1 1 2];
@@ -13,10 +26,13 @@ ranges = [
 
 plotting = 0;
 fitting = 'average';
-fit_type = 'any';
+
+if ~exist('fit_type','var')
+    fit_type = 'IC50';
+end
 
 if exist('opt','var')
-    fields = {'plotting', 'priors', 'ranges', 'fitting', 'fit_type'};
+    fields = {'plotting', 'priors', 'ranges', 'fitting'};
     for field = fields
         if isfield(opt,field{:})
             eval([field{:} ' = opt.' field{:} ';'])
@@ -25,15 +41,34 @@ if exist('opt','var')
 end
 
 Conc = ToRow(Conc);
-assert(all([1 size(RelativeGrowth,2)]==size(Conc)))
+if isvector(Growth)
+    Growth=ToColumn(Growth);
+    fitting = 'average';
+end
+assert(all([1 size(Growth,1)]==size(Conc)))
+
+
+switch fitting
+    case 'average'
+        g = mean(Growth,2)';
+    case 'individual'
+        for i=1:size(Growth,2)
+            [xI50(i), Hill(i), Emax(i), r2(i), fit_final{i}, p(i), log{i}] = ...
+                ICcurve_fit(Conc, Growth(:,i)', fit_type, opt);
+        end
+        return
+end
 
 % 'IC50'
-fit_type = 2;
-ranges(1,2) = 0; % lowest Emax
+switch fit_type
+    case 'IC50'
+        ranges(1,2) = 0; % lowest Emax
+    case 'GI50'
+        ranges(1,2) = -Inf; % lowest Emax
+end
 
 
-g = mean(RelativeGrowth,1);
-
+Npara = 4; % N of parameters in the growth curve
 [fit_res, gof] = sigmoidal_fit(Conc,g);
 [fit_res_flat, gof_flat] = flat_fit(Conc,g);
 
@@ -41,8 +76,8 @@ g = mean(RelativeGrowth,1);
 RSS2 = gof.sse;
 RSS1 = gof_flat.sse;
 
-df1 = (4 -1);
-df2 = (length(g) -4);
+df1 = (Npara -1);
+df2 = (length(g) -Npara);
 F = ( (RSS1-RSS2)/df1 )/( RSS2/df2 );
 p = 1-fcdf(F, df1, df2);
 
@@ -50,8 +85,7 @@ xc = 10.^(log10(min(Conc))-1:.05:log10(max(Conc))+1);
 r2 = gof.rsquare;
 
 if p>=.05
-    GI50 = +Inf;
-    IC50 = +Inf;
+    xI50 = +Inf;
     Hill = 0;
     Emax = +Inf;
     log = ['**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
@@ -62,24 +96,30 @@ else
     
     fit_growth = fit_res(xc);
     
-    if any(fit_growth<.5) && any(fit_growth>.5)
-        GI50 = fit_res.c*((((fit_res.a-fit_res.b)/(.5-fit_res.b))-1)^(1/fit_res.d));
-    elseif all(fit_growth>.5)
-        GI50 = Inf;
-        log = [log '\tGI50>10*max(Conc) --> +Inf'];
-    elseif all(fit_growth<.5)
-        GI50 = -Inf;
-        log = [log '\tGI50<min(Conc)/10 --> -Inf'];
-    else
-        warning('undefined GI50')
-        log = [log '\tundefined GI50 --> NaN'];
-    end
-    
     Emax = fit_res.b;
-    IC50 = fit_res.c;
     Hill = fit_res.d;
     fit_final = fit_res;
     
+    switch fit_type
+        
+        case 'IC50'
+            xI50 = fit_res.c;
+        case 'GI50'
+            if any(fit_growth<.5) && any(fit_growth>.5) % interpolation
+                xI50 = fit_res.c*((((fit_res.a-fit_res.b)/(.5-fit_res.b))-1)^(1/fit_res.d));
+            elseif all(fit_growth>.5)
+                xI50 = Inf;
+                log = [log '\tGI50>10*max(Conc) --> +Inf'];
+            elseif all(fit_growth<.5)
+                xI50 = -Inf;
+                log = [log '\tGI50<min(Conc)/10 --> -Inf'];
+            else
+                xI50 = NaN;
+                warning('undefined GI50')
+                log = [log '\tundefined GI50 --> NaN'];
+            end
+            
+    end
 end
 
 
@@ -102,9 +142,6 @@ if plotting
     end
     
     title(sprintf('r^2 = %.3f', r2))
-%     if fit_type==1
-%         ylim([max(min(min(ylim),-2),-3) max(ylim)])
-%     end
 end
 
 
