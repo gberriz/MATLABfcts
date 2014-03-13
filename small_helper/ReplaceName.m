@@ -19,6 +19,7 @@ if ~exist('IsUp','var')
 end
 
 if iscell(str)
+    Repstr = str;
     for i=1:length(str)
         Repstr{i} = ReplaceName(str{i},RepalcedCharacters,NewCharacter,IsUp);
     end

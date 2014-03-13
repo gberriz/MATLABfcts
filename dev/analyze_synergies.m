@@ -34,6 +34,7 @@ end
 
 get_newfigure(figtag+2)
 get_newfigure(figtag+1)
+get_newfigure(figtag+3)
 
 for iD = 1:size(ComboDidx,1)
     Doses1 = [0 Drugs(ComboDidx(iD,1)).ComboDoses];
@@ -86,22 +87,31 @@ for iD = 1:size(ComboDidx,1)
     Relcnt = nanmean(CellCnt./repmat(reshape(meanCtrl,1,1,[]),...
         length(Doses1),length(Doses2)),3);
     
-    for iF=1:2
+    for iF=1:3
         figure(figtag+iF)
-        get_newaxes([.04+.92*(ComboDidx(iD,2)-1)/Ncols ...
-            .05+.9*(ComboDidx(iD,1)-1)/Nrows ...
-            -.06+.92/Ncols -.08+.9/Nrows])
+        get_newaxes([.08+.91*(ComboDidx(iD,2)-2)/(Ncols-1) ...
+            .06+.9*(ComboDidx(iD,1)-1)/Nrows ...
+            -.06+.91/(Ncols-1) -.08+.9/Nrows])
         
-        if iF==1
+        if iF==1 % cell count
             imagesc(Relcnt,[.2 1])
             colormap(Plotting_parameters.cmapWP)
-        else
-            delta = (min(Relcnt,1)-AddRelcnt);
-            Reldelta = delta./AddRelcnt;
-            Reldelta(abs(delta)<.05) = 0;
+        elseif iF==2 % different predicted
+            delta = -(min(Relcnt,1)-AddRelcnt);
             delta(abs(delta)<.05) = 0;
             
             imagesc(delta,[-.301 .301])
+            
+            colormap(Plotting_parameters.cmapBR)
+        else    % Bliss combination index 
+            I1 = 1-AddRelcnt(1,:);
+            I2 = 1-AddRelcnt(:,1);
+            I12= 1-Relcnt;
+            Bliss = I12-(ones(size(I2))*I1+I2*ones(size(I1))-I2*I1);
+            Bliss(1,:) = 0;
+            Bliss(:,1) = 0;
+            
+            imagesc(Bliss,[-.301 .301])
             
             colormap(Plotting_parameters.cmapBR)
             
@@ -110,13 +120,15 @@ for iD = 1:size(ComboDidx,1)
             hc = colorbar('location','northoutside');
             set(hc,'position',[.4 .9 .2 .02],'fontsize',8)
             if iF==1
-                xlabel(hc,'Cell count (rel to ctrl)','fontsize',10,'fontweight','bold')
+                xlabel(hc,[CellLine ': Cell count (rel to ctrl)'],'fontsize',10,'fontweight','bold')
             elseif iF==2
-                xlabel(hc,'Delta Rel cell count with prediction','fontsize',10,'fontweight','bold')
+                xlabel(hc,[CellLine ': Delta Rel cell count with prediction'],'fontsize',10,'fontweight','bold')
+            elseif iF==3
+                xlabel(hc,[CellLine ': Delta Bliss (red=synergy)'],'fontsize',10,'fontweight','bold')
             end
         end
         
-        set(gca,'xtick',1:length(Doses2),'xticklabel',1e-3*round(1e3*[0 Doses2(2:end)]), ...
+        set(gca,'xtick',1:2:length(Doses2),'xticklabel',1e-3*round(1e3*[0 Doses2(3:2:end)]), ...
             'ytick',1:length(Doses1),'yticklabel',1e-3*round(1e3*[0 Doses1(2:end)]),'fontsize',8)
         ylabel(Drug1)
         xlabel(Drug2)
@@ -124,7 +136,7 @@ for iD = 1:size(ComboDidx,1)
     
 end
 
-for iF=1:2
+for iF=1:3
     figure(figtag+iF)
     set(gcf,'color','w','position',[400 30+(iF-1)*250 900 550], ...
         'PaperUnits','centimeters','papersize',[28 18], 'PaperPositionMode', 'auto')
@@ -132,6 +144,8 @@ for iF=1:2
         set(gcf,'FileName',['./RelCellCnt_' CellLine '.pdf'])
     elseif iF==2
         set(gcf,'FileName',['./DeltaCombo_' CellLine '.pdf'])
+    elseif iF==3
+        set(gcf,'FileName',['./Bliss_' CellLine '.pdf'])
     end
 end
 

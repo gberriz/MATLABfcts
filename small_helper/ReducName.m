@@ -20,7 +20,7 @@ if iscell(str)
 else
     Redstr = str;
     for i=1:length(RemovedCharacters)
-        idx = find(Redstr~=RemovedCharacters(i));
+        idx = find(Redstr==RemovedCharacters(i));
         Redstr(idx) = [];
     end
     if IsUp
