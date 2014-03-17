@@ -13,7 +13,10 @@ if ~exist('IsUp','var')
     IsUp = false;
 end
 
+
+
 if iscell(str)
+    Redstr = cell(size(str));
     for i=1:length(str)
         Redstr{i} = ReducName(str{i},RemovedCharacters,IsUp);
     end
