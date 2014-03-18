@@ -1,4 +1,8 @@
 function t_CLcorrected = correct_edges(t_CL, figtag)
+% t_CLcorrected = correct_edges(t_CL, figtag)
+%
+%
+
 
 if ~exist('figtag','var')
     figtag = 0;
@@ -124,6 +128,13 @@ title({ [CellLine '; CV=' ...
     median(centerCtrl.Cellcount)-median(edgeCtrl.Cellcount), ...
     ratio, pval)});
 
+missingCol = setdiff(1:24, t_ctrl_plate.Column);
+missingRow = setdiff(1:16, t_ctrl_plate.Row);
+t_ctrl_plate = [t_ctrl_plate; cell2table(num2cell(...
+    [ones(length(missingCol),1) missingCol' NaN(length(missingCol),1);
+    missingRow' ones(length(missingRow),1) NaN(length(missingRow),1)]), ...
+    'VariableNames', t_ctrl_plate.Properties.VariableNames)];
+    
 
 set(gca,'fontsize',8)
 

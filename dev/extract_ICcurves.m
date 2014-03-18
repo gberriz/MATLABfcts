@@ -1,4 +1,4 @@
-% [IC50, ICdata, GI50, GIdata] = extract_ICcurves(t_CL, Drugs, removed_replicates, plotting)
+% t_Results = extract_ICcurves(t_CL, Drugs, removed_replicates, plotting)
 %
 %
 %
@@ -73,11 +73,14 @@ for iD=1:length(Drugs)
     DrugIdx = table2array(t_CL(:,DrugCidx))~=0 & ...
         all(table2array(t_CL(:,otherDrugCidx))==0,2);
     
-    Doses = sort(t_CL.(DrugName)(t_CL.Replicate==1 & DrugIdx));
-    assert(all(unique(Doses)==setdiff(t_CL.(DrugName)(DrugIdx),0)))
+    Doses = unique(t_CL.(DrugName)(t_CL.Replicate==1 & DrugIdx));
+    assert(all(Doses==unique(setdiff(t_CL.(DrugName)(DrugIdx),0))))
     
     Relcnt = NaN(max(t_CL.Replicate), length(Doses));
     
+    if DoGI50
+        Relgrowth = NaN(max(t_CL.Replicate), length(Doses));
+    end
     if plotting
         figure(plotting)
         subplot(floor(sqrt(length(Drugs))), ...
@@ -101,9 +104,10 @@ for iD=1:length(Drugs)
         std_ctrl = std(t_CL.Cellcount(CtrlIdx & RepIdx));
         
         t_doses = sortrows(t_CL(RepIdx & DrugIdx,:),DrugName);
-        assert(all(t_doses.(DrugName)==Doses))
+        assert(all(unique(t_doses.(DrugName))==Doses))
         
-        Relcnt(iR,:) = t_doses.Cellcount/ctrls(iR);
+        Relcnt(iR,:) = varfun(@mean,t_doses,'GroupingVar',DrugName, ...
+            'InputVar', 'Cellcount', 'outputformat','uniform')/ctrls(iR);
         if plotting
             figure(plotting)
             if ismember(iR, GoodReplicates)
@@ -117,7 +121,8 @@ for iD=1:length(Drugs)
         end
         
         if DoGI50
-            Relgrowth(iR,:) = (t_doses.Cellcount-SeededNumber)/...
+            Relgrowth(iR,:) = (varfun(@mean,t_doses,'GroupingVar',DrugName,...
+                'InputVar', 'Cellcount', 'outputformat','uniform')-SeededNumber)/...
                 (ctrls(iR)-SeededNumber);
             
             if plotting

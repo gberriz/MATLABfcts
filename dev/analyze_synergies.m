@@ -1,4 +1,9 @@
-function [a] = analyze_synergies(t_CL, t_Results, Drugs, removed_replicates, figtag)
+function a = analyze_synergies(t_CL, t_Results, Drugs, removed_replicates, figtag)
+%  a = analyze_synergies(t_CL, t_Results, Drugs, removed_replicates, figtag)
+%
+%
+%   implemented only for IC cruves, bit GI
+
 
 Generate_Plotting_parameters
 
@@ -21,15 +26,15 @@ meanCtrl = varfun(@mean,t_CL(CtrlIdx,:),'InputVariables', ...
 meanCtrl = meanCtrl.mean_Cellcount;
 
 if isfield(Drugs,'Primary')
-    PrimDrugCidx = find([Drugs.IsPrimary]);
-    SecDrugCidx = find(~[Drugs.IsPrimary]);
+    PrimDrugCidx = find([Drugs.Primary]);
+    SecDrugCidx = find(~[Drugs.Primary]);
     ComboDidx = Allpairs(PrimDrugCidx, SecDrugCidx);
     Nrows = length(PrimDrugCidx);
     Ncols = length(SecDrugCidx);
 else
     ComboDidx = nchoosek(1:length(Drugs),2);
     Nrows = length(Drugs)-1;
-    Ncols = length(Drugs);
+    Ncols = length(Drugs)-1;
 end
 
 get_newfigure(figtag+2)
@@ -37,13 +42,13 @@ get_newfigure(figtag+1)
 get_newfigure(figtag+3)
 
 for iD = 1:size(ComboDidx,1)
-    Doses1 = [0 Drugs(ComboDidx(iD,1)).ComboDoses];
+    Doses1 = unique([0 Drugs(ComboDidx(iD,1)).ComboDoses]);
     Drug1 = Drugs(ComboDidx(iD,1)).DrugName;
     Drug1CIdx = find(strcmp(t_CL.Properties.VariableNames, Drug1));
     
     Drug1Idx = table2array(t_CL(:,Drug1CIdx))~=0 ;
     
-    Doses2 = [0 Drugs(ComboDidx(iD,2)).ComboDoses];
+    Doses2 = unique([0 Drugs(ComboDidx(iD,2)).ComboDoses]);
     Drug2 = Drugs(ComboDidx(iD,2)).DrugName;
     
     Drug2CIdx = find(strcmp(t_CL.Properties.VariableNames, Drug2));
@@ -75,10 +80,10 @@ for iD = 1:size(ComboDidx,1)
                     min(1,Drug1fit(Doses1(iDo1)))*...
                     min(1,Drug2fit(Doses2(iDo2)));
                 for iR = setdiff(1:max(t_CL.Replicate),removed_replicates)
-                    CellCnt(iDo1,iDo2,iR) = t_CL.Cellcount(...
+                    CellCnt(iDo1,iDo2,iR) = mean(t_CL.Cellcount(...
                         t_CL.(Drug1)==Doses1(iDo1) & ...
                         t_CL.(Drug2)==Doses2(iDo2) & ...
-                        t_CL.Replicate==iR);
+                        t_CL.Replicate==iR));
                 end
             end
         end
@@ -89,9 +94,9 @@ for iD = 1:size(ComboDidx,1)
     
     for iF=1:3
         figure(figtag+iF)
-        get_newaxes([.08+.91*(ComboDidx(iD,2)-2)/(Ncols-1) ...
-            .06+.9*(ComboDidx(iD,1)-1)/Nrows ...
-            -.06+.91/(Ncols-1) -.08+.9/Nrows])
+        get_newaxes([.08+.91*(ComboDidx(iD,2)-min(ComboDidx(:,2)))/Ncols ...
+            .06+.9*(ComboDidx(iD,1)-min(ComboDidx(:,1)))/Nrows ...
+            -.06+.91/Ncols -.08+.9/Nrows])
         
         if iF==1 % cell count
             imagesc(Relcnt,[.2 1])

@@ -13,6 +13,7 @@ if ~exist('edge_ctrl','var') || isempty(edge_ctrl)
     edge_ctrl = true;
 end
 
+min_volumedrop = 10e-12; % minimum step of the drop is 10pl for the 
 
 % conc in mM
 if ~exist('nominal_conc','var')
@@ -35,7 +36,7 @@ total_cnt = length(Drugs)*length(SingleDoses) + ...
 
 for iD = 1:length(Drugs)
     
-    dose_step = 1e3*drugs_struct(iD).nominal_conc *10e-12/well_volume;
+    dose_step = 1e3*drugs_struct(iD).nominal_conc *min_volumedrop/well_volume; 
     temp_d = Doses(iD,:);
     if any(temp_d<2*dose_step)
         disp(['!! Doses below minimal conc (' num2str(2*dose_step) ') for ' Drugs{iD}])
@@ -95,15 +96,16 @@ if edge_ctrl
         ctrlpos([1 end], [1 end]) = 1;
     end
     
-    % complete the number of control with randomized positions
-    temp = reshape(randperm(16*24),16,24);    
-    temp(ctrlpos==1) = 384;
+    if ctrl_cnt>sum(ctrlpos(:))        
+        % complete the number of control with randomized positions
+        temp = reshape(randperm(16*24),16,24);
+        temp(ctrlpos==1) = 384;
+        cutoff = sort(temp(:));
+        cutoff = cutoff(ctrl_cnt-sum(ctrlpos(:)));
+        ctrlpos(temp<=cutoff) = 1;
+    end
     
-    cutoff = sort(temp(:));
-    cutoff = cutoff(ctrl_cnt-sum(ctrlpos(:)));
-    ctrlpos(temp<=cutoff) = 1;
-    ctrlidx = find(ctrlpos);
-    
+    ctrlidx = find(ctrlpos);    
     assert(ctrl_cnt==length(ctrlidx));
 else
     ctrlidx = find(reshape(randperm(16*24),16,24)<=(ctrl_cnt));

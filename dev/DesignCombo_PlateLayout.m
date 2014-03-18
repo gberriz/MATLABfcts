@@ -66,13 +66,15 @@ if edge_ctrl
         ctrlpos([1 end], [1 end]) = 1;
     end
     
-     % complete the number of control with randomized positions
-    temp = reshape(randperm(16*24),16,24);    
-    temp(ctrlpos==1) = 384;
     
-    cutoff = sort(temp(:));
-    cutoff = cutoff(ctrl_cnt-sum(ctrlpos(:)));
-    ctrlpos(temp<=cutoff) = 1;
+    if ctrl_cnt>sum(ctrlpos(:))        
+        % complete the number of control with randomized positions
+        temp = reshape(randperm(16*24),16,24);
+        temp(ctrlpos==1) = 384;
+        cutoff = sort(temp(:));
+        cutoff = cutoff(ctrl_cnt-sum(ctrlpos(:)));
+        ctrlpos(temp<=cutoff) = 1;
+    end
     
     ctrlidx = find(ctrlpos);
     assert(ctrl_cnt==length(ctrlidx));
@@ -162,7 +164,7 @@ end
 
     function new_Doses = round_to_minConc(old_Doses, nominal_conc)
         
-        dose_step = 1e3*nominal_conc *10e-12/well_volume;
+        dose_step = 1e3*nominal_conc *1e-12/well_volume;
         temp_d = old_Doses;
         if any(temp_d<2*dose_step)
             disp(['!! Doses below minimal conc (' num2str(2*dose_step) ')'])
