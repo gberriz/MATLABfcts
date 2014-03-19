@@ -45,7 +45,7 @@ end
 
 
 fprintf('Number of test wells: %i\n',total_cnt);
-assert(total_cnt<384)
+assert(total_cnt<384, 'Too many well used (%i)', total_cnt)
 
 ctrl_cnt = 384 - total_cnt;
 

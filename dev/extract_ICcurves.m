@@ -34,6 +34,11 @@ else
     DoGI50 = false;
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%     remove the edges if there are made of controls and there are 
+%%%         enough controls in the center
+%%%%%%%%%%%%%%%%
+
 get_newfigure(plotting)
 fprintf('Fit for %s:\n',CellLine);
 ctrls = NaN(1,max(t_CL.Replicate));
