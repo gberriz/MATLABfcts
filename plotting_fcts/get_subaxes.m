@@ -6,7 +6,7 @@ function h = get_subaxes(Nrows, Ncols, RowIdx, ColIdx, holded, offsets)
 %   (RowIdx, ColIdx) are the indexes for row and column
 %
 %   holded is optional (default not hold)
-%   offsets is optional (default rather compact)
+%   offsets is optional (default rather compact: [.08 .9 .06 .91])
 %
 
 if ~exist('holded','var')
