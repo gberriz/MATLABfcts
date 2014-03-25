@@ -103,7 +103,7 @@ for iD = 1:size(ComboDidx,1)
             -.06+.91/Ncols -.08+.9/Nrows])
         
         if iF==1 % cell count
-            imagesc(Relcnt,[.2 1])
+            imagesc(Relcnt,[.1 1.1])
             colormap(Plotting_parameters.cmapWP)
         elseif iF==2 % different predicted
             delta = -(min(Relcnt,1)-AddRelcnt);

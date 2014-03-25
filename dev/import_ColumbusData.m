@@ -56,7 +56,16 @@ end
 
 t_raw = readtable([folder data_file],'delimiter','\t');
 
-assert(length(unique(t_raw.NumberOfAnalyzedFields))==1)
+if length(unique(t_raw.NumberOfAnalyzedFields))>1    
+    Nref = median(t_raw.NumberOfAnalyzedFields);
+    warning('wells with missing fields: %i', ...
+        unique(t_raw.NumberOfAnalyzedFields))
+    for i = find(t_raw.NumberOfAnalyzedFields~=Nref)'
+        t_raw.Nuclei_NumberOfObjects(i) = t_raw.Nuclei_NumberOfObjects(i)*...
+            (Nref/t_raw.NumberOfAnalyzedFields(i));
+    end
+end
+    
 
 allExp = [Replicate_tags Untrt_tag Day0_tag];
 

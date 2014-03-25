@@ -18,7 +18,7 @@ function [xI50, Hill, Emax, Area, r2, fit_final, p, log] = ...
 priors = [1 .1 1 2];
 
 ranges = [
-    .8 1.2  %E0
+    .975 1.025  %E0
     0 1    %Emax
     10.^[-4.5 1.5]  %E50
     .1 4    % HS
