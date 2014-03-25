@@ -12,4 +12,5 @@ else
     fhandle = figure(number);
 end
 clf
+set(gcf, 'color','w', 'papersize', [position(3)/90 position(4)/90]);
 set(gcf, 'position', position, varargin{:});

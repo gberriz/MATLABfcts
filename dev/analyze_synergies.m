@@ -1,4 +1,4 @@
-function a = analyze_synergies(t_CL, t_Results, Drugs, removed_replicates, figtag)
+function a = analyze_synergies(t_CL, t_Results, Drugs, removed_replicates, fignum, figtag)
 %  a = analyze_synergies(t_CL, t_Results, Drugs, removed_replicates, figtag)
 %
 %
@@ -11,6 +11,13 @@ if ~exist('removed_replicates','var') || isempty(removed_replicates)
     removed_replicates = [];
 end
 
+if ~exist('fignum','var') || isempty(fignum)
+    fignum = 0;
+end
+
+if ~exist('figtag','var') || isempty(figtag)
+    figtag = '';
+end
 
 assert(HasUniqueElement(t_CL.CellLine))
 CellLine = char(unique(t_CL.CellLine));
@@ -37,9 +44,9 @@ else
     Ncols = length(Drugs)-1;
 end
 
-get_newfigure(figtag+2)
-get_newfigure(figtag+1)
-get_newfigure(figtag+3)
+get_newfigure(fignum+2)
+get_newfigure(fignum+1)
+get_newfigure(fignum+3)
 
 for iD = 1:size(ComboDidx,1)
     Doses1 = unique([0 Drugs(ComboDidx(iD,1)).ComboDoses]);
@@ -97,7 +104,7 @@ for iD = 1:size(ComboDidx,1)
         length(Doses1),length(Doses2)),3);
     
     for iF=1:3
-        figure(figtag+iF)
+        figure(fignum+iF)
         get_newaxes([.08+.91*(ComboDidx(iD,2)-min(ComboDidx(:,2)))/Ncols ...
             .06+.9*(ComboDidx(iD,1)-min(ComboDidx(:,1)))/Nrows ...
             -.06+.91/Ncols -.08+.9/Nrows])
@@ -146,15 +153,15 @@ for iD = 1:size(ComboDidx,1)
 end
 
 for iF=1:3
-    figure(figtag+iF)
+    figure(fignum+iF)
     set(gcf,'color','w','position',[400 30+(iF-1)*250 900 550], ...
         'PaperUnits','centimeters','papersize',[28 18], 'PaperPositionMode', 'auto')
     if iF==1
-        set(gcf,'FileName',['./RelCellCnt_' CellLine '.pdf'])
+        set(gcf,'FileName',['./RelCellCnt_' CellLine figtag '.png'])
     elseif iF==2
-        set(gcf,'FileName',['./DeltaCombo_' CellLine '.pdf'])
+        set(gcf,'FileName',['./DeltaCombo_' CellLine figtag '.png'])
     elseif iF==3
-        set(gcf,'FileName',['./Bliss_' CellLine '.pdf'])
+        set(gcf,'FileName',['./Bliss_' CellLine figtag '.png'])
     end
 end
 
