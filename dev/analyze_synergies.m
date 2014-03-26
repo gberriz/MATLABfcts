@@ -32,6 +32,14 @@ meanCtrl = varfun(@mean,t_CL(CtrlIdx,:),'InputVariables', ...
     'Cellcount','GroupingVariables','Replicate');
 meanCtrl = meanCtrl.mean_Cellcount;
 
+
+if ismember('Day0', t_CL.Properties.VariableNames) && any(t_CL.Day0)
+    DoGI50 = true;
+    SeededNumber = trimmean(t_CL.Cellcount(t_CL.Day0==1),50);
+else
+    DoGI50 = false;
+end
+
 if isfield(Drugs,'Primary')
     PrimDrugCidx = find([Drugs.Primary]);
     SecDrugCidx = find(~[Drugs.Primary]);
@@ -64,8 +72,14 @@ for iD = 1:size(ComboDidx,1)
     ComboIdx = table2array(t_CL(:,Drug1CIdx))~=0 & ...
         table2array(t_CL(:,Drug2CIdx))~=0;
     
-    Drug1fit = t_Results.ICfit{ComboDidx(iD,1)};
-    Drug2fit = t_Results.ICfit{ComboDidx(iD,2)};
+    %     Drug1fit = t_Results.ICfit{ComboDidx(iD,1)};
+    %     Drug2fit = t_Results.ICfit{ComboDidx(iD,2)};
+
+    Drug1fit = @(x) spline([0 t_Results.Doses{ComboDidx(iD,1)}], ...
+        [1 smooth(t_Results.Rel_CellCnt{ComboDidx(iD,1)},'lowess')'], x);
+    
+    Drug2fit = @(x) spline([0 t_Results.Doses{ComboDidx(iD,2)}], ...
+        [1 smooth(t_Results.Rel_CellCnt{ComboDidx(iD,2)},'lowess')'], x);
     
     CellCnt = NaN(length(Doses1), length(Doses2), max(t_CL.Replicate));
     
@@ -110,8 +124,28 @@ for iD = 1:size(ComboDidx,1)
             -.06+.91/Ncols -.08+.9/Nrows])
         
         if iF==1 % cell count
-            imagesc(Relcnt,[.1 1.1])
-            colormap(Plotting_parameters.cmapWP)
+            clims = [.1 1.1];
+            imagesc(Relcnt,clims)
+            
+            if DoGI50
+                c0 = SeededNumber/mean(meanCtrl);
+                l1 = clims(2)-c0;
+                l2 = c0-clims(1);
+                if l1>l2
+                    idx = ceil(l2*length(Plotting_parameters.cmapWBr)/l1);
+                    cmap = [Plotting_parameters.cmapWBr(idx:-1:1,:);
+                        Plotting_parameters.cmapWP];
+                else
+                    idx = ceil(l1*length(Plotting_parameters.cmapWP)/l2);
+                    cmap = [Plotting_parameters.cmapWBr(end:-1:1,:);
+                        Plotting_parameters.cmapWP(1:idx,:)];
+                end
+                colormap(cmap)
+            else
+                colormap(Plotting_parameters.cmapWP)
+            end
+            
+            
         elseif iF==2 % different predicted
             delta = -(min(Relcnt,1)-AddRelcnt);
             delta(abs(delta)<.05) = 0;
