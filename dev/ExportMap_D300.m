@@ -7,7 +7,7 @@ function ExportMap_D300(drugs_struct, filename, sheet)
 %   layout      16x24 matrix with plate concentration (in uM)
 %
 
-
+maxDrugName = 10; % length of drug name for layout sheet
 
 output = cell(19*length(drugs_struct),25);
 total_output = cell(18+4*length(drugs_struct),25);
@@ -34,10 +34,12 @@ for i=1:length(drugs_struct)
             if drugs_struct(i).layout(i1,i2)>0
                 if isempty(total_output{i1+1,i2+1})
                     total_output{i1+1,i2+1} = sprintf('%s, %.2fuM', ...
-                        drugs_struct(i).name, drugs_struct(i).layout(i1,i2));
+                        drugs_struct(i).name(1:min(end,maxDrugName)), ...
+                        drugs_struct(i).layout(i1,i2));
                 else
                     total_output{i1+1,i2+1} = sprintf('%s\n%s, %.2fuM', ...
-                        total_output{i1+1,i2+1}, drugs_struct(i).name, drugs_struct(i).layout(i1,i2));
+                        total_output{i1+1,i2+1}, drugs_struct(i).name(1:min(end,maxDrugName)),...
+                        drugs_struct(i).layout(i1,i2));
                 end
             end
         end
@@ -45,11 +47,14 @@ for i=1:length(drugs_struct)
     
     temp = {drugs_struct(i).name 'Stock (mM)=' drugs_struct(i).nominal_conc ...
         'Volume (nl)=' drugs_struct(i).volume 'Well volume (ul)=' drugs_struct(i).well_volume*1e6 };
-    temp(2,1:(length(drugs_struct(i).Doses)+1)) = [{'Combo Doses (uM)='} ...
-        num2cell(drugs_struct(i).Doses)];
-    temp(3,1:(length(drugs_struct(i).SingleDoses)+1)) = [{'Single Doses (uM)='} ...
-        num2cell(drugs_struct(i).SingleDoses)];
-    
+    if isfield(drugs_struct(i),'Doses')
+        temp(2,1:(length(drugs_struct(i).Doses)+1)) = [{'Combo Doses (uM)='} ...
+            num2cell(drugs_struct(i).Doses)];
+    end
+    if isfield(drugs_struct(i),'SingleDoses')
+        temp(3,1:(length(drugs_struct(i).SingleDoses)+1)) = [{'Single Doses (uM)='} ...
+            num2cell(drugs_struct(i).SingleDoses)];
+    end
     total_output(18+(i-1)*4+(1:3),1:size(temp,2)) = temp;
     
 end
