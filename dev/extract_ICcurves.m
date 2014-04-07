@@ -177,7 +177,7 @@ for iD=1:length(Drugs)
     
     if DoGI50
         [GI50, Hill, Emax, Area, r2, fit, p, log] = ...
-            ICcurve_fit(Doses, mean(Relgrowth(GoodReplicates,:)), 'IC50');
+            ICcurve_fit(Doses, mean(Relgrowth(GoodReplicates,:)), 'GI50');
         
         
         t_GI = [t_GI;
