@@ -4,7 +4,7 @@
 %
 
 
-function t_Results = extract_ICcurves(t_CL, Drugs, removed_replicates, fignum, figtag)
+function t_Results = extract_ICcurves(t_CL, Drugs, removed_replicates, fignum, figtag, opt)
 
 
 if ~exist('removed_replicates','var') || isempty(removed_replicates)
@@ -19,6 +19,20 @@ end
 if ~exist('figtag','var') || isempty(figtag)
     figtag = '';
 end
+
+
+pcutoff = .05;
+
+if exist('opt','var')
+    fields = {'pcutoff'};
+    for field = fields
+        if isfield(opt,field{:})
+            eval([field{:} ' = opt.' field{:} ';'])
+        end
+    end
+end
+
+fitopt.pcutoff = pcutoff;
 
 %%
 assert(HasUniqueElement(t_CL.CellLine))
@@ -154,7 +168,7 @@ for iD=1:length(Drugs)
     
     
     [IC50, Hill, Emax, Area, r2, fit, p, log] = ...
-        ICcurve_fit(Doses, mean(Relcnt(GoodReplicates,:)), 'IC50');
+        ICcurve_fit(Doses, mean(Relcnt(GoodReplicates,:)), 'IC50', fitopt);
     
     t_IC = [t_IC;
         cell2table({IC50, Hill, Emax, Area, r2, fit, log, {Doses'}, ...
@@ -177,7 +191,7 @@ for iD=1:length(Drugs)
     
     if DoGI50
         [GI50, Hill, Emax, Area, r2, fit, p, log] = ...
-            ICcurve_fit(Doses, mean(Relgrowth(GoodReplicates,:)), 'GI50');
+            ICcurve_fit(Doses, mean(Relgrowth(GoodReplicates,:)), 'GI50', fitopt);
         
         
         t_GI = [t_GI;

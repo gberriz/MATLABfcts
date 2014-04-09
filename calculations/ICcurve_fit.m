@@ -1,6 +1,6 @@
 %
 % function [xI50, Hill, Emax, Area, r2, fit_final, p, log] = ...
-%     ICcurve_fit(Conc, Growth, opt)
+%     ICcurve_fit(Conc, Growth, fit_type, opt)
 %
 %   IC50 => Growth is relative to control (end/ctrl)
 %   GI50 => Growth is relative to growth of the control:
@@ -26,13 +26,14 @@ ranges = [
 
 plotting = 0;
 fitting = 'average';
+pcutoff = .05;
 
 if ~exist('fit_type','var')
     fit_type = 'IC50';
 end
 
 if exist('opt','var')
-    fields = {'plotting', 'priors', 'ranges', 'fitting'};
+    fields = {'plotting', 'priors', 'ranges', 'fitting', 'pcutoff'};
     for field = fields
         if isfield(opt,field{:})
             eval([field{:} ' = opt.' field{:} ';'])
@@ -84,7 +85,7 @@ p = 1-fcdf(F, df1, df2);
 xc = 10.^(log10(min(Conc))-1:.05:log10(max(Conc))+1);
 r2 = gof.rsquare;
 
-if p>=.05
+if p>=pcutoff
     xI50 = +Inf;
     Hill = 0;
     Emax = +Inf;

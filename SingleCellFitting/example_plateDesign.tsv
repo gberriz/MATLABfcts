@@ -1,0 +1,14 @@
+Folder	./data/foldername/		
+Nwells	5		
+Experimentalist	Jeremie		
+Date	20130731		
+RFPchannel	not		
+Timestep	5		
+Drugs	TRAIL	Bortezomib	FlipL
+Units	ng/ml	nM	Inf
+Treatments			
+C08	0	0	0
+C04	1	0	0
+D04	25	0	1
+E08	250	0	1
+D06	25	100	0
