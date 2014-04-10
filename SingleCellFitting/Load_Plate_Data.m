@@ -24,7 +24,11 @@ for i = 1:plate_design.Nwells
             temp = rmfield(temp,'rfp');
         end
     end
-    Raw_data.rawdata(i) = temp;
+    if i>1
+        Raw_data.rawdata(i) = orderfields(temp, Raw_data.rawdata(1));
+    else
+        Raw_data.rawdata(i) = temp;
+    end
     
     if i==1
         Ntimepoints = size(Raw_data.rawdata(i).fret,1);
