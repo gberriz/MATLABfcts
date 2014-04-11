@@ -41,7 +41,7 @@ plate_design.tag = tag;
 while ~feof(file)
     line = fgetl(file);
     line = regexp(line,'\t','split');
-    if verbatim,disp(['   ' cellstr2str(line,'¦')]),end
+    if verbatim,disp(['   ' cellstr2str(line,'~')]),end
     
     if ~isempty(strfind(line{1},'Treatm')) || ~isempty(strfind(line{1},'treatm'))
         disp('all input fields read')
@@ -73,7 +73,7 @@ while ~feof(file)
     
     line = fgetl(file);
     line = regexp(line,'\t','split');
-    if verbatim,disp(['   ' cellstr2str(line,'¦')]),end
+    if verbatim,disp(['   ' cellstr2str(line,'~')]),end
     
     Wellcnt = Wellcnt+1;
     plate_design.Wells(Wellcnt,:) = {line{1}(1) str2double(line{1}(2:end)) line{1}};
