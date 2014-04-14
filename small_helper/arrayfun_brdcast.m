@@ -1,13 +1,13 @@
-function output = cellfun_brdcast(fct, varargin)
-% output = cellfun_brdcast(fct, varargin)
-%   rewritten cellfun to broadcast any single cell input
+function output = arrayfun_brdcast(fct, varargin)
+% output = arrayfun_brdcast(fct, varargin)
+%   rewritten arrayfun to broadcast any single cell input
 %
 
 assert(isa(fct, 'function_handle'))
 
 for i=1:length(varargin)
-    if isa(varargin{i},'dataset')
-        varargin{i} = dataset2cell(varargin{i});
+    if isa(varargin{i},'table')
+        varargin{i} = table2cell(varargin{i});
     end
 end
 
@@ -30,4 +30,4 @@ for i=1:length(varargin)
     end        
 end
 
-output = cellfun(fct, varargin2{:}, 'uniformoutput', false);
+output = arrayfun(fct, varargin2{:}, 'uniformoutput', false);
