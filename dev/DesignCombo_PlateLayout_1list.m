@@ -13,6 +13,11 @@ if ~exist('edge_ctrl','var') || isempty(edge_ctrl)
     edge_ctrl = true;
 end
 
+if randomize_seed>1e3    
+    s = RandStream('mt19937ar','Seed',mod(randomize_seed,1e9));
+    RandStream.setGlobalStream(s);
+end
+
 % well volume
 well_volume = 6e-5;
 min_volumedrop = 1e-11; % minimum step of the drop is 10pl for the 
@@ -36,51 +41,12 @@ total_cnt = length(Drugs)*length(SingleDoses) + ...
 
 
 for iD = 1:length(Drugs)
+        
+    drugs_struct(iD).Doses = round_Conc(Doses(iD,:), ...
+        drugs_struct(iD).nominal_conc);
+    drugs_struct(iD).SingleDoses = round_Conc(SingleDoses(iD,:), ...
+        drugs_struct(iD).nominal_conc);
     
-    dose_step = 1e3*drugs_struct(iD).nominal_conc *min_volumedrop/well_volume; 
-    dose_max = 1e3*drugs_struct(iD).nominal_conc *max_volumedrop/well_volume; 
-    temp_d = Doses(iD,:);
-    if any(temp_d<2*dose_step)
-        disp(['!! Doses below minimal conc (' num2str(2*dose_step) ') for ' Drugs{iD}])
-        disp(['       at doses : ' num2str(temp_d(temp_d<2*dose_step))])
-        temp_d = max(temp_d, 2*dose_step);
-    end
-    if any(temp_d<50*dose_step)
-        idx = temp_d<50*dose_step;
-        disp([' - Rouding doses for ' Drugs{iD}])
-        disp([' - former doses: ' num2str(temp_d(idx))])
-        temp_d(idx) = dose_step*round(temp_d(idx)/dose_step);
-        disp(['        now as: ' num2str(temp_d(idx))])
-    end
-    if any(temp_d>dose_max)
-        disp(['!! Doses above maximal conc (' num2str(dose_max) ') for ' Drugs{iD}])
-        disp(['       at doses : ' num2str(temp_d(temp_d>dose_max))])
-        temp_d = min(temp_d, dose_max);
-    end
-    Doses(iD,:) = temp_d;
-    
-    temp_d = SingleDoses(iD,:);
-    if any(temp_d<2*dose_step)
-        disp(['!! Doses below minimal conc (' num2str(2*dose_step) ') for ' Drugs{iD}])
-        disp(['       at doses : ' num2str(temp_d(temp_d<2*dose_step))])
-        temp_d = max(temp_d, 2*dose_step);
-    end
-    if any(temp_d<50*dose_step)
-        idx = temp_d<50*dose_step;
-        disp([' - Rouding doses for ' Drugs{iD}])
-        disp([' - former doses: ' num2str(temp_d(idx))])
-        temp_d(idx) = dose_step*round(temp_d(idx)/dose_step);
-        disp(['        now as: ' num2str(temp_d(idx))])
-    end
-    if any(temp_d>dose_max)
-        disp(['!! Doses above maximal conc (' num2str(dose_max) ') for ' Drugs{iD}])
-        disp(['       at doses : ' num2str(temp_d(temp_d>dose_max))])
-        temp_d = min(temp_d, dose_max);
-    end
-    SingleDoses(iD,:) = temp_d;
-    
-    drugs_struct(iD).Doses = Doses(iD,:);
-    drugs_struct(iD).SingleDoses = SingleDoses(iD,:);
     assert(all(ismember(Doses(iD,:), SingleDoses(iD,:))),...
         'Dose in the combo not found in the titration for %s',Drugs{iD})
 end
@@ -156,7 +122,16 @@ for iD = 1:length(Drugs)
             for iDo2 = 1:length(drugs_struct(iD2).Doses);                
                 drugs_struct(iD).layout(trtidx(cnt)) = drugs_struct(iD).Doses(iDo);                
                 drugs_struct(iD2).layout(trtidx(cnt)) = ...
-                    drugs_struct(iD2).Doses(iDo2);                
+                    drugs_struct(iD2).Doses(iDo2);             
+                
+                 vol = well_volume*((drugs_struct(iD).Doses(iDo)/drugs_struct(iPD).nominal_conc)+...
+                    (drugs_struct(iD2).Doses(iDo2)/drugs_struct(iD2).nominal_conc))/1000;
+                if vol>max_volumedrop
+                    warning('Too large volume used (%.2f%%) for combo %s(%.2fuM) - %s(%.2fuM)', ...
+                        100*vol/well_volume, drugs_struct(iD).name, drugs_struct(iPD).Doses(iDo), ...
+                        drugs_struct(iD2).name, ...
+                        drugs_struct(iD2).Doses(iDo2))
+                end
                 cnt = cnt+1;
             end
         end        
@@ -175,3 +150,29 @@ for iD = 1:length(Drugs)
     drugs_struct(iD).volume = 1e9*well_volume*sum(drugs_struct(iD).layout(:))/...
         (1e3*drugs_struct(iD).nominal_conc);
 end
+
+
+
+    function new_Doses = round_Conc(old_Doses, nominal_conc)
+        
+        dose_step = 1e3*nominal_conc *min_volumedrop/well_volume;
+        dose_max = 1e3*nominal_conc *max_volumedrop/well_volume;
+        temp_d = old_Doses;
+        if any(temp_d<2*dose_step)
+            disp(['!! Doses below minimal conc (' num2str(2*dose_step) ')'])
+            disp(['       at doses : ' num2str(temp_d(temp_d<2*dose_step))])
+            temp_d = max(temp_d, 2*dose_step);
+        end
+        if any(temp_d<50*dose_step)
+            idx = temp_d<50*dose_step;
+            disp(['former doses: ' num2str(temp_d(idx))])
+            temp_d(idx) = dose_step*round(temp_d(idx)/dose_step);
+            disp(['      now as: ' num2str(temp_d(idx))])
+        end
+        if any(temp_d>dose_max)
+            disp(['!! Doses above maximal conc (' num2str(dose_max) ')'])
+            disp(['       at doses : ' num2str(temp_d(temp_d>dose_max))])
+            temp_d = min(temp_d, dose_max);
+        end
+        new_Doses = temp_d;
+    end
