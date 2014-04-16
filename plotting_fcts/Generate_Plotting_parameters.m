@@ -1,5 +1,3 @@
-% function Generate_Plotting_parameters
-% global Plotting_parameters
 
 
 global Plotting_parameters
@@ -8,6 +6,9 @@ if isempty(Plotting_parameters)
     Plotting_parameters.cmapRB = [ [.9:.001:1]' [0:.01:1]' [0:.01:1]' ;
         [1:-.01:0]' [1:-.01:0]' [1:-.001:.9]' ].^1.2;
     Plotting_parameters.cmapBR = Plotting_parameters.cmapRB(end:-1:1,:);
+    
+    Plotting_parameters.cmapRW = [ [.9:.001:1]' [0:.01:1]' [0:.01:1]' ];
+    Plotting_parameters.cmapWR = Plotting_parameters.cmapRW(end:-1:1,:);
     
     Plotting_parameters.cmapYBB = [ [1:-.009:.1]' [1:-.009:.1]' [.01:-.0001:0]' ;
         [0:.001:.1]' [0:.001:.1]' [0:.01:1]' ].^.7;
