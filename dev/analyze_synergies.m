@@ -124,7 +124,7 @@ for iD = 1:size(ComboDidx,1)
             -.06+.91/Ncols -.08+.9/Nrows])
         
         if iF==1 % cell count
-            clims = [.1 1.1];
+            clims = [.1 1.2];
             imagesc(Relcnt,clims)
             
             if DoGI50
