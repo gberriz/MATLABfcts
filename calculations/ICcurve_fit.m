@@ -131,7 +131,9 @@ end
 
 if plotting
     
-    errorbar(log10(Conc), mean(RelativeGrowth,1), std(RelativeGrowth,[],1) ,'.k-');
+    if exist('RelativeGrowth','var')
+        errorbar(log10(Conc), mean(RelativeGrowth,1), std(RelativeGrowth,[],1) ,'.k-');
+    end
     hold on
     plot(log10(xc), fit_res(xc),'-r')
     
