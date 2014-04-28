@@ -103,7 +103,8 @@ for iCL = 1:length(CellLines)
         
         idx = find(strfindcell(t_raw.Result, ColumbusTag{iCL})>0 & ...
             strfindcell(t_raw.Result, allExp{iR})>0);
-        assert(length(unique(PlateID(idx)))==1)
+        assert(length(unique(PlateID(idx)))==1, '%i plate IDs found', ...
+            length(unique(PlateID(idx))))
         assert(isempty(intersect(unique(PlateID(idx)), unique(PlateID(~idx)))))
         
         CellLine(idx) = CellLines(iCL);

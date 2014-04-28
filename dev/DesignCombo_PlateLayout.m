@@ -10,7 +10,7 @@ function drugs_struct = DesignCombo_PlateLayout(PrimaryDrugs, PrimaryDoses, Prim
 %   minimal dispensed volume is 20 pl, step of 10pl
 %   maximal dispensed volume is 120 nl to have a dilution of 500-fold minimum
 
-if ~exist('edge_ctrl','var')
+if ~exist('edge_ctrl','var') || isempty(edge_ctrl)
     edge_ctrl = true;
 end
 
