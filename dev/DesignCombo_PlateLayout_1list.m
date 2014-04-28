@@ -1,5 +1,5 @@
 function drugs_struct = DesignCombo_PlateLayout_1list(Drugs, Doses, SingleDoses, ...
-    randomize, edge_ctrl, nominal_conc)
+    randomize_seed, edge_ctrl, nominal_conc)
 % function drugs_struct = plate_design_combo(Drugs, Doses, SingleDoses, ...
 %     randomize, edge_ctrl, nominal_conc)
 %
@@ -89,7 +89,7 @@ else
     ctrlidx = find(reshape(randperm(16*24),16,24)<=(ctrl_cnt));
 end
 
-if ~exist('randomize','var') || isempty(randomize) || randomize
+if ~exist('randomize','var') || isempty(randomize_seed) || randomize_seed
     trtidx = randperm(384);
     trtidx = trtidx(~ismember(trtidx,ctrlidx));
 else
@@ -124,11 +124,11 @@ for iD = 1:length(Drugs)
                 drugs_struct(iD2).layout(trtidx(cnt)) = ...
                     drugs_struct(iD2).Doses(iDo2);             
                 
-                 vol = well_volume*((drugs_struct(iD).Doses(iDo)/drugs_struct(iPD).nominal_conc)+...
+                 vol = well_volume*((drugs_struct(iD).Doses(iDo)/drugs_struct(iD).nominal_conc)+...
                     (drugs_struct(iD2).Doses(iDo2)/drugs_struct(iD2).nominal_conc))/1000;
                 if vol>max_volumedrop
-                    warning('Too large volume used (%.2f%%) for combo %s(%.2fuM) - %s(%.2fuM)', ...
-                        100*vol/well_volume, drugs_struct(iD).name, drugs_struct(iPD).Doses(iDo), ...
+                    warning('Too large volume used (%.4f%%) for combo %s(%.2fuM) - %s(%.2fuM)', ...
+                        100*vol/well_volume, drugs_struct(iD).name, drugs_struct(iD).Doses(iDo), ...
                         drugs_struct(iD2).name, ...
                         drugs_struct(iD2).Doses(iDo2))
                 end
@@ -176,3 +176,5 @@ end
         end
         new_Doses = temp_d;
     end
+
+end
