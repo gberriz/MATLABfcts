@@ -11,8 +11,8 @@ if delimiter==' '
 end
 
 numidx = cellfun(@isnumeric,data(:));
-
 data(numidx) = cellfun(@num2str,data(numidx),'uniformoutput',0);
+
 data(:,1:end-1) = strcat(data(:,1:end-1),delimiter);
 
 file = fopen(filename,'w');
