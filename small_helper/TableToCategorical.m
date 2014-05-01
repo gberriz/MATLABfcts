@@ -1,4 +1,5 @@
 function t_out = TableToCategorical(t_in, varidx)
+% TableToCategorical(t_in, varidx)
 
 if isnumeric(varidx)
     if varidx==0

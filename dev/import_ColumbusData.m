@@ -56,7 +56,8 @@ for i=1:length(fields)
     end
 end
 if iscell(DesignFiles)
-    assert(numel(DesignFiles) == length(CellLines)*length(Replicate_tags))
+    assert(numel(DesignFiles) == length(CellLines)*length(Replicate_tags), ...
+        '# of design files is not correct')
     if (length(Replicate_tags)~=length(CellLines)) && ...
             all(size(DesignFiles) == [length(Replicate_tags) length(CellLines)])
         DesignFiles = DesignFiles';

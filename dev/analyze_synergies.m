@@ -52,9 +52,8 @@ else
     Ncols = length(Drugs)-1;
 end
 
-get_newfigure(fignum+2)
-get_newfigure(fignum+1)
-get_newfigure(fignum+3)
+get_newfigure(fignum+1, [120 80 50+Ncols*150 40+200*Nrows], ['./RelCellCnt_' CellLine figtag '.png'])
+get_newfigure(fignum+3, [400 380 50+Ncols*150 40+200*Nrows], ['./Bliss_' CellLine figtag '.png'])
 
 for iD = 1:size(ComboDidx,1)
     Doses1 = unique([0 Drugs(ComboDidx(iD,1)).ComboDoses]);
@@ -117,11 +116,11 @@ for iD = 1:size(ComboDidx,1)
     Relcnt = nanmean(CellCnt./repmat(reshape(meanCtrl,1,1,[]),...
         length(Doses1),length(Doses2)),3);
     
-    for iF=1:3
+    for iF=[1 3]
         figure(fignum+iF)
-        get_newaxes([.08+.91*(ComboDidx(iD,2)-min(ComboDidx(:,2)))/Ncols ...
-            .06+.9*(ComboDidx(iD,1)-min(ComboDidx(:,1)))/Nrows ...
-            -.06+.91/Ncols -.08+.9/Nrows])
+        get_newaxes([.08+.1/Ncols+.91*(ComboDidx(iD,2)-min(ComboDidx(:,2)))/Ncols ...
+            .06+.1/Nrows+.85*(ComboDidx(iD,1)-min(ComboDidx(:,1)))/Nrows ...
+            -.06+.8/Ncols -.08+.75/Nrows])
         
         if iF==1 % cell count
             clims = [.1 1.2];
@@ -168,7 +167,7 @@ for iD = 1:size(ComboDidx,1)
         end
         if iD==1            
             hc = colorbar('location','northoutside');
-            set(hc,'position',[.4 .9 .2 .02],'fontsize',8)
+            set(hc,'position',[.4 .93-.1/Nrows .2 .02],'fontsize',8)
             if iF==1
                 xlabel(hc,[CellLine ': Cell count (rel to ctrl)'],'fontsize',10,'fontweight','bold')
             elseif iF==2
@@ -186,18 +185,6 @@ for iD = 1:size(ComboDidx,1)
     
 end
 
-for iF=1:3
-    figure(fignum+iF)
-    set(gcf,'color','w','position',[400 30+(iF-1)*250 900 550], ...
-        'PaperUnits','centimeters','papersize',[28 18], 'PaperPositionMode', 'auto')
-    if iF==1
-        set(gcf,'FileName',['./RelCellCnt_' CellLine figtag '.png'])
-    elseif iF==2
-        set(gcf,'FileName',['./DeltaCombo_' CellLine figtag '.png'])
-    elseif iF==3
-        set(gcf,'FileName',['./Bliss_' CellLine figtag '.png'])
-    end
-end
 
 
 
