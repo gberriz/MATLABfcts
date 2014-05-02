@@ -52,8 +52,8 @@ else
     Ncols = length(Drugs)-1;
 end
 
-get_newfigure(fignum+1, [120 80 50+Ncols*150 40+200*Nrows], ['./RelCellCnt_' CellLine figtag '.png'])
-get_newfigure(fignum+3, [400 380 50+Ncols*150 40+200*Nrows], ['./Bliss_' CellLine figtag '.png'])
+get_newfigure(fignum+1, [120 80 50+Ncols*150 40+200*Nrows], [CellLine '_RelCellCnt' figtag '.png'])
+get_newfigure(fignum+3, [400 380 50+Ncols*150 40+200*Nrows], [CellLine '_Bliss' figtag '.png'])
 
 for iD = 1:size(ComboDidx,1)
     Doses1 = unique([0 Drugs(ComboDidx(iD,1)).ComboDoses]);
@@ -119,8 +119,8 @@ for iD = 1:size(ComboDidx,1)
     for iF=[1 3]
         figure(fignum+iF)
         get_newaxes([.08+.1/Ncols+.91*(ComboDidx(iD,2)-min(ComboDidx(:,2)))/Ncols ...
-            .06+.1/Nrows+.85*(ComboDidx(iD,1)-min(ComboDidx(:,1)))/Nrows ...
-            -.06+.8/Ncols -.08+.75/Nrows])
+            .06+.12/Nrows+.85*(ComboDidx(iD,1)-min(ComboDidx(:,1)))/Nrows ...
+            -.06+.8/Ncols -.09+.72/Nrows])
         
         if iF==1 % cell count
             clims = [.1 1.2];
@@ -177,10 +177,10 @@ for iD = 1:size(ComboDidx,1)
             end
         end
         
-        set(gca,'xtick',1:2:length(Doses2),'xticklabel',1e-3*round(1e3*[0 Doses2(3:2:end)]), ...
-            'ytick',1:length(Doses1),'yticklabel',1e-3*round(1e3*[0 Doses1(2:end)]),'fontsize',8)
-        ylabel(Drug1)
-        xlabel(Drug2)
+        set(gca,'xtick',2:2:length(Doses2),'xticklabel',.1*round(10*log10(Doses2(2:2:end))), ...
+            'ytick',2:length(Doses1),'yticklabel',.1*round(10*log10(Doses1(2:end))),'fontsize',8)
+        ylabel([Drug1 ' log_{10}(\muM)'])
+        xlabel([Drug2 ' log_{10}(\muM)'])
     end
     
 end
