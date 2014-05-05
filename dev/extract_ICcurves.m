@@ -1,7 +1,10 @@
-% t_Results = extract_ICcurves(t_CL, Drugs, removed_replicates, fignum, figtag, opt)
-%   opt.['pcutoff' 'plotGI50']
+% t_Results = extract_ICcurves(t_CL, Drugs, removed_replicates, plotting)
 %
-function [t_Results, a] = extract_ICcurves(t_CL, Drugs, removed_replicates, fignum, figtag, opt)
+%
+%
+
+
+function t_Results = extract_ICcurves(t_CL, Drugs, removed_replicates, fignum, figtag, opt)
 
 
 if ~exist('removed_replicates','var') || isempty(removed_replicates)
@@ -21,7 +24,7 @@ end
 pcutoff = .05;
 
 if exist('opt','var')
-    fields = {'pcutoff' 'plotGI50'};
+    fields = {'pcutoff'};
     for field = fields
         if isfield(opt,field{:})
             eval([field{:} ' = opt.' field{:} ';'])
@@ -52,19 +55,13 @@ if ismember('Day0', t_CL.Properties.VariableNames) && any(t_CL.Day0)
 else
     DoGI50 = false;
 end
-if ~exist('plotGI50','var')
-    plotGI50 = false;
-end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%     remove the edges if there are made of controls and there are 
 %%%         enough controls in the center
 %%%%%%%%%%%%%%%%
 
-if fignum
-    get_newfigure(fignum, [50 450 800 500],  ...
-        [CellLine '_ICcurves' figtag '.pdf'])
-end
+if fignum, get_newfigure(fignum), end
 fprintf('Fit for %s:\n',CellLine);
 ctrls = NaN(1,max(t_CL.Replicate));
 for iR = 1:max(t_CL.Replicate)
@@ -84,10 +81,7 @@ if DoGI50
     fprintf('\tSeeding number: %.0f +/- %.0f\n', SeededNumber, ...
         std(t_CL.Cellcount(t_CL.Day0==1)));
     GI50 = NaN(1, length(Drugs));
-    if fignum && plotGI50
-        get_newfigure(fignum+1, [50 450 800 500],  ...
-            [CellLine '_GIcurves_' figtag '.pdf'])
-    end
+    if fignum, get_newfigure(fignum+1), end
     t_GI = table;
 end
 
@@ -115,19 +109,17 @@ for iD=1:length(Drugs)
         Relgrowth = NaN(max(t_CL.Replicate), length(Doses));
     end
     if fignum
-        xlims = [min(log10(Doses))-.1 max(log10(Doses))+.1]*1.05;
-        
         figure(fignum)
-        a(iD) = subplot(floor(sqrt(length(Drugs))), ...
-            ceil(length(Drugs)/floor(sqrt(length(Drugs)))),iD);
-        plot(xlims, [1 1],'-c')
+        subplot(floor(sqrt(length(Drugs))), ...
+            ceil(length(Drugs)/floor(sqrt(length(Drugs)))),iD)
+        plot([min(Doses) max(Doses)], [1 1],'-c')
         hold on
         
-        if plotGI50
+        if DoGI50
             figure(fignum+1)
             subplot(floor(sqrt(length(Drugs))), ...
                 ceil(length(Drugs)/floor(sqrt(length(Drugs)))),iD)
-            plot(xlims, [1 1],'-c')
+            plot([min(Doses) max(Doses)], [1 1],'-c')
             hold on
         end
     end
@@ -146,13 +138,13 @@ for iD=1:length(Drugs)
         if fignum
             figure(fignum)
             if ismember(iR, GoodReplicates)
-                plot(log10(Doses),Relcnt(iR,:),'.-');
+                plot(Doses,Relcnt(iR,:),'.-');
             else
-                plot(log10(Doses),Relcnt(iR,:),'.-','color',[.7 .7 .7]);
+                plot(Doses,Relcnt(iR,:),'.-','color',[.7 .7 .7]);
             end
             
-            plot(xlims, [1 1]-(std_ctrl/ctrl),':c')
-            plot(xlims, [1 1]+(std_ctrl/ctrl),':c')
+            plot([min(Doses) max(Doses)], [1 1]-(std_ctrl/ctrl),':c')
+            plot([min(Doses) max(Doses)], [1 1]+(std_ctrl/ctrl),':c')
         end
         
         if DoGI50
@@ -160,16 +152,16 @@ for iD=1:length(Drugs)
                 'InputVar', 'Cellcount', 'outputformat','uniform')-SeededNumber)/...
                 (ctrls(iR)-SeededNumber);
             
-            if fignum && plotGI50
+            if fignum
                 figure(fignum+1)
                 if ismember(iR, GoodReplicates)
-                    plot(log10(Doses),Relgrowth(iR,:),'.-');
+                    plot(Doses,Relgrowth(iR,:),'.-');
                 else
-                    plot(log10(Doses),Relgrowth(iR,:),'.-','color',[.7 .7 .7]);
+                    plot(Doses,Relgrowth(iR,:),'.-','color',[.7 .7 .7]);
                 end
                 
-                plot(xlims, [1 1]-(std_ctrl/ctrl),':c')
-                plot(xlims, [1 1]+(std_ctrl/ctrl),':c')
+                plot([min(Doses) max(Doses)], [1 1]-(std_ctrl/ctrl),':c')
+                plot([min(Doses) max(Doses)], [1 1]+(std_ctrl/ctrl),':c')
             end
         end
     end
@@ -183,58 +175,43 @@ for iD=1:length(Drugs)
         {mean(Relcnt(GoodReplicates,:))}}, 'VariableNames', ...
         {'IC50' 'Hill' 'Emax' 'Area' 'r2' 'ICfit' 'log' 'Doses' 'Rel_CellCnt'})];
     
+    if fignum
+        figure(fignum)
+        plot(Doses, mean(Relcnt(GoodReplicates,:)), '.-k')
+        plot(Doses, fit(Doses), '.-r','linewidth',2)
+        
+        title(sprintf('%s - %s, r=%.2f',CellLine, DrugName, r2))
+        set(gca,'xscale','log')
+        ylim([0 1.4])
+        xlim([min([Drugs.SingleDoses]) max([Drugs.SingleDoses])])
+        if DoGI50
+            plot([min(Doses) max(Doses)], [1 1]*SeededNumber/ctrl,':k')
+        end
+    end
     
     if DoGI50
-        [GI50, Hill, GI_Emax, Area, r2, GI_fit, p, log] = ...
-            ICcurve_fit(Doses, mean(Relgrowth(GoodReplicates,:)), 'GI50', fitopt);        
+        [GI50, Hill, Emax, Area, r2, fit, p, log] = ...
+            ICcurve_fit(Doses, mean(Relgrowth(GoodReplicates,:)), 'GI50', fitopt);
+        
         
         t_GI = [t_GI;
-            cell2table({GI50, Hill, GI_Emax, Area, r2, GI_fit, log, ...
+            cell2table({GI50, Hill, Emax, Area, r2, fit, log, ...
             {mean(Relgrowth(GoodReplicates,:))} SeededNumber*ones(size(r2))},...
             'VariableNames', ...
             {'GI50' 'Hill_GI' 'Emax_GI' 'Area_GI' 'r2_GI' 'GIfit' ...
             'log_GI' 'Rel_growth' 'SeededNumber'})];
-    end
-    
-    if fignum
-        figure(fignum)
-        plot(log10(Doses), mean(Relcnt(GoodReplicates,:)), '.-k')
-        plot(log10(Doses), fit(Doses), '.-r','linewidth',2)
-        plot(log10(IC50)*[1 1], [0 .5*(1+Emax)], '-r')
-        plot(xlims, [1 1]*Emax, '-r')
-        score = sprintf('log_{10}(IC_{50})=%.2g', log10(IC50));        
         
-        if DoGI50
-            plot(xlims, [1 1]*SeededNumber/ctrl,':k')
-            plot(log10(GI50)*[1 1], [0 .5*(1+SeededNumber/ctrl)], '-k')
-            score = [score sprintf(', log_{10}(GI_{50})=%.2g ', log10(GI50))];
+        if fignum
+            figure(fignum+1)
+            plot(Doses, mean(Relgrowth(GoodReplicates,:)), '.-k')
+            plot(Doses, fit(Doses), '.-r','linewidth',2)
+            
+            
+            title(sprintf('%s - %s, r=%.2f',CellLine, DrugName, r2))
+            set(gca,'xscale','log')
+            ylim([min([-.1 min(Relgrowth(GoodReplicates,:))]) 1.4])
+            xlim([min([Drugs.SingleDoses]) max([Drugs.SingleDoses])])
         end
-        
-        title({CellLine; DrugName; score},...
-            'fontsize',8,'fontweight','bold')
-        set(gca,'ytick',0:.2:1, 'fontsize',6,'xtick',...
-            (.1*floor(10*min(log10(Doses))):.5:(.1*ceil(10*max(log10(Doses))))))
-        xlabel('log_{10}(Dose) (\muM)','fontsize',6,'fontweight','bold')
-        ylabel('Relative cell cnt','fontsize',6,'fontweight','bold')
-        ylim([0 1.4])
-        xlim(xlims)
-    end
-    
-    if fignum && plotGI50
-        figure(fignum+1)
-        plot(log10(Doses), mean(Relgrowth(GoodReplicates,:)), '.-k')
-        plot(log10(Doses), GI_fit(Doses), '.-r','linewidth',2)
-        
-        
-        title({CellLine; DrugName; sprintf('r=%.2f', r2)},...
-            'fontsize',8,'fontweight','bold')
-        set(gca,'ytick',-2:.25:1, 'fontsize',6,'xtick',...
-            (.1*floor(10*min(log10(Doses))):.5:(.1*ceil(10*max(log10(Doses))))))
-        xlabel('log_{10}(Dose) (\muM)','fontsize',6,'fontweight','bold')
-        ylabel('Relative growth','fontsize',6,'fontweight','bold')
-        ylim([min([-.1 min(Relgrowth(GoodReplicates,:))]) 1.4])
-        xlim(xlims)
-        
     end
 end
 
@@ -243,5 +220,21 @@ if DoGI50
     t_Results = [t_labels t_IC t_GI];
 else
     t_Results = [t_labels t_IC];
+end
+
+if fignum
+    figure(fignum)
+    set(gcf,'color','w','position',[50 450 900 550], ...
+        'PaperUnits','centimeters','papersize',[28 18], 'PaperPositionMode', 'auto', ...
+        'FileName',['ICcurves_' CellLine figtag '.pdf'])
+    
+    if DoGI50
+        figure(fignum+1)
+        set(gcf,'color','w','position',[50 450 900 550], ...
+            'PaperUnits','centimeters','papersize',[28 18], 'PaperPositionMode', 'auto', ...
+            'FileName',['GIcurves_' CellLine figtag '.pdf'])
+    end
+    
+    
 end
 
