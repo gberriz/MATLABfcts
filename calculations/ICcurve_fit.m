@@ -8,7 +8,9 @@
 %           Growth should not comprise the control value; each replicate is
 %           a column
 %
-%   %%%%%% AREA: check formula!!
+%   Area => sum of (1-cell count)
+%
+%
 
 function [xI50, Hill, Emax, Area, r2, fit_final, p, log] = ...
     ICcurve_fit(Conc, Growth, fit_type, opt)
@@ -88,11 +90,11 @@ r2 = gof.rsquare;
 if p>=pcutoff
     xI50 = +Inf;
     Hill = 0;
-    Emax = +Inf;
+    Emax = fit_res_flat.b;
     log = ['**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
     fit_final = fit_res_flat;
     
-    Area = 0;
+    Area = length(g)*(1-fit_res_flat.b);
     
 else
     log = ['r2 = ' num2str(gof.rsquare,'%.2f')];
@@ -103,8 +105,8 @@ else
     Hill = fit_res.d;
     fit_final = fit_res;
     
-    %%%%%% AREA: check formula!!
-    Area = 0;%diff(log10(Conc)) * (1-mean([g(1:end-1); g(2:end)])');
+    
+    Area = sum(1-g);
     
     switch fit_type
         
@@ -164,7 +166,7 @@ end
 
     function [fit_result, gof2] = flat_fit(doses, response)
         fitopt = fitoptions('Method','NonlinearLeastSquares',...
-            'Lower',ranges(1,2),...
+            'Lower',max(.7,ranges(1,2)),...
             'Upper',ranges(2,1),...
             'Startpoint',priors(1));
         f = fittype('b+0*x','options',fitopt);
