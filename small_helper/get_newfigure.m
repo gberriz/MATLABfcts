@@ -21,6 +21,6 @@ if length(varargin)==1 && mod(length(varargin),2)==1 && varargin{1}(end-3)=='.'
 end
 
 
-set(gcf, 'color','w','paperunits','inches');
+set(gcf, 'color','w','paperunits','inches', 'PaperPositionMode', 'auto');
 set(gcf,'papersize', [position(3)/90 position(4)/90]);
 set(gcf, 'position', position, varargin{:});
