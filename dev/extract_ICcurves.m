@@ -48,7 +48,7 @@ GoodReplicates = GoodReplicates(GoodReplicates>0);
 
 if ismember('Day0', t_CL.Properties.VariableNames) && any(t_CL.Day0)
     DoGI50 = true;
-    SeededNumber = trimmean(t_CL.Cellcount(t_CL.Day0==1),50);
+    Day0Cnt = trimmean(t_CL.Cellcount(t_CL.Day0==1),50);
 else
     DoGI50 = false;
 end
@@ -62,7 +62,7 @@ end
 %%%%%%%%%%%%%%%%
 
 if fignum
-    get_newfigure(fignum, [50 450 800 500],  ...
+    get_newfigure(fignum, [50 250 900 500],  ...
         [CellLine '_ICcurves' figtag '.pdf'])
 end
 fprintf('Fit for %s:\n',CellLine);
@@ -70,7 +70,7 @@ ctrls = NaN(1,max(t_CL.Replicate));
 for iR = 1:max(t_CL.Replicate)
     RepIdx = t_CL.Replicate==iR;
     
-    ctrls(iR) = mean(t_CL.Cellcount(CtrlIdx & RepIdx));
+    ctrls(iR) = trimmean(t_CL.Cellcount(CtrlIdx & RepIdx),50);
     std_ctrl = std(t_CL.Cellcount(CtrlIdx & RepIdx));
     
     fprintf('\tUntreated ctrl (rep %i): %.0f +/- %.0f (%i)\n', ...
@@ -81,11 +81,11 @@ end
 
 
 if DoGI50
-    fprintf('\tSeeding number: %.0f +/- %.0f\n', SeededNumber, ...
+    fprintf('\tSeeding number: %.0f +/- %.0f\n', Day0Cnt, ...
         std(t_CL.Cellcount(t_CL.Day0==1)));
     GI50 = NaN(1, length(Drugs));
     if fignum && plotGI50
-        get_newfigure(fignum+1, [50 450 800 500],  ...
+        get_newfigure(fignum+1, [50 250 900 500],  ...
             [CellLine '_GIcurves_' figtag '.pdf'])
     end
     t_GI = table;
@@ -157,8 +157,8 @@ for iD=1:length(Drugs)
         
         if DoGI50
             Relgrowth(iR,:) = (varfun(@mean,t_doses,'GroupingVar',DrugName,...
-                'InputVar', 'Cellcount', 'outputformat','uniform')-SeededNumber)/...
-                (ctrls(iR)-SeededNumber);
+                'InputVar', 'Cellcount', 'outputformat','uniform')-Day0Cnt)/...
+                (ctrls(iR)-Day0Cnt);
             
             if fignum && plotGI50
                 figure(fignum+1)
@@ -180,8 +180,8 @@ for iD=1:length(Drugs)
     
     t_IC = [t_IC;
         cell2table({IC50, Hill, Emax, Area, r2, fit, log, {Doses'}, ...
-        {mean(Relcnt(GoodReplicates,:))}}, 'VariableNames', ...
-        {'IC50' 'Hill' 'Emax' 'Area' 'r2' 'ICfit' 'log' 'Doses' 'Rel_CellCnt'})];
+        {mean(Relcnt(GoodReplicates,:))}, mean(ctrls(GoodReplicates))}, 'VariableNames', ...
+        {'IC50' 'Hill' 'Emax' 'Area' 'r2' 'ICfit' 'log' 'Doses' 'Rel_CellCnt' 'CtrlCnt'})];
     
     
     if DoGI50
@@ -190,10 +190,10 @@ for iD=1:length(Drugs)
         
         t_GI = [t_GI;
             cell2table({GI50, Hill, GI_Emax, Area, r2, GI_fit, log, ...
-            {mean(Relgrowth(GoodReplicates,:))} SeededNumber*ones(size(r2))},...
+            {mean(Relgrowth(GoodReplicates,:))} Day0Cnt*ones(size(r2))},...
             'VariableNames', ...
             {'GI50' 'Hill_GI' 'Emax_GI' 'Area_GI' 'r2_GI' 'GIfit' ...
-            'log_GI' 'Rel_growth' 'SeededNumber'})];
+            'log_GI' 'Rel_growth' 'Day0Cnt'})];
     end
     
     if fignum
@@ -205,8 +205,8 @@ for iD=1:length(Drugs)
         score = sprintf('log_{10}(IC_{50})=%.2g', log10(IC50));        
         
         if DoGI50
-            plot(xlims, [1 1]*SeededNumber/ctrl,':k')
-            plot(log10(GI50)*[1 1], [0 .5*(1+SeededNumber/ctrl)], '-k')
+            plot(xlims, [1 1]*Day0Cnt/ctrl,':k')
+            plot(log10(GI50)*[1 1], [0 .5*(1+Day0Cnt/ctrl)], '-k')
             score = [score sprintf(', log_{10}(GI_{50})=%.2g ', log10(GI50))];
         end
         
