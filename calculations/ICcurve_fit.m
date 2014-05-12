@@ -30,7 +30,7 @@ plotting = 0;
 fitting = 'average';
 pcutoff = .05;
 
-if ~exist('fit_type','var')
+if ~exist('fit_type','var') || isempty(fit_type)
     fit_type = 'IC50';
 end
 
@@ -110,7 +110,7 @@ else
     
     switch fit_type
         
-        case 'IC50'
+        case {'IC50' 'x50'}
             xI50 = fit_res.c;
         case 'GI50'
             if any(fit_growth<.5) && any(fit_growth>.5) % interpolation
