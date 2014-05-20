@@ -59,6 +59,26 @@ for i=1:length(drugs_struct)
     
 end
 
+
+if isfield(drugs_struct,'seeding')
+    for i1 = 1:16
+        for i2 = 1:24
+            total_output{i1+1,i2+1} = sprintf('%s\nseed=%.0f', ...
+                total_output{i1+1,i2+1},drugs_struct(1).seeding(i1,i2));
+        end
+    end
+end
+
+if isfield(drugs_struct,'Ligand')
+    for i1 = 1:16
+        for i2 = 1:24
+            total_output{i1+1,i2+1} = sprintf('%s\n%s, %.2f', ...
+               total_output{i1+1,i2+1}, drugs_struct(1).Ligand, drugs_struct(1).Ligand_layout(i1,i2));
+        end
+    end
+end
+
+
 if ~exist('filename','var')
     filename = 'temp.xlsx';
 end
