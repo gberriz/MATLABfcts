@@ -7,7 +7,6 @@ function Export_PlateLayout(layout, label, filename, sheet)
 
 
 output = cell(19,25);
-total_output = cell(22,25);
 letter_label = 'A':'P';
 num_label = 1:24;
 
@@ -30,7 +29,6 @@ if ~exist('sheet','var')
     end
     
     xlswrite(filename,output,'layout')
-    xlswrite(filename,total_output,'total')
     
 else
     if exist(filename, 'file')
