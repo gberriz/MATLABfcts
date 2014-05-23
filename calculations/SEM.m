@@ -18,11 +18,13 @@ if all(size(values)>1)
     return
 end
 
-values = ToColumn(values);
+values(isnan(values)) = []; 
 
 if length(values)>2
-    SEM_value = std(values)/sqrt(length(values));
-else
+    SEM_value = std(ToColumn(values))/sqrt(length(values));
+elseif length(values)==2
     SEM_value = abs(diff(values)/2);
+else
+    SEM_value = NaN(size(values));
 end
 
