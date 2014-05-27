@@ -9,7 +9,7 @@ function ExportMap_D300(drugs_struct, filename, sheet)
 
 maxDrugName = 10; % length of drug name for layout sheet
 
-output = cell(19*length(drugs_struct),25);
+%output = cell(19*length(drugs_struct),25);
 total_output = cell(18+4*length(drugs_struct),25);
 letter_label = 'A':'P';
 num_label = 1:24;
@@ -18,16 +18,16 @@ total_output(2:17,1) = num2cell(letter_label);
 total_output(1,2:end) = num2cell(num_label');
 
 for i=1:length(drugs_struct)
-    temp_out = cell(19,25);
-    temp_out{1,1} = drugs_struct(i).name;
-    temp_out{1,2} = num2str(drugs_struct(i).nominal_conc);
-    temp_out{1,3} = 'mM';
-    
-    temp_out(3:end-1,1) = num2cell(letter_label);
-    temp_out(2,2:end) = num2cell(num_label');
-    temp_out(3:end-1,2:end) = num2cell(drugs_struct(i).layout);
-    
-    output((1:19)+(i-1)*19,:) = temp_out;
+%     temp_out = cell(19,25);
+%     temp_out{1,1} = drugs_struct(i).name;
+%     temp_out{1,2} = num2str(drugs_struct(i).nominal_conc);
+%     temp_out{1,3} = 'mM';
+%     
+%     temp_out(3:end-1,1) = num2cell(letter_label);
+%     temp_out(2,2:end) = num2cell(num_label');
+%     temp_out(3:end-1,2:end) = num2cell(drugs_struct(i).layout);
+%     
+%     output((1:19)+(i-1)*19,:) = temp_out;
     
     for i1 = 1:16
         for i2 = 1:24
@@ -80,35 +80,11 @@ end
 
 
 if ~exist('filename','var')
-    filename = 'temp.xlsx';
+    filename = 'temp.tsv';
 end
-
-save([filename(1:(find(filename=='.',1,'last')-1)) '_' sheet '.mat'], 'drugs_struct')
-
 if ~exist('sheet','var')
-    if exist(filename, 'file')
-        warning('Deleting file %s', filename)
-        delete(filename)
-    end
-    
-    xlswrite(filename,output,'layout')
-    xlswrite(filename,total_output,'total')
-    
-else
-    if exist(filename, 'file')
-        [~,sheets] = xlsfinfo(filename);
-        if ismember(sheet, sheets)
-            fprintf('!! Deleting sheet %s in file %s\n', sheet, filename)
-            [~,~,dumb] = xlsread(filename, sheet);
-            xlswrite(filename, cell(size(dumb)), sheet);
-        end
-        if ismember([sheet '_total'], sheets)
-            fprintf('!! Deleting sheet %s in file %s\n', [sheet '_total'], filename)
-            [~,~,dumb] = xlsread(filename, [sheet '_total']);
-            xlswrite(filename, cell(size(dumb)), [sheet '_total']);
-        end
-    end
-    
-    xlswrite(filename, output, sheet)
-    xlswrite(filename, total_output, [sheet '_total'])
+    sheet = 'default';
 end
+
+save([filename '_' sheet '.mat'], 'drugs_struct')
+tsvwrite(filename, total_output, [sheet '_total'])
