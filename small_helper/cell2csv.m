@@ -13,6 +13,10 @@ end
 numidx = cellfun(@isnumeric,data(:));
 data(numidx) = cellfun(@num2str,data(numidx),'uniformoutput',0);
 
+logicidx = cellfun(@islogical,data(:));
+data(logicidx) = cellfun(@num2str,data(logicidx),'uniformoutput',0);
+
+
 data(:,1:end-1) = strcat(data(:,1:end-1),delimiter);
 
 file = fopen(filename,'w');
