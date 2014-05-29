@@ -86,5 +86,4 @@ if ~exist('sheet','var')
     sheet = 'default';
 end
 
-save([filename '_' sheet '.mat'], 'drugs_struct')
-tsvwrite(filename, total_output, [sheet '_total'])
+tsvwrite(filename, total_output, sheet)

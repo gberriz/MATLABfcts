@@ -27,8 +27,8 @@ create_text_children(protocol, ...
     {
     'Version'                   int2str(2);
     'VolumeUnit'                'nL';
-    'ConcentrationUnit'         'ÂµM';
-    'MolarityConcentrationUnit' 'ÂµM';
+    'ConcentrationUnit'         'µM';
+    'MolarityConcentrationUnit' 'µM';
     'MassConcentrationUnit'     'ng_mL';
     'ShakePerFluid'             logical2str(0);
     'ShakePlateDuration'        int2str(5);
@@ -67,7 +67,7 @@ for fluid_num = 1:length(fluid_data)
         % It's not clear whether this is meant as the unit to use for
         % display within the D300 software, or something else, so we'll
         % just play it safe and use the same units we used up top.
-        'ConcentrationUnit' 'ÂµM';
+        'ConcentrationUnit' 'µM';
         } ...
     );
 end
