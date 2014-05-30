@@ -9,12 +9,14 @@ if ~exist('position','var')
     position = [100 80 600 450];
 end
 
-if nargout==0
-    figure(number)    
-else
-    fhandle = figure(number);
-end
-clf
+% if nargout==0
+%     figure(number)    
+% else
+%     fhandle = figure(number);
+% end
+fhandle = figure(number);
+set(fhandle, 'Visible', 'off');
+clf;
 
 if length(varargin)==1 && mod(length(varargin),2)==1 && varargin{1}(end-3)=='.'
     varargin = ['filename' varargin];

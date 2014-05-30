@@ -1,14 +1,15 @@
 function b = table2cellstr(a)
-
-tic
-for i=1:size(a,2)
-    if iscategorical(a.(a.Properties.VariableNames{i})(1))
-        a.(a.Properties.VariableNames{i}) = cellstr(a.(a.Properties.VariableNames{i}));
-    elseif isnumeric(a.(a.Properties.VariableNames{i})(1))
-        a.(a.Properties.VariableNames{i}) = cellfun_brdcast(@num2str,...
-            num2cell(a.(a.Properties.VariableNames{i})));
+    if height(a) > 0
+        row1 = a(1, :);
+        for j = 1:width(row1)
+            v = row1.(j);
+            if iscategorical(v) || ischar(v)
+                a.(j) = cellstr(a.(j));
+            elseif isnumeric(v)
+                a.(j) = cellstr(num2str(a.(j)));
+            end
+        end
     end
-end
 
-b = [a.Properties.VariableNames;    table2cell(a)];
-toc
+    b = [a.Properties.VariableNames; table2cell(a)];
+end
