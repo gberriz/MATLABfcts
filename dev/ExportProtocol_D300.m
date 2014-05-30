@@ -22,13 +22,16 @@ protocol = document.getDocumentElement;
 protocol.appendChild(document.createTextNode(sprintf('\n   ')));
 protocol.appendChild(document.createComment('Created by ExportProtocol_D300.m'));
 
+% Constant for the non-ascii character mu.
+MICRO = char(181);
+
 % Add protocol-global settings.
 create_text_children(protocol, ...
     {
     'Version'                   int2str(2);
     'VolumeUnit'                'nL';
-    'ConcentrationUnit'         'µM';
-    'MolarityConcentrationUnit' 'µM';
+    'ConcentrationUnit'         [MICRO 'M'];
+    'MolarityConcentrationUnit' [MICRO 'M'];
     'MassConcentrationUnit'     'ng_mL';
     'ShakePerFluid'             logical2str(0);
     'ShakePlateDuration'        int2str(5);
@@ -67,7 +70,7 @@ for fluid_num = 1:length(fluid_data)
         % It's not clear whether this is meant as the unit to use for
         % display within the D300 software, or something else, so we'll
         % just play it safe and use the same units we used up top.
-        'ConcentrationUnit' 'µM';
+        'ConcentrationUnit' [MICRO 'M'];
         } ...
     );
 end
