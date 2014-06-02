@@ -116,37 +116,57 @@ else
     Usedidx = 1:height(t_raw);
 end
 
-CellLine = categorical(CellLine);
 t_data = [table(CellLine,Replicate,Untrt,Day0) t_raw(Usedidx,{'Well' 'Row' 'Column' 'Nuclei_NumberOfObjects'})];
 t_data.Properties.VariableNames{'Nuclei_NumberOfObjects'} = 'Cellcount';
-
+t_data = TableToCategorical(t_data,[1 5]);
 %%
-CellLines = categories(CellLine);
+CellLines = categories(t_data.CellLine);
 t_CL = cell(1,length(CellLines));
 Drugs = t_CL;
+
+welllist = cell(0,1);
+colrowlist = NaN(0,2);
+for i=1:24
+    welllist(end+[1:16]) = strcat(num2cell('A':'P'), num2str(i,'%i'))';
+    colrowlist(end+[1:16],:) = [ [1:16]' repmat(i,16,1)];
+end
 
 for iCL=1:length(CellLines)
     
     t_CL{iCL} = t_data(t_data.CellLine==CellLines{iCL},:);
     
+    for iR = unique(t_CL{iCL}.Replicate)'
+        not_measured = ~ismember(welllist, t_CL{iCL}.Well(t_CL{iCL}.Replicate==iR));
+        temp = cell2table([repmat(CellLines(iCL), sum(not_measured),1), ...
+            repmat({iR NaN NaN}, sum(not_measured),1) ...
+            welllist(not_measured) num2cell(colrowlist(not_measured,:)) ...
+            repmat({NaN}, sum(not_measured),1)], ...
+            'variablenames', t_CL{iCL}.Properties.VariableNames);
+        temp = TableToCategorical(temp,[1 5]);
+        t_CL{iCL} = [t_CL{iCL};temp];
+    end
+    
     design_file = Barcode_table.DesignFile{find(strcmp(Barcode_table.CellLine,...
         char(CellLines(iCL))) & Barcode_table.Replicate>0,1,'first')};
-    load([folder design_file ])
+    load([folder design_file])
         
     Drugs{iCL} = {drugs_struct.name};
     
     DrugDoses = NaN(height(t_CL{iCL}),length(Drugs{iCL}));
     t_CL{iCL} = sortrows(t_CL{iCL},{'Replicate' 'Column' 'Row'});
-    for iR = setdiff(unique(t_data.Replicate), 0)'   
+    for iR = setdiff(unique( t_CL{iCL}.Replicate), 0)'   
         
         design_file = Barcode_table.DesignFile{strcmp(Barcode_table.CellLine,...
             char(CellLines(iCL))) & Barcode_table.Replicate==iR};
         
-        load([folder design_file ])
+        load([folder design_file])
     
         assert(all(strcmp(Drugs{iCL}, {drugs_struct.name})))        
         for iD=1:length(Drugs{iCL})
-            DrugDoses(t_CL{iCL}.Replicate==iR,iD) = drugs_struct(iD).layout(:);
+            idx = sub2ind([16 24], t_CL{iCL}.Row(t_CL{iCL}.Replicate==iR & ~isnan(t_CL{iCL}.Cellcount)), ...
+                t_CL{iCL}.Column(t_CL{iCL}.Replicate==iR & ~isnan(t_CL{iCL}.Cellcount)) );
+            DrugDoses(t_CL{iCL}.Replicate==iR & ~isnan(t_CL{iCL}.Cellcount),iD) = ...
+                drugs_struct(iD).layout(idx);
         end
     end
     
@@ -170,7 +190,6 @@ for iCL=1:length(CellLines)
         % than 20 controls overall (enough control remain)
         CornerIdx = find(t_CL{iCL}.Replicate==iR & ...
             ismember(t_CL{iCL}.Well,{'A1' 'A24' 'P1' 'P24'}));
-        assert(length(CornerIdx)==4)
         if all(CtrlIdx(CornerIdx)==1)
             CtrlIdx(CornerIdx)=0;
         end

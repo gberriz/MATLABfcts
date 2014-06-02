@@ -1,7 +1,11 @@
-function drugs_struct = ImportMap_xlsx(filename, savefilename)
+function drugs_struct = ImportMap_xlsx(filename, savefilename, sheetname)
 
 
-[~,txt,data] = xlsread(filename);
+if exist('sheetname','var')
+    [~,txt,data] = xlsread(filename,sheetname);
+else
+    [~,txt,data] = xlsread(filename);
+end
 
 %%
 Drugs = unique(setdiff(txt(:,1),[num2cell('A':'P') {''}]));
@@ -45,6 +49,7 @@ end
 
 n = hist(tested_pairs(:),1:length(Drugs));
 
+Complete = false;
 if length(unique(n))>2
     disp('No pattern with primary vs secondary drugs')
 elseif length(unique(n))==2
