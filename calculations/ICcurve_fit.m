@@ -174,8 +174,8 @@ end
 
     function [fit_result, gof2] = flat_fit(doses, response)
         fitopt = fitoptions('Method','NonlinearLeastSquares',...
-            'Lower',max(.7,ranges(1,2)),...
-            'Upper',ranges(2,1),...
+            'Lower',ranges(1,2),...   % min Emax
+            'Upper',ranges(2,1),...   % max E0
             'Startpoint',priors(1));
         f = fittype('b+0*x','options',fitopt);
         [fit_result,gof2] = fit(doses', response',f);
