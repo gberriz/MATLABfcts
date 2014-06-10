@@ -4,7 +4,10 @@ function ExportProtocol_D300( base_filename, experiment )
 %   EXPORTPROTOCOL_D300( filename, experiment) writes the plate maps
 %   defined in experiment to filename + '.hpdd'.
 %
-%   experiment is a struct array (name, plate_map).
+%   experiment is a struct array (name, plate_map, backfill).
+%
+%   backfill is optional otherwise 16x24 boolean matrix;
+%       default is 'all wells are backfilled'. 
 %
 %   Units:
 %
@@ -90,6 +93,15 @@ for plate_num = 1:length(experiment)
                         'Plate %d is not 24x16=384 wells', plate_num);
         throw(me);
     end
+    % Verify that backfill maps are 24x16 (384) wells if it exists. If we have to
+    % support different plate types in the future this would need to be
+    % changed.
+    if isfield(experiment, 'backfill') && ...
+            ~all(size(experiment(plate_num).backfill) == [16 24])
+        me = MException('ExportProtocol_D300:backfill_size_mismatch', ...
+                        'Backfill for plate %d is not 24x16=384 wells', plate_num);
+        throw(me);
+    end
     % TODO check that plate_map.well_volume values are identical
     plate = document.createElement('Plate');
     plates.appendChild(plate);
@@ -146,11 +158,14 @@ for plate_num = 1:length(experiment)
     plate_id = int2str(plate_num - 1);
     for row = 1:16
         for column = 1:24
-            well = document.createElement('Well');
-            wells.appendChild(well);
-            well.setAttribute('P', plate_id);
-            well.setAttribute('R', int2str(row - 1));
-            well.setAttribute('C', int2str(column - 1));
+            if ~isfield(experiment, 'backfill') || ...
+                    experiment(plate_num).backfill(row,column)
+                well = document.createElement('Well');
+                wells.appendChild(well);
+                well.setAttribute('P', plate_id);
+                well.setAttribute('R', int2str(row - 1));
+                well.setAttribute('C', int2str(column - 1));
+            end
         end
     end
 end
