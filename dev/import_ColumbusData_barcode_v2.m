@@ -138,10 +138,10 @@ for iCL=1:length(CellLines)
     
     t_CL{iCL} = t_data(t_data.CellLine==CellLines{iCL},:);
     
-    for iR = unique(t_CL{iCL}.DesignNumber)'
-        not_measured = ~ismember(welllist, t_CL{iCL}.Well(t_CL{iCL}.DesignNumber==iR));
+    for iDe = unique(t_CL{iCL}.DesignNumber)'
+        not_measured = ~ismember(welllist, t_CL{iCL}.Well(t_CL{iCL}.DesignNumber==iDe));
         temp = cell2table([repmat(CellLines(iCL), sum(not_measured),1), ...
-            repmat({iR NaN NaN}, sum(not_measured),1) ...
+            repmat({iDe NaN NaN}, sum(not_measured),1) ...
             welllist(not_measured) num2cell(colrowlist(not_measured,:)) ...
             repmat({NaN}, sum(not_measured),1)], ...
             'variablenames', t_CL{iCL}.Properties.VariableNames);
@@ -149,50 +149,78 @@ for iCL=1:length(CellLines)
         t_CL{iCL} = [t_CL{iCL};temp];
     end
     
-    design_file = Barcode_table.TrtFile{find(strcmp(Barcode_table.CellLine,...
-        char(CellLines(iCL))) & Barcode_table.DesignNumber>0,1,'first')};
-    load([folder design_file])
-
-    temp = cellfun2(@(x) {x.name}, design);
-    Drugs{iCL} =  unique([temp{:}]);
-    
-    DrugDoses = NaN(height(t_CL{iCL}),length(Drugs{iCL}));
-    t_CL{iCL} = sortrows(t_CL{iCL},{'Replicate' 'Column' 'Row'});
-    for iR = setdiff(unique( t_CL{iCL}.Replicate), 0)'   
+    tempDrugs = {};
+    IsPrimary = {};
+    SingleDoses = {};
+    ComboDoses = {};
+    for iDe = find(Barcode_table.CellLine==CellLines(iCL) &...
+            Barcode_table.DesignNumber>0)'
         
-        design_file = Barcode_table.DesignFile{strcmp(Barcode_table.CellLine,...
-            char(CellLines(iCL))) & Barcode_table.Replicate==iR};
+        load([folder char(Barcode_table.TrtFile(iDe))])
         
-        load([folder design_file])
-    
-        assert(all(strcmp(Drugs{iCL}, {drugs_struct.name})))        
-        for iD=1:length(Drugs{iCL})
-            idx = sub2ind([16 24], t_CL{iCL}.Row(t_CL{iCL}.Replicate==iR & ~isnan(t_CL{iCL}.Cellcount)), ...
-                t_CL{iCL}.Column(t_CL{iCL}.Replicate==iR & ~isnan(t_CL{iCL}.Cellcount)) );
-            DrugDoses(t_CL{iCL}.Replicate==iR & ~isnan(t_CL{iCL}.Cellcount),iD) = ...
-                drugs_struct(iD).layout(idx);
+        temp = cellfun2(@(x) {x.name}, design(Barcode_table.DesignNumber(iDe)));
+        temp = temp{:};
+        for i=1:length(temp)
+            if ~ismember(temp{i}, tempDrugs)
+                tempDrugs =  [tempDrugs temp{i}];
+                if isfield(design{Barcode_table.DesignNumber(iDe)},'Primary')
+                    IsPrimary{end+1} = design{Barcode_table.DesignNumber(iDe)}.Primary;
+                end
+                SingleDoses{end+1} = design{Barcode_table.DesignNumber(iDe)}.SingleDoses;
+                
+                if isfield(design{Barcode_table.DesignNumber(iDe)},'Doses')
+                    ComboDoses{end+1} = design{Barcode_table.DesignNumber(iDe)}.Doses;
+                end
+                if isfield(design{Barcode_table.DesignNumber(iDe)},'ComboDoses')
+                    ComboDoses{end+1} = design{Barcode_table.DesignNumber(iDe)}.ComboDoses;
+                end
+            end
         end
     end
+    if isempty(IsPrimary) && isempty(ComboDoses)
+        Drugs{iCL} = struct('DrugName',MATLABsafename(ReducName(tempDrugs)), ...
+            'SingleDoses',SingleDoses);
+    elseif isempty(IsPrimary)
+        Drugs{iCL} = struct('DrugName',MATLABsafename(ReducName(tempDrugs)), ...
+            'SingleDoses',SingleDoses, ...
+            'ComboDoses', ComboDoses);
+    else        
+        Drugs{iCL} = struct('DrugName',MATLABsafename(ReducName(tempDrugs)), ...
+            'Primary',IsPrimary, ...
+            'SingleDoses',SingleDoses, ...
+            'ComboDoses', ComboDoses);
+    end
     
-    if isfield(drugs_struct,'Primary')
-        Drugs{iCL} = struct('DrugName',MATLABsafename(ReducName(Drugs{iCL})), ...
-            'Primary',{drugs_struct.Primary}, ...
-            'SingleDoses',{drugs_struct.SingleDoses});
-    else
-        Drugs{iCL} = struct('DrugName',MATLABsafename(ReducName(Drugs{iCL})), ...
-            'SingleDoses',{drugs_struct.SingleDoses});
-    end
-    if isfield(drugs_struct,'Doses')
-        for i=1:length(Drugs{iCL})
-            Drugs{iCL}(i).ComboDoses = drugs_struct(i).Doses;
+    
+    DrugDoses = zeros(height(t_CL{iCL}),length(tempDrugs));
+    t_CL{iCL} = sortrows(t_CL{iCL},{'DesignNumber' 'Column' 'Row'});
+    
+    for iDe = find(Barcode_table.CellLine==CellLines(iCL) &...
+            Barcode_table.DesignNumber>0)'
+         
+        
+        load([folder char(Barcode_table.TrtFile(iDe))])
+        
+        temp = cellfun2(@(x) {x.name}, design(Barcode_table.DesignNumber(iDe)));
+        temp = temp{:};
+        assert(all(ismember(temp, tempDrugs)))      
+        for iD=1:length(temp)
+            idx = sub2ind([16 24], t_CL{iCL}.Row(t_CL{iCL}.DesignNumber==iDe & ~isnan(t_CL{iCL}.Cellcount)), ...
+                t_CL{iCL}.Column(t_CL{iCL}.DesignNumber==iDe & ~isnan(t_CL{iCL}.Cellcount)) );
+            DrugDoses(t_CL{iCL}.DesignNumber==iDe & ~isnan(t_CL{iCL}.Cellcount), ...
+                strcmp(tempDrugs, design{Barcode_table.DesignNumber(iDe)}(iD).name)) = ...
+                design{Barcode_table.DesignNumber(iDe)}(iD).layout(idx);
         end
+        
+        
     end
+    
     
     CtrlIdx = all(DrugDoses==0,2);
-    for iR = setdiff(unique(t_CL{iCL}.Replicate), 0)'
+    for iDe = setdiff(unique(t_CL{iCL}.DesignNumber), 0)'
         % remove corner as control to avoid bias (only the case if more
         % than 20 controls overall (enough control remain)
-        CornerIdx = find(t_CL{iCL}.Replicate==iR & ...
+        CornerIdx = find(t_CL{iCL}.DesignNumber==iDe & ...
             ismember(t_CL{iCL}.Well,{'A1' 'A24' 'P1' 'P24'}));
         if all(CtrlIdx(CornerIdx)==1)
             CtrlIdx(CornerIdx)=0;
@@ -202,7 +230,7 @@ for iCL=1:length(CellLines)
     t_CL{iCL} = [t_CL{iCL} array2table([DrugDoses CtrlIdx], ...
         'VariableNames',{Drugs{iCL}.DrugName 'Ctrl'})];
         
-    t_CL{iCL} = sortrows(t_CL{iCL},{'Replicate' 'Column' 'Untrt' ...
+    t_CL{iCL} = sortrows(t_CL{iCL},{'DesignNumber' 'Column' 'Untrt' ...
         'Day0' 'Ctrl'});
 end
 
