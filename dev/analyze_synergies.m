@@ -52,8 +52,8 @@ else
     Ncols = length(Drugs)-1;
 end
 
-get_newfigure(fignum+1, [120 80 50+Ncols*150 40+200*Nrows], [CellLine '_RelCellCnt' figtag '.png'])
-get_newfigure(fignum+3, [400 380 50+Ncols*150 40+200*Nrows], [CellLine '_Bliss' figtag '.png'])
+get_newfigure(fignum+1, [120 80 50+Ncols*150 40+170*Nrows], [CellLine '_RelCellCnt' figtag '.png'])
+get_newfigure(fignum+3, [400 380 50+Ncols*150 40+170*Nrows], [CellLine '_Bliss' figtag '.png'])
 
 for iD = 1:size(ComboDidx,1)
     Doses1 = unique([0 Drugs(ComboDidx(iD,1)).ComboDoses]);
@@ -120,7 +120,7 @@ for iD = 1:size(ComboDidx,1)
         figure(fignum+iF)
         get_newaxes([.08+.1/Ncols+.91*(ComboDidx(iD,2)-min(ComboDidx(:,2)))/Ncols ...
             .06+.12/Nrows+.85*(ComboDidx(iD,1)-min(ComboDidx(:,1)))/Nrows ...
-            -.06+.8/Ncols -.09+.72/Nrows])
+            -.06+.85/Ncols -.09+.8/Nrows])
         
         if iF==1 % cell count
             clims = [.1 1.2];
