@@ -152,7 +152,7 @@ end
 t_CL_Trt_Design = sortrows(unique(t_data(t_data.DesignNumber>0,{'CellLine' 'TrtFile' 'DesignNumber'})));
     
 DrugDoses = zeros(height(t_data), length(DrugNames));
-CtrlIdx = false(height(t_data), 1);
+Ctrl = false(height(t_data), 1);
 
 for ix = extrafields
     eval([ix{:} '=zeros(height(t_data),1);']);
@@ -183,15 +183,16 @@ for iCTD = 1:height(t_CL_Trt_Design)
             ix{:} '(Layout_idx);']);
     end
     
-    tempCtrl = all(DrugDoses(data_idx,:)==0,2);
+    tempCtrl = false(16,24);
+    tempCtrl(Layout_idx) = all(DrugDoses(data_idx,:)==0,2);
     if sum(tempCtrl)>20
         tempCtrl(sub2ind([16 24], [1 1 16 16], [1 24 1 24])) = false;
     end
-    CtrlIdx(data_idx) = tempCtrl(Layout_idx);
+    Ctrl(data_idx) = tempCtrl(Layout_idx);
     
 end
 %%
-tempstr = 'CtrlIdx';
+tempstr = 'Ctrl';
 for ix = extrafields
     tempstr = [tempstr ',' ix{:}];
 end
