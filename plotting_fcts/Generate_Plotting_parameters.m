@@ -70,7 +70,11 @@ if isempty(Plotting_parameters)
     Plotting_parameters.Lightcolors(3,:) = ...
         min([1 1 1;(Plotting_parameters.colors(3,:)+.05).^.9]);
     
-    Plotting_parameters.ProfilesColorsIdx = [3 5 4];
+    Plotting_parameters.ProfilesColorsIdx = [5 4 3 3];
+    
+    Plotting_parameters.axes = {'fontsize',6};
+    Plotting_parameters.axislabel = {'fontsize',8,'fontweight','bold'};
+    Plotting_parameters.title = {'fontsize',10,'fontweight','bold'};
     
     clear iColorsInPlotting
 end
