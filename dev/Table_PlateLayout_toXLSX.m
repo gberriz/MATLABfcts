@@ -10,7 +10,7 @@ if ~exist('filename','var')
 end
 
 % find the different plates
-if ismember(t_layout.Properties.VariableNames,'Plate')
+if ismember('Plate',t_layout.Properties.VariableNames)
     PlateNames = unique(t_layout.Plate);
     nPlate = length(PlateNames);
 else
@@ -33,6 +33,11 @@ else
     error('Missing Well or column/Row labels')
 end
 
+% for iCol = setdiff(t_layout.Properties.VariableNames, {'Well' 'Column' 'Row' 'Plate'})
+%     if iscategorical(t_layout.(iCol{:}))
+%         t_layout.(iCol{:}) = cellstr(t_layout.(iCol{:}));
+%     end
+% end
 
 
 for iP = 1:nPlate
@@ -40,16 +45,13 @@ for iP = 1:nPlate
     output = cell(17,25);
     
     if ~isempty(PlateNames)
-        if isstr(PlateNames{iP})
+        if iscellstr(PlateNames)
             t_plate = t_layout(strcmp(t_layout.Plate,PlateNames{iP}),:);
             output{1,1} = PlateNames{iP};
         else
             t_plate = t_layout(t_layout.Plate==PlateNames(iP),:);
-            if isnumeric
-                output{1,1} = num2str(PlateNames(iP));
-            else
-                output{1,1} = char(PlateNames(iP));
-            end
+            
+            output{1,1} = sprintf('Plate %i', PlateNames(iP));
         end
     else
         output{1,1} = 'Plate layout';
@@ -88,23 +90,18 @@ for iP = 1:nPlate
             
         end
     end
+    sheet = output{1,1};
     
-    output
-    if ~exist('sheet','var')
-        
-        xlswrite(filename,output,'layout')
-        
-    else
-        if exist(filename, 'file')
-            [~,sheets] = xlsfinfo(filename);
-            if ismember(sheet, sheets)
-                fprintf('!! Deleting sheet %s in file %s\n', sheet, filename)
-                [~,~,dumb] = xlsread(filename, sheet);
-                xlswrite(filename, cell(size(dumb)), sheet);
-            end
+    if exist(filename, 'file')
+        [~,sheets] = xlsfinfo(filename);
+        if ismember(sheet, sheets)
+            fprintf('!! Deleting sheet %s in file %s\n', sheet, filename)
+            [~,~,dumb] = xlsread(filename, sheet);
+            xlswrite(filename, cell(size(dumb)), sheet);
         end
-        
-        xlswrite(filename, output, sheet)
     end
+    
+    xlswrite(filename, output, sheet)
+    
     
 end
