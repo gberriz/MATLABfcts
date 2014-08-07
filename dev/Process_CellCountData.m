@@ -70,10 +70,13 @@ for iP = 1:height(t_plate)
     t_processed = [t_processed; t_conditions];
     
     % collapse the replicates
-    t_mean = [t_mean
-        collapse(t_conditions, @mean, 'keyvars', [plate_keys cond_keys 'pert_type'], ...
-        'valvars', {'RelCellCnt' 'RelGrowth'})];
+    temp = collapse(t_conditions, @mean, 'keyvars', [plate_keys cond_keys 'pert_type'], ...
+        'valvars', {'RelCellCnt' 'RelGrowth'});
+    temp = innerjoin(temp, t_processed, 'keys', [plate_keys cond_keys 'pert_type'], ...
+        'rightvariables', setdiff(varnames(t_processed), [plate_keys cond_keys ...
+        {'pert_type' 'RelCellCnt' 'RelGrowth' 'Replicate' 'Ctrlcount' 'Day0Cnt'} varnames(temp)]));
     
+    t_mean = [t_mean; temp];
 end
 
 t_mean = sortrows(t_mean, [plate_keys cond_keys]);

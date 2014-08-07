@@ -1,5 +1,9 @@
 function t_out = TableToCategorical(t_in, varidx)
 % TableToCategorical(t_in, varidx)
+%   change the columns in category arrays.
+%       varidx is the columns to change (either Variablenames or indices)
+%       set varidx=0 for all columns
+%
 
 if isnumeric(varidx)
     if varidx==0

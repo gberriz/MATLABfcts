@@ -19,7 +19,7 @@ function t_data = Read_ColumbusData(filename, barcode_file)
 %           time (in hours)
 %
 
-t_raw = readtsv(filename);
+t_raw = tsv2table(filename);
 
 
 if length(unique(t_raw.NumberOfAnalyzedFields))>1    
@@ -38,7 +38,7 @@ t_raw = [cell2table(Code_date,'VariableName',{'Barcode' 'date'}) t_raw(:,2:end)]
 
 %%
 
-t_barcode = readtsv(barcode_file); 
+t_barcode = tsv2table(barcode_file); 
 
 assert(length(unique(t_raw.Barcode))>=height(t_barcode), ...
     'Found %i plates, but expected %i plates; missing %s', ...
