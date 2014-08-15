@@ -14,6 +14,6 @@ if i==1
     end
     fprintf('\n ');
 end
-if mod(i,max(floor(imax/5),4))==1,fprintf('|'),end
-if mod(i,max(floor(imax/50),2))==1,fprintf('.'),end
+if mod(i,max(floor(imax/5),2))==1,fprintf('|'),end
+if mod(i,ceil(imax/50))==0,fprintf('.'),end
 if i==imax,fprintf('|\n');end

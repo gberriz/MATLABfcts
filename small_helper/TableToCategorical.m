@@ -2,7 +2,7 @@ function t_out = TableToCategorical(t_in, varidx)
 % TableToCategorical(t_in, varidx)
 %   change the columns in category arrays.
 %       varidx is the columns to change (either Variablenames or indices)
-%       set varidx=0 for all columns
+%       set varidx=0 for all string columns
 %
 
 if isnumeric(varidx)
@@ -16,5 +16,9 @@ end
 t_out = t_in;
 
 for ivar = ToRow(varidx)
-    t_out.(ivar{:}) = categorical(t_out.(ivar{:}));
+    if ~isnumeric(t_out.(ivar{:})) && ~islogical(t_out.(ivar{:})) && ...
+            ~iscategorical(t_out.(ivar{:}));
+ivar{:}
+        t_out.(ivar{:}) = categorical(t_out.(ivar{:}));
+    end
 end

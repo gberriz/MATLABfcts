@@ -15,8 +15,8 @@ function t_data = Read_ColumbusData(filename, barcode_file)
 %           CellLine
 %           Treatmentfile (refer to a table or .mat with with the
 %               treatments on the plate - plate design) use   -   if untreated
-%           Replicate:  replicate (treatment)
-%           time (in hours)
+%           DesignNumber:  replicate (treatment)
+%           Time (in hours)
 %
 
 t_raw = tsv2table(filename);
@@ -51,11 +51,11 @@ PlateID = vertcat(url{:});
 PlateID = cellfun(@str2num,PlateID(:,end-1));
 
 CellLine = cell(height(t_raw),1);
-Barcodes = cell(height(t_raw),1);
+Barcode = cell(height(t_raw),1);
 Treatmentfile = cell(height(t_raw),1);
-Replicate = zeros(height(t_raw),1);
+DesignNumber = zeros(height(t_raw),1);
 Time = zeros(height(t_raw),1);
-
+Untrt = false(height(t_raw),1);
 cnt = 0;
 for iBC = 1:height(t_barcode)
     
@@ -65,10 +65,10 @@ for iBC = 1:height(t_barcode)
     assert(isempty(intersect(unique(PlateID(idx)), unique(PlateID(~idx)))))
     
     CellLine(idx) = t_barcode.CellLine(iBC);
-    Barcodes(idx) = t_barcode.Barcode(iBC);
+    Barcode(idx) = t_barcode.Barcode(iBC);
     Treatmentfile(idx) = t_barcode.Treatmentfile(iBC);
-    Replicate(idx) = t_barcode.Replicate(iBC);
-        
+    DesignNumber(idx) = t_barcode.DesignNumber(iBC);
+    Untrt(idx) = strcmp(t_barcode.Treatmentfile(iBC),'-');
     Time(idx) = t_barcode.Time(iBC);
     
     cnt = cnt+1;
@@ -80,19 +80,20 @@ if cnt<length(unique(PlateID))
     Usedidx = ~cell2mat(cellfun2(@isempty,CellLine));
     Treatmentfile = Treatmentfile(Usedidx);
     CellLine = CellLine(Usedidx);
-    Replicate = Replicate(Usedidx);
+    DesignNumber = DesignNumber(Usedidx);
     Untrt = Untrt(Usedidx);
     Time = Time(Usedidx);    
 else
     
     Usedidx = 1:height(t_raw);
 end
+DesignNumber(isnan(DesignNumber)) = 0;
 
 Untrt = cellfun(@(x) strcmp(x,'-') || isempty(x), Treatmentfile);
-assert(all(Replicate>0 | Untrt))
-assert(all(Time(~Untrt)>0))
+assert(all(DesignNumber>0 | Untrt), 'Some wells are not ''Untrt'' and don''t have a DesignNumber')
+assert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
 
-t_data = [table(CellLine,Treatmentfile,Replicate,Untrt,Time) t_raw(Usedidx, ...
+t_data = [table(CellLine,Treatmentfile,DesignNumber,Untrt,Time) t_raw(Usedidx, ...
     {'Well' 'Row' 'Column' 'Nuclei_NumberOfObjects' 'date'})];
 t_data.Properties.VariableNames{'Nuclei_NumberOfObjects'} = 'Cellcount';
 t_data = TableToCategorical(t_data,[1 2 6]);
