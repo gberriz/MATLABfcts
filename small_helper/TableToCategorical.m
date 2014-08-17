@@ -18,7 +18,6 @@ t_out = t_in;
 for ivar = ToRow(varidx)
     if ~isnumeric(t_out.(ivar{:})) && ~islogical(t_out.(ivar{:})) && ...
             ~iscategorical(t_out.(ivar{:}));
-ivar{:}
         t_out.(ivar{:}) = categorical(t_out.(ivar{:}));
     end
 end

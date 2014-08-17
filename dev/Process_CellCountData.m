@@ -16,9 +16,9 @@ function [t_mean, t_processed] = Process_CellCountData(t_data, plate_inkeys, con
 
 % assign and control the variables
 if exist('plate_inkeys','var')
-    plate_keys = unique([{'CellLine' 'Treatmentfile' 'Time'} plate_inkeys]);
+    plate_keys = unique([{'CellLine' 'Time'} plate_inkeys]);
 else
-    plate_keys = {'CellLine' 'Treatmentfile' 'Time'}; 
+    plate_keys = {'CellLine' 'Time'}; 
     plate_inkeys = {};
 end
 if exist('cond_inkeys','var')
@@ -39,7 +39,7 @@ EvaluateGI = any(t_data.Untrt & t_data.Time==0);
 
 % find the number of different of plates to merge and group them
 t_plate = unique(t_data(:,plate_keys));
-t_plate = t_plate(t_plate.Time~=0,:);
+t_plate = t_plate(t_plate.Time~=0,:)
 
 t_processed = table;
 t_mean = table;
@@ -83,8 +83,8 @@ for iP = 1:height(t_plate)
         'valvars', {'RelCellCnt' 'RelGrowth'});
     temp2 = unique(t_conditions(:, setdiff(varnames(t_conditions), ...
         {'pert_type' 'RelCellCnt' 'RelGrowth' 'DesignNumber' 'Ctrlcount' 'Day0Cnt' ...
-        'Untrt' 'Cellcount' 'date' 'Row' 'Column' 'Well'})));
-    temp = innerjoin(temp, temp2, 'keys', [plate_keys cond_keys ], ...
+        'Untrt' 'Cellcount' 'date' 'Row' 'Column' 'Well' 'Treatmentfile'})));
+    temp = innerjoin(temp, temp2, 'keys', [setdiff(plate_keys, plate_inkeys) cond_keys ], ...
         'rightvariables', setdiff(varnames(temp2), varnames(temp)));
     
     t_mean = [t_mean; temp];

@@ -21,6 +21,8 @@ addParameter(p, 'ytransform', @(x)x, @(x)isa(x,'function_handle'))
 addParameter(p, 'axischanges', @(x) set(x,'fontsize',6), @(x) isa(x,'function_handle'))
 addParameter(p, 'mean_SEM', true, @islogical)
 addParameter(p, 'plotcolors', Plotting_parameters.colors, @isnumeric)
+addParameter(p, 'xspacing', .03, @isnumeric)
+addParameter(p, 'yspacing', .07, @isnumeric)
 
 parse(p,varargin{:})
 p = p.Results;
@@ -47,9 +49,9 @@ t_fits = TableToCategorical(t_fits, {p.xplotkey, p.yplotkey, p.colorkey});
 nCols = length(xplotkeys);
 nRows = length(yplotkeys);
 
-xspacing = .03;
+xspacing = p.xspacing;
 axis_width = (1-(nCols+1)*xspacing)/nCols;
-yspacing = .07;
+yspacing = p.yspacing;
 axis_height = (1-(nRows+1)*yspacing)/nRows;
 
 for ixp=1:nCols

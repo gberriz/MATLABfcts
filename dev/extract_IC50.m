@@ -3,7 +3,7 @@ function t_fits = extract_IC50(t_data, keys, pcutoff)
 %%
 if ~exist('keys','var')
     keys = intersect(t_data.Properties.VariableNames, ...
-        {'CellLine' 'DrugName' 'Time' 'SeedingNumber'});
+        {'CellLine' 'DrugName' 'Time' 'SeedingNumber' 'date'});
 end
 
 if ~exist('pcutoff','var')
@@ -12,7 +12,7 @@ end
 fitopt.pcutoff = pcutoff;
 
 
-t_keys = unique(t_data(:,keys));
+t_keys = unique(t_data(:,keys))
 
 DoGI50 = ismember('RelGrowth', t_data.Properties.VariableNames);
 
