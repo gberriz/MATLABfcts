@@ -1,6 +1,21 @@
 classdef XMLElement < handle
     %DOMNode Convenient representation of an XML DOM node.
     %    This class imitates the key bits of Python's lxml.etree.Element.
+    % Example
+    %   % parse .xml into an XMLElement object
+    %   p = XMLElement.parse('protocol.hpdd');
+    %
+    %   % find first child element with matching tag 
+    %   fluids = p.find('Fluids');
+    %
+    %   % find *all* matching elements at any depth 
+    %   f_elts = fluids.iter('Fluid');
+    %
+    %   % print the text content of all fluids' "Name" element 
+    %   for i = 1:length(f_elts)
+    %       disp(f_elts(i).find('Name').text);
+    %   end
+
     
     properties (SetAccess = protected)
         tag = ''
