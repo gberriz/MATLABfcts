@@ -48,7 +48,7 @@ function t = readtsv(filename,varargin)
 %                          some large files.
 
 varargin = [{'Delimiter', '\t', 'FileType', 'text'} varargin];
-t = table.readFromFile(filename,varargin);
+t = shutup(@() table.readFromFile(filename,varargin));
 
 
 

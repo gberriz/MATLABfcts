@@ -38,10 +38,9 @@ DrugNames = cell(length(Drugstruct),1);
 stock_conc = cell(length(Drugstruct),1);
 DrugOrder = NaN(length(Drugstruct),1);
 
-% print the text content of all fluids' "Name" element
 for i = 1:length(Drugstruct)
     
-    % check for the proper ordering (further assuming
+    % check for the proper ordering (necessary for indexing)
     DrugOrder(i) = Drugstruct(1).attributes(strcmp({Drugstruct(1).attributes.name},'ID')).value+1;
     
     DrugNames{i} = Drugstruct(i).find('Name').text;
@@ -58,7 +57,8 @@ for i = 1:length(Drugstruct)
             Drugstruct(i).find('ConcentrationUnit').text)
     end
     
-    stock_conc{i} = str2double(Drugstruct(i).find('Concentration').text)*Concentration_conversion;
+    stock_conc{i} = str2double(Drugstruct(i).find('Concentration').text) ...
+        *Concentration_conversion;
     
 end
 
@@ -96,7 +96,8 @@ end
 for iP = 1:length(plates)
     plate_dims{iP} = [str2double(plates(iP).find('Rows').text) ...
         str2double(plates(iP).find('Cols').text)];
-    well_volume{iP} = str2double(plates(iP).find('AssayVolume').text)*volume_conversion;
+    well_volume{iP} = str2double(plates(iP).find('AssayVolume').text) ...
+        *volume_conversion;
     Barcode{iP} = plates(iP).find('Name').text;
     
     treated_wells{iP} = false(plate_dims{iP});
