@@ -48,7 +48,12 @@ function t = readtsv(filename,varargin)
 %                          some large files.
 
 varargin = [{'Delimiter', '\t', 'FileType', 'text'} varargin];
-t = shutup(@() table.readFromFile(filename,varargin));
+
+warning('off','MATLAB:codetools:ModifiedVarnames')
+warning('off', 'MATLAB:table:ModifiedVarnames')
+t = table.readFromFile(filename,varargin);
+warning('on','MATLAB:codetools:ModifiedVarnames')
+warning('on', 'MATLAB:table:ModifiedVarnames')
 
 
 

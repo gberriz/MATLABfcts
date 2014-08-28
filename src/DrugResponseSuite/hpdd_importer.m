@@ -70,7 +70,7 @@ Drugs = struct('DrugName',DrugNames, 'stock_conc',stock_conc, ...
 
 if any(~cellfun(@isempty, HMSLids))
     for i=1:length(Drugs)
-        Drugs(i).HMSLids = HMSLids{i};
+        Drugs(i).HMSLid = HMSLids{i};
     end
 end
 

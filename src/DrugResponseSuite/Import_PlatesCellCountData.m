@@ -12,15 +12,15 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo)
 %           - Well
 %           - NumberOfAnalyzedFields
 %           - Nuclei_NumberOfObjects
-%           note: cannot currently handle other columns
+%           note: currently is not checking for other column names
 %
 %   plateinfo should be a table (or the name of a tsv file) with headers:
 %           - Barcode
 %           - CellLine
 %           - TreatmentFile (refer to a table or .hpdd/.mat with with the
-%               plate design; use  -  if untreated)
+%               plate design; use  -  if untreated, 1 if tab-separated file)
 %           - DesignNumber (replicate or treatment design, mandatory for
-%               .mat or .hpdd treatment files)
+%               .mat or .hpdd treatment files; set to 1 for other files)
 %           - Time (in hours)
 %           - any Additional field with relevant plate properties to pass to the
 %               data (collagen, ...)
@@ -48,7 +48,7 @@ end
 
 fprintf('\nImporting from: %s\n', filename)
 %% load the cell count data
-t_raw = shutup(@() tsv2table(filename));
+t_raw = tsv2table(filename);
 
 % specific case of the output of Columbus: Results split into Barcode and
 % date
@@ -59,8 +59,7 @@ end
 % check the number of fields
 if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
-    fprintf('\tWarning: %i wells with missing fields\n', ...
-        sum(t_raw.NumberOfAnalyzedFields<Nref))
+    warnprintf('%i wells with missing fields', sum(t_raw.NumberOfAnalyzedFields<Nref))
     for i = find(t_raw.NumberOfAnalyzedFields~=Nref)'
         t_raw.Nuclei_NumberOfObjects(i) = t_raw.Nuclei_NumberOfObjects(i)*...
             (Nref/t_raw.NumberOfAnalyzedFields(i));
@@ -85,7 +84,7 @@ otherVariables = setdiff(varnames(t_plateinfo), {'Time' 'CellLine' 'Barcode' ...
 if ismember('Untrt', otherVariables)
     if ~all(strcmp(t_plateinfo.TreatmentFile(t_plateinfo.Untrt>0),'-')) || ...
             ~all(t_plateinfo.Untrt(strcmp(t_plateinfo.TreatmentFile,'-'))>0)
-        warning('Discrepency between TreatmentFile==''-'' and Untrt; Overwriting TreatmentFile')
+        warnprintf('Discrepency between TreatmentFile==''-'' and Untrt; Overwriting TreatmentFile')
         t_plateinfo.TreatmentFile(t_plateinfo.Untrt>0) = {'-'};
     end
     t_plateinfo.Untrt = [];
@@ -109,13 +108,19 @@ for iBC = 1:height(t_plateinfo)
     CellLine(idx) = t_plateinfo.CellLine(iBC);
     Barcode(idx) = t_plateinfo.Barcode(iBC);
     TreatmentFile(idx) = t_plateinfo.TreatmentFile(iBC);
-    if ~isempty(strfind(t_plateinfo.TreatmentFile{iBC}, '.mat')) || ...
-            isvariable(t_plateinfo,'DesignNumber')
+    [~,~,ext] = fileparts(t_plateinfo.TreatmentFile{iBC});
+    
+    if (strcmp(ext,'.mat') || strcmp(ext,'.hpdd'))
         assert(isvariable(t_plateinfo,'DesignNumber'), ...
-            'Treatment files .mat needs a DesignNumber column')
+            'Treatment files .mat or .hpdd needs a DesignNumber column')
         DesignNumber(idx) = t_plateinfo.DesignNumber(iBC);
-    else
-        DesignNumber(idx) = NaN;
+    elseif ~isempty(ext) % assume a tab-separated file
+        if isvariable(t_plateinfo,'DesignNumber') && ...
+                (t_plateinfo.DesignNumber(iBC)~=1 || ...
+                ~isnan(t_plateinfo.DesignNumber(iBC)))
+            warnprintf('for tab-separated file, DesignNumber is forced to be 1')
+        end
+        DesignNumber(idx) = 1;
     end
     Untrt(idx) = strcmp(t_plateinfo.TreatmentFile(iBC),'-');
     Time(idx) = t_plateinfo.Time(iBC);
@@ -161,7 +166,7 @@ assert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
 t_data = [table(CellLine,TreatmentFile,DesignNumber,Untrt,Time) ...
     t_raw(Usedidx, {'Well' 'Row' 'Column' 'Nuclei_NumberOfObjects' 'Date'})];
 if ~isempty(otherVariables)
-    fprintf(['\tAdded variable(s) ''' cellstr2str(otherVariables, ''', ''') '''\n'])
+    fprintf(['\tAdded variable(s): ''' cellstr2str(otherVariables, ''', ''') '''\n'])
     eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
 end
 t_data.Properties.VariableNames{'Nuclei_NumberOfObjects'} = 'Cellcount';

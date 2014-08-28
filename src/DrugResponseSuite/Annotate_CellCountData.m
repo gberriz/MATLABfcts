@@ -1,95 +1,122 @@
-function t_annotated = AddTreatmentData(t_data, folder, fields)
-%
+function t_annotated = Annotate_CellCountData(t_data, folder, fields)
+% t_annotated = Annotate_CellCountData(t_data, folder, fields)
 %
 %   annotate the data using the treatment files
 %   adding the fields: 
 %       - DrugName    (assuming only one drug per well)
 %       - Conc
-%       - any additional fields as given in input varaible 'fields' (by
-%           default all 'Perturbations' in the array of structures Design)
+%       - selected additional fields as given in input varaible 'fields' (by
+%           default ALL 'Perturbations' in the array of structures Design)
 %
 %   variable folder is to specify where the TreatmentFiles are stored.
 %
 
 
-if ~exist('folder','var')
+if ~exist('folder','var') || isempty(folder)
     folder = '';
 end
 
-%%
+%% import all treatment files and read the designs
 Trtfiles = setdiff(cellstr(unique(t_data.TreatmentFile)),'-');
 
-Ndrugs = 1;
-Perturbations = {};
-% check for the treatment files
+Designs = cell(length(Trtfiles),1);
 for iTf = 1:length(Trtfiles)
     assert(exist(fullfile(folder, Trtfiles{iTf}), 'file')>0, ...
         'Treatment file %s missing in folder %s', Trtfiles{iTf}, folder)
     [~,~,ext] = fileparts(Trtfiles{iTf});
     
     if strcmp(ext,'.mat')
-        design_vars = load(fullfile(folder, Trtfiles{iTf}));
-        Design = design_vars.Design;
+        temp = load(fullfile(folder, Trtfiles{iTf}));
+        Designs{iTf} = temp.Design;
     elseif strcmp(ext,'.hpdd')
-        Design = hpdd_importer(hpdd_filename);
+        Designs{iTf} = hpdd_importer(hpdd_filename);
     else
-        tsv2table(fullfile(folder, Trtfiles{iTf}));
-        continue
-    end
-    
-    for iD=1:size(Design)
-        % check for the number of drugs in the same well
-        DrugConc = reshape([Design(iD).Drugs.layout], [Design(iD).plate_dims ...
-            length(Design(iD).Drugs)]);
-        if any(any(sum(DrugConc>0,3)>Ndrugs))
-            Ndrugs = max(max(sum(DrugConc>0,3)));
-            warning('some wells have %i drugs, additional columns in output', ...
-                Ndrugs)            
-        end
-        
-        if isfield(Design(iD), 'Perturbations')
-            Perturbations = unique([Perturbations {Design(iD).Perturbations.Name}], 'stable');
+        try % assume a tsv file
+            Designs{iTf} = TextDesignFile_importer(fullfile(folder, Trtfiles{iTf}));
+        catch err
+            error(['Expecting a .mat, .hpdd or a formated tab-separated ' ...
+                'file as TreatmentFile\nError : %s'], err)
         end
     end
     
 end
+
+%% look up all the drugs and perturbations in the designs
+
+Ndrugs = 1;
+Perturbations = {};
+DrugNames = {};
+t_HMSLids = table;
+allDesigns = [Designs{:}];
+for iD=1:size(allDesigns)
+    % check for multiple drugs in the same well
+    DrugConc = reshape([allDesigns(iD).Drugs.layout], [allDesigns(iD).plate_dims ...
+        length(allDesigns(iD).Drugs)]);
+    DrugNames = unique([DrugNames {allDesigns(iD).Drugs.DrugName}],'stable');
+    if isfield(allDesigns(iD).Drugs,'HMSLid')
+        t_HMSLids = [ t_HMSLids; table({allDesigns(iD).Drugs.DrugName}', ...
+            {allDesigns(iD).Drugs.HMSLid}','VariableNames', {'DrugName' 'HMSLid'})];
+    end
+    if any(any(sum(DrugConc>0,3)>Ndrugs))
+        Ndrugs = max(max(sum(DrugConc>0,3)));
+        warnprintf('some wells have %i drugs, additional columns in output', ...
+            Ndrugs)
+    end
     
+    % store all possible perturbations
+    if isfield(allDesigns(iD), 'Perturbations')
+        Perturbations = unique([Perturbations {allDesigns(iD).Perturbations.Name}], 'stable');
+    end
+end
+t_HMSLids = unique(t_HMSLids);
+
+   
+%% declare the variables
+
 Conc = NaN(height(t_data),1);
 DrugName = repmat({''}, height(t_data),1);
+HMSLid = repmat({''}, height(t_data),1);
 
 % this is not the optimal way of storing multiple drugs because of the
 % hierarcy between DrugName and Conc as well as the redudancy and possible
 % swapping between Drug1 and Drug2 ; it makes matching between condition hard
-
 for iAD = 2:Ndrugs
-    eval(sprintf('Conc%i = Conc; DrugName%i = DrugName;', iAD, iAD))
+    eval(sprintf('Conc%i = Conc; DrugName%i = DrugName; HMSLid%i = HMSLid;', ...
+        iAD, iAD, iAD))
 end
 
 if exist('fields','var')
-    datafields = cell(1, length(fields));
+    assert(all(ismember(fields, Perturbations)), ...
+        'Not all ''fields'' found as perturbations in the design files')
 else
-    datafields = Perturbations;
+    fields = Perturbations;
 end
+datafields = cell(1, length(fields));
 
 
 %%
-if exist('fields','var')
-    warning('need better implementation of the design file')
-    
-    design_vars = load(fullfile(folder, Trtfiles{1}));
-    designs = design_vars.design;
-    idx = t_data.Treatmentfile=='-';
-    
-    LayoutIdx = sub2ind(size(designs{iD}(1).layout), t_data.Row(idx), t_data.Column(idx));
-    
-    for iF = 1:length(fields)
-        temp = designs{1}(1).(fields{iF})(LayoutIdx);
-        datafields{iF}(idx) = temp;
-    end
-end
+% if exist('fields','var')
+%     warning('need better implementation of the design file')
+%     
+%     temp = load(fullfile(folder, Trtfiles{1}));
+%     designs = temp.design;
+%     idx = t_data.Treatmentfile=='-';
+%     
+%     LayoutIdx = sub2ind(size(designs{iD}(1).layout), t_data.Row(idx), t_data.Column(idx));
+%     
+%     for iF = 1:length(fields)
+%         temp = designs{1}(1).(fields{iF})(LayoutIdx);
+%         datafields{iF}(idx) = temp;
+%     end
+% end
 
-for iTf = 1:length(Trtfiles)
-        
+for iTf = 1:length(Trtfiles)        
+    
+    Design = Designs{iTf};
+    
+    
+    
+    
     if ~isempty(strfind(Trtfiles{iTf}, '.tsv')) || ...
             ~isempty(strfind(Trtfiles{iTf}, '.txt'))
         % case of a .tsv file
@@ -107,8 +134,8 @@ for iTf = 1:length(Trtfiles)
     elseif ~isempty(strfind(Trtfiles{iTf}, '.mat'))
         % case of a MATLAB file with a structure 'design'
         
-        design_vars = load(fullfile(folder, Trtfiles{iTf}));
-        designs = design_vars.design;
+        temp = load(fullfile(folder, Trtfiles{iTf}));
+        designs = temp.design;
         
         DesignNumbers = setdiff(unique(t_data.DesignNumber),0);
         DesignNumbers = DesignNumbers(~isnan(DesignNumbers));
