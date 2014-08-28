@@ -61,7 +61,8 @@ for ixp=1:nCols
             yspacing*1.5+(nRows-iyp)*(axis_height+yspacing) axis_width axis_height],1,...
             'fontsize',6);
         
-        title([char(xplotkeys(ixp)) ' ' char(yplotkeys(iyp))])
+        title([p.xplotkey '=' AnyToString(xplotkeys(ixp)) '; ' ...
+            p.yplotkey '=' AnyToString(yplotkeys(iyp))])
 
         xvals = t_fits.(p.xaxiskey)(t_fits.(p.xplotkey)==xplotkeys(ixp) & ...
             t_fits.(p.yplotkey)==yplotkeys(iyp));
@@ -78,18 +79,18 @@ for ixp=1:nCols
             subt = sortrows(subt, p.xaxiskey);
 
             if ~p.mean_SEM
-            plot(subt.(p.xaxiskey), subt.(p.yaxiskey), '.-', ...
-                'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:))
+            h(iC) = plot(subt.(p.xaxiskey), subt.(p.yaxiskey), '.-', ...
+                'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
             else
                 y_mean = collapse(subt, @mean, 'keyvars', {p.xaxiskey}, 'valvars', {p.yaxiskey});
                 y_SEM = collapse(subt, @SEM,  'keyvars', {p.xaxiskey}, 'valvars', {p.yaxiskey});
                 if height(y_SEM) == height(subt)
-                    plot(subt.(p.xaxiskey), subt.(p.yaxiskey), '.-', ...
-                        'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:))
+                    h(iC) = plot(subt.(p.xaxiskey), subt.(p.yaxiskey), '.-', ...
+                        'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
                 else
-                    errorbar(y_mean.(p.xaxiskey), y_mean.(p.yaxiskey),...
+                    h(iC) = errorbar(y_mean.(p.xaxiskey), y_mean.(p.yaxiskey),...
                         y_SEM.(p.yaxiskey),'.-', ...
-                        'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:))
+                        'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
                 end
             end
         end
@@ -98,6 +99,11 @@ for ixp=1:nCols
         if iyp==nRows, xlabel(gca,p.xaxiskey,'fontweight','bold'), end
         if ixp==1, ylabel(gca, p.yaxiskey,'fontweight','bold'), end
 
+        if ixp==nCols && iyp==nRows
+            hl = legend(h, strcat(p.colorkey, '=', AnyToString(colorkeys)), ...
+                'fontsize',6, 'orientation', 'horizontal');
+            set(hl, 'position', [.01 .005 .98 .03])
+        end
     end
 end
 

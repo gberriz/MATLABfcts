@@ -12,7 +12,7 @@ end
 fitopt.pcutoff = pcutoff;
 
 
-t_keys = unique(t_data(:,keys))
+t_keys = unique(t_data(:,keys));
 
 DoGI50 = ismember('RelGrowth', t_data.Properties.VariableNames);
 

@@ -39,7 +39,7 @@ EvaluateGI = any(t_data.Untrt & t_data.Time==0);
 
 % find the number of different of plates to merge and group them
 t_plate = unique(t_data(:,plate_keys));
-t_plate = t_plate(t_plate.Time~=0,:)
+t_plate = t_plate(t_plate.Time~=0,:);
 
 t_processed = table;
 t_mean = table;

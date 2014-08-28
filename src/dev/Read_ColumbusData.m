@@ -64,7 +64,7 @@ Time = zeros(height(t_raw),1);
 Untrt = false(height(t_raw),1);
 cnt = 0;
 otherVariables = setdiff(varnames(t_barcode), {'Time' 'CellLine' 'Barcode' ...
-            'Treatmentfile' 'DesignNumber'});
+            'Treatmentfile' 'DesignNumber' 'ExpNumber'});
 for iBC = 1:height(t_barcode)
     
     idx = find(strcmp(t_raw.Barcode, t_barcode.Barcode{iBC}));

@@ -5,7 +5,7 @@ function fhandle = get_newfigure(number, position, varargin)
 %   further should be pairs of parameter/value as in set(gcf, ...)
 %
 
-if ~exist('position','var')
+if ~exist('position','var') || isempty(position)
     position = [100 80 600 450];
 end
 

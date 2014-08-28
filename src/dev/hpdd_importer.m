@@ -1,0 +1,196 @@
+function [Design, t_barcode] = hpdd_importer(hpdd_filename)
+% [Design, t_barcode] = hpdd_importer(hpdd_filename)
+%   Read a hpdd file and convert the information in an array of Design structure
+%   with standard fields for treatment. Convert the metadata in a table with 
+%   barcodes and corresponding treatment design.
+%
+%   hpdd_filename : path and file name to a treatment saved by the D300
+%   Design :        array of design structures with the following fields:
+%                       - plate_dims (plate dimension)
+%                       - treated_wells (wells treated with DMSO)
+%                       - well_volume (in uL)
+%                       - Drugs (structure with DrugName, HMSL_id, stock_conc
+%                           and layout - concentration given in uM)
+%   t_barcode :     table with columns:
+%                       - Barcode
+%                       - TreatmentFile (input)
+%                       - DesignNumber
+%
+
+%% get the data 
+
+protocol = XMLElement.parse(hpdd_filename);
+
+%% get the main fields of the xml structure and perform a few checks
+DMSObackfill = protocol.find('Backfills').iter('Backfill');
+plates = protocol.find('Plates').iter('Plate');
+Drugstruct = protocol.find('Fluids').iter('Fluid');
+
+% unit consistency
+assert(strcmp(protocol.find('ConcentrationUnit').text, ...
+    protocol.find('MolarityConcentrationUnit').text), ...
+    'Mismatch between the units for ''ConcentrationUnit'' and ''MolarityConcentrationUnit''');
+
+
+%% properties of the drugs 
+
+DrugNames = cell(length(Drugstruct),1);
+stock_conc = cell(length(Drugstruct),1);
+DrugOrder = NaN(length(Drugstruct),1);
+
+% print the text content of all fluids' "Name" element
+for i = 1:length(Drugstruct)
+    
+    % check for the proper ordering (further assuming
+    DrugOrder(i) = Drugstruct(1).attributes(strcmp({Drugstruct(1).attributes.name},'ID')).value+1;
+    
+    DrugNames{i} = Drugstruct(i).find('Name').text;
+    
+    % convert to uM for the stock concentration
+    if Drugstruct(i).find('ConcentrationUnit').text(1) == 'n' % nM
+        Concentration_conversion = 1e-3;
+    elseif Drugstruct(i).find('ConcentrationUnit').text(1) == 181 % uM
+        Concentration_conversion = 1;
+    elseif Drugstruct(i).find('ConcentrationUnit').text(1) == 'm' % mM
+        Concentration_conversion = 1e3;
+    else
+        error('Issue with the unit of the stock drug concentration: %s', ...
+            Drugstruct(i).find('ConcentrationUnit').text)
+    end
+    
+    stock_conc{i} = str2double(Drugstruct(i).find('Concentration').text)*Concentration_conversion;
+    
+end
+
+stock_conc = stock_conc(sortidx(DrugOrder,'ascend'));
+[DrugNames, HMSLids] = splitHMSLid(DrugNames(sortidx(DrugOrder,'ascend')));
+
+Drugs = struct('DrugName',DrugNames, 'stock_conc',stock_conc, ...
+    'layout', []);
+
+if any(~cellfun(@isempty, HMSLids))
+    for i=1:length(Drugs)
+        Drugs(i).HMSLids = HMSLids{i};
+    end
+end
+
+%% get the general properties of the plates
+
+plate_dims = cell(length(plates),1);
+treated_wells = plate_dims;
+well_volume = plate_dims;   % will be transformed in uL
+Barcode = plate_dims;
+treated_wells = plate_dims;
+
+
+if protocol.find('VolumeUnit').text(1) == 'n' % nL
+    volume_conversion = 1e-3;
+elseif protocol.find('VolumeUnit').text(1) == 181 % uL
+    volume_conversion = 1;
+else
+    error('Issue with the unit of the well volume: %s', ...
+        protocol.find('VolumeUnit').text)
+end
+
+
+for iP = 1:length(plates)
+    plate_dims{iP} = [str2double(plates(iP).find('Rows').text) ...
+        str2double(plates(iP).find('Cols').text)];
+    well_volume{iP} = str2double(plates(iP).find('AssayVolume').text)*volume_conversion;
+    Barcode{iP} = plates(iP).find('Name').text;
+    
+    treated_wells{iP} = false(plate_dims{iP});
+end
+    
+for iB = 1:length(DMSObackfill)
+    wells = DMSObackfill(iB).find('Wells').iter('Well');
+    for iW = 1:length(wells)
+        well = wells(iW);
+        row = str2double(well.get('R')) + 1;
+        col = str2double(well.get('C')) + 1;
+        iP = str2double(well.get('P')) + 1;
+        
+        assert(iP<=length(plates))
+        assert(row<=plate_dims{iP}(1))
+        assert(col<=plate_dims{iP}(2))
+        
+        treated_wells{iP}(row, col) = true;
+    end    
+end
+
+
+Design = struct('plate_dims', plate_dims, 'treated_wells', treated_wells, ...
+    'well_volume', well_volume, 'Drugs', Drugs);
+
+
+%% assign the concentration for each drug
+
+DMSOwarning = true;
+
+for iP = 1:length(plates)
+    
+    wells = plates(iP).find('Wells').iter('Well');
+    
+    for i=1:length(Design(iP).Drugs)
+        Design(iP).Drugs(i).layout = zeros(Design(iP).plate_dims);
+    end
+    usedDrug = false(length(Design(iP).Drugs), 1);
+    
+    for iW = 1:length(wells)
+        well = wells(iW);
+        row = str2double(well.get('Row')) + 1;
+        col = str2double(well.get('Col')) + 1;
+        
+        assert(row<=Design(iP).plate_dims(1))
+        assert(col<=Design(iP).plate_dims(2))
+        
+        fluids = well.iter('Fluid');
+        for iD = 1:length(fluids)
+            Didx = str2double(fluids(iD).get('ID'))+1;
+            assert(Didx>0 && Didx<=length(Design(iP).Drugs))
+            usedDrug(Didx) = true;
+            Design(iP).Drugs(Didx).layout(row, col) = str2double(fluids(iD).text);
+            if ~(Design(iP).treated_wells(row, col))
+                if DMSOwarning
+                    warning('Some wells have no DMSO backfill')
+                end
+                Design(iP).treated_wells(row, col) = true;
+            end
+        end
+    end
+    
+    % remove the drugs that are not used in that particular design
+    Design(iP).Drugs = Design(iP).Drugs(usedDrug);
+    assert(all(cellfun(@(x)any(any(x>0)), {Design(iP).Drugs.layout})))
+    
+end
+
+%% find the replicates and match the bar codes.
+
+DesignNumber = (1:length(Barcode))';
+DesignToRemove = false(length(Barcode),1);
+
+
+for iP = 2:length(plates)
+    for iP2 = 1:(iP-1)
+        if isequal(Design(iP2), Design(iP))
+            DesignToRemove(iP) = true;
+            DesignNumber(iP) = iP2;
+            break
+        end
+    end
+end
+
+DesignIdx = DesignNumber(~DesignToRemove);
+assert(all(ismember(DesignNumber, DesignIdx)))
+
+Design = Design(DesignIdx);
+DesignNumber = arrayfun(@(x) find(x==DesignIdx), DesignNumber);
+
+%% table with barcodes
+[~,fname,fext] = fileparts(hpdd_filename);
+TreatmentFile = repmat({[fname fext]}, length(plates),1);
+
+t_barcode = table(Barcode, TreatmentFile, DesignNumber);
+
+

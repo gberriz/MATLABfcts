@@ -80,6 +80,7 @@ for iTf = 1:length(Trtfiles)
         designs = design_vars.design;
         
         DesignNumbers = setdiff(unique(t_data.DesignNumber),0);
+        DesignNumbers = DesignNumbers(~isnan(DesignNumbers));
         for iD = DesignNumbers'
             idx = t_data.Treatmentfile==Trtfiles{iTf} & t_data.DesignNumber==iD;
             
