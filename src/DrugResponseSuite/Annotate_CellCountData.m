@@ -92,12 +92,9 @@ datafields = cell(1, length(fields));
 
 
 %%
-t_annotated = t_data(t_data.TreatmentFile=='-',:);
-
-%%%%% issue with the untreated plates ... needs to fill up the columns to
-%%%%% merge !!
 
 
+t_annotated = table;
 
 for iTf = 1:length(Trtfiles)        
     
@@ -118,6 +115,15 @@ for iTf = 1:length(Trtfiles)
     end
     
 end
+
+%%%%% issue with the untreated plates ... needs to fill up the columns to
+%%%%% merge !!
+NDrugs = sum(strfindcell(varnames(t_annotated),'DrugName')==1);
+Untrtidx = t_data.TreatmentFile=='-';
+pert_type = repmat({'Untrt'}, sum(Untrtidx),1);
+
+t_annotated = [t_annotated;
+    [t_data(Untrtidx,:) table( pert_type)];
     
 assert(height(t_annotated)==height(t_data), 'table went from %i to %i rows; check labels', ...
     height(t_data), height(t_annotated))
