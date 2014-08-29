@@ -20,8 +20,8 @@ function t_design = DrugDesignToTable(Design1, Perturbations, DrugOrder)
 %                   multiple drugs per well.
 %
 %   t_design :  table with the following columns:
-%                   - DrugName (and HMSLid)
 %                   - Well
+%                   - DrugName (and HMSLid)
 %                   - Conc (for concentration in uM)
 %               and annotation columns:
 %                   - DMSO (added to the treated_wells)
@@ -31,12 +31,15 @@ function t_design = DrugDesignToTable(Design1, Perturbations, DrugOrder)
 %                   - other perturbations (e.g. EGF/...)
 %                   - DrugName2/3/... and Conc2/3/... for multiple drugs per well
 %
+%               add the 'pert_type' if not present in Design1
+%
 
 
 %%
 [rows, cols] = find(Design1.treated_wells);
 Well = ConvertRowColToWells(rows, cols);
 
+% get all drugs and match the order
 DrugNames = {Design1.Drugs.DrugName};
 if exist('DrugOrder','var')
     [temp, order] = ismember(DrugOrder, DrugNames);
@@ -46,6 +49,7 @@ else
     order = 1:length(DrugNames);
 end
 
+% get all perturbations
 PertNames = {Design1.Perturbations.Name};
 if exist('Perturbations','var') && ~isempty(Perturbations)
     PertNames = intersect(Perturbations, PertNames, 'stable');
@@ -55,13 +59,15 @@ if exist('Perturbations','var') && ~isempty(Perturbations)
 end
 
 if isfield(Design1.Drugs,'HMSLid')
-    t_HMSLids = table({Design1.Drugs.DrugName}', {Design1.Drugs.HMSLid}', ...
+    t_HMSLids = table([{Design1.Drugs.DrugName} {'-'}]', [{Design1.Drugs.HMSLid} {'-'}]', ...
         'VariableNames', {'DrugName' 'HMSLid'});
+    t_HMSLids.HMSLid(cellfun(@isempty,t_HMSLids.HMSLid)) = {'-'};
 end
 
 %%
-Ndrugs = 1;
 
+% determine the number of Drug Columns
+Ndrugs = 1;
 DrugConc = reshape([Design1.Drugs(order).layout], ...
     [Design1.plate_dims length(DrugNames)]);
 if any(any(sum(DrugConc>0,3)>Ndrugs))
@@ -69,11 +75,58 @@ if any(any(sum(DrugConc>0,3)>Ndrugs))
     warnprintf('some wells have %i drugs, additional columns in output', ...
         Ndrugs)
 end
+% this is not the optimal way of storing multiple drugs because of the
+% hierarcy between DrugName and Conc as well as the redudancy and possible
+% swapping between Drug1 and Drug2 ; it makes matching between condition hard
 
-Conc = NaN(height(t_data),1);
-DrugName = repmat({''}, height(t_data),1);
+
+% set the table columns
+Conc = zeros(length(Well),1);
+DrugName = repmat({'-'}, length(Well),1);
+t_design = table(Well, DrugName, Conc);
 for iAD = 2:Ndrugs
-    eval(sprintf('Conc%i = Conc; DrugName%i = DrugName;', ...
-        iAD, iAD))
+    t_design = [t_design table(DrugName, Conc, 'VariableNames', ...
+        {sprintf('DrugName%i', iAD), sprintf('Conc%i', iAD)})];
 end
+
+
+% construct the drug columns
+for iW = 1:height(t_design)
+    Didx = find(DrugConc(rows(iW), cols(iW),:));
+    if isempty(Didx), continue, end
+        
+    for iD = 1:length(Didx)
+        t_design.(sprintf('DrugName%i', iD(iD>1))){iW} = DrugNames{Didx(iD)};
+        t_design.(sprintf('Conc%i', iD(iD>1)))(iW) =  DrugConc(rows(iW), cols(iW),Didx(iD));
+    end
+end
+
+% add the HMSLid if it exists
+if exist('t_HMSLids','var')
+    for iD = 1:Ndrugs
+        temp = join(t_design(:,sprintf('DrugName%i', iD(iD>1))), t_HMSLids, 'leftkeys', sprintf('DrugName%i', iD(iD>1)), ...
+            'rightkeys', 'DrugName', 'rightvariables', 'HMSLid');
+        idx = find(strcmp(varnames(t_design), sprintf('DrugName%i', iD(iD>1))));
+        t_design = [t_design(:,1:idx) varnames(temp(:,'HMSLid'),{sprintf('HMSLid%i', iD)}), ...
+            t_design(:,(idx+1):end)];
+    end
+    % correct the small trick to avoid having the same column name
+    t_design.Properties.VariableNames{'HMSLid1'} = 'HMSLid'; 
+end
+    
+% add the perturbation columns
+for iP = 1:length(PertNames)    
+    Pertvals = Design1.Perturbations(strcmp({Design1.Perturbations.Name}, ...
+        PertNames{iP})).layout(sub2ind(Design1.plate_dims, rows, cols));
+    
+    t_design = [t_design, table(Pertvals, 'VariableNames', PertNames(iP))];
+end
+
+if ~isvariable(t_design, 'pert_type')
+    pert_type = repmat({'trt_cp'}, height(t_design),1);
+    pert_type(t_design.Conc==0) = {'ctl_vehicle'};
+    t_design = [t_design table(pert_type)];
+end
+
+t_design = TableToCategorical(t_design, 0);
 
