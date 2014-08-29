@@ -50,12 +50,16 @@ else
 end
 
 % get all perturbations
-PertNames = {Design1.Perturbations.Name};
-if exist('Perturbations','var') && ~isempty(Perturbations)
-    PertNames = intersect(Perturbations, PertNames, 'stable');
-    if isempty(PertNames)
-        warnprintf('No perturbation found in Design that matches ''Perturbations''');
+if isfield(Design1, 'Perturbations')
+    PertNames = {Design1.Perturbations.Name};
+    if exist('Perturbations','var') && ~isempty(Perturbations)
+        PertNames = intersect(Perturbations, PertNames, 'stable');
+        if isempty(PertNames)
+            warnprintf('No perturbation found in Design that matches ''Perturbations''');
+        end
     end
+else
+    PertNames = {};
 end
 
 if isfield(Design1.Drugs,'HMSLid')
@@ -94,7 +98,7 @@ end
 for iW = 1:height(t_design)
     Didx = find(DrugConc(rows(iW), cols(iW),:));
     if isempty(Didx), continue, end
-        
+    
     for iD = 1:length(Didx)
         t_design.(sprintf('DrugName%i', iD(iD>1))){iW} = DrugNames{Didx(iD)};
         t_design.(sprintf('Conc%i', iD(iD>1)))(iW) =  DrugConc(rows(iW), cols(iW),Didx(iD));
@@ -111,11 +115,11 @@ if exist('t_HMSLids','var')
             t_design(:,(idx+1):end)];
     end
     % correct the small trick to avoid having the same column name
-    t_design.Properties.VariableNames{'HMSLid1'} = 'HMSLid'; 
+    t_design.Properties.VariableNames{'HMSLid1'} = 'HMSLid';
 end
-    
+
 % add the perturbation columns
-for iP = 1:length(PertNames)    
+for iP = 1:length(PertNames)
     Pertvals = Design1.Perturbations(strcmp({Design1.Perturbations.Name}, ...
         PertNames{iP})).layout(sub2ind(Design1.plate_dims, rows, cols));
     

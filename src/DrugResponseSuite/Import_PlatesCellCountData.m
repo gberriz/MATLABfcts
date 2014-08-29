@@ -12,7 +12,14 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo)
 %           - Well
 %           - NumberOfAnalyzedFields
 %           - Nuclei_NumberOfObjects
-%           note: currently is not checking for other column names
+%           note: currently is not checking for other column names or
+%           storing them
+%
+%   Alternatively, filename can be a Nx[1-2] cell array with a filename and
+%   corresponding barcode. Files will be read in order and if it is a Nx2
+%   array, barcode will be added while reading. Each file should have
+%   fields Well, NumberOfAnalyzedFields, Nuclei_NumberOfObjects, and a
+%   field Result/Barcode if a Nx1 array is provided.
 %
 %   plateinfo should be a table (or the name of a tsv file) with headers:
 %           - Barcode
@@ -35,7 +42,14 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo)
 
 
 %% check for proper inputs
-assert(exist(filename,'file')>0, 'File %s is missing!', filename)
+if ischar(filename)
+    assert(exist(filename,'file')>0, 'File %s is missing!', filename)
+else
+    assert(iscellstr(filename), 'Wrong type of input')
+    for i=1:size(filename,1)
+        assert(exist(filename{i,1},'file')>0, 'File %s is missing!', filename{i,1})
+    end
+end
 
 if ischar(plateinfo)
     assert(exist(plateinfo,'file'), 'Barcode file %s is missing!', plateinfo)
@@ -46,14 +60,56 @@ else
     error('Wrong argument for plateinfo')
 end
 
-fprintf('\nImporting from: %s\n', filename)
+CheckPlateInfo(t_plateinfo)
 %% load the cell count data
-t_raw = tsv2table(filename);
+
+if ischar(filename)
+    % case of a single file
+    fprintf('\nImporting from: %s\n', filename)
+    t_raw = tsv2table(filename);
+else
+    % case of a cell array (multiple files)
+    t_raw = table;
+    fprintf('\nImporting from: files\n')
+    for i=1:size(filename,1)
+        temp = tsv2table(filename{i,1});
+        fprintf('\t%s\n', filename{i,1});
+        
+        if size(filename,2)==2
+            % replace/ add the barcode
+            if any(isvariable(temp, {'Result' 'Barcode'}))
+                warnprintf(['Overwriting the Result/Barcode found in ' ...
+                    'the individual file with input filename(:,2)'])
+                if isvariable(temp, 'Barcode')
+                    temp(:,'Barcode') =[];
+                else
+                    temp(:,'Result') =[];
+                end
+            end
+            temp = [table(repmat(filename(i,2), height(temp),1), ...
+                'VariableName', {'Barcode'}) temp];
+        end
+        
+        t_raw = [t_raw; temp];
+        
+    end
+end
+
 
 % specific case of the output of Columbus: Results split into Barcode and
 % date
 if isvariable(t_raw, 'Result')
     t_raw = splitBarcodeDate(t_raw);
+end
+
+% correction of some variable names
+CorrectionVarNames = {
+    'WellName' 'Well'};
+for i=1:size(CorrectionVarNames,1)
+    if isvariable(t_raw, CorrectionVarNames{i,1})
+        t_raw.Properties.VariableNames{CorrectionVarNames{i,1}} = ...
+            CorrectionVarNames{i,2};
+    end
 end
 
 % check the number of fields
@@ -130,7 +186,7 @@ for iBC = 1:height(t_plateinfo)
         eval([otherVariables{i} '(idx) = t_plateinfo.' otherVariables{i} '(iBC);'])
     end
     
-    cnt = cnt+1;    
+    cnt = cnt+1;
 end
 
 % format properly the additional plate information from the plateinfo file
@@ -158,13 +214,13 @@ else
 end
 
 % Evaluate the untreated plates
-Untrt = cellfun(@(x) strcmp(x,'-') || isempty(x), TreatmentFile);
+Untrt = cellfun(@(x) strcmp(x,'-') || isempty(x), TreatmentFile) ;
 assert(~any(DesignNumber==0 & ~Untrt), 'Some wells are not ''Untrt'' and don''t have a DesignNumber')
 assert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
 
 % compile the finale table
 t_data = [table(CellLine,TreatmentFile,DesignNumber,Untrt,Time) ...
-    t_raw(Usedidx, {'Well' 'Row' 'Column' 'Nuclei_NumberOfObjects' 'Date'})];
+    t_raw(Usedidx, {'Well' 'Nuclei_NumberOfObjects'})];
 if ~isempty(otherVariables)
     fprintf(['\tAdded variable(s): ''' cellstr2str(otherVariables, ''', ''') '''\n'])
     eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
@@ -181,3 +237,20 @@ Code_date = regexp(t_raw.Result,' > ','split');
 Code_date = vertcat(Code_date{:});
 t_raw = [cell2table(Code_date,'VariableName',{'Barcode' 'Date'}) t_raw(:,2:end)];
 end
+
+function CheckPlateInfo(t_plateinfo)
+Infovars = {'Barcode' 'Time' 'CellLine' 'TreatmentFile' 'DesignNumber'};
+for i=1:length(Infovars)
+    assert(isvariable(t_plateinfo, Infovars{i}), 'Missing columns %s in the plate info',...
+        Infovars{i})
+end
+for i=1:height(t_plateinfo)
+    tf = t_plateinfo.TreatmentFile{i};
+    [~,n,e] = fileparts(tf);
+    assert(ismember(e, {'.mat' '.hpdd' '.tsv' '.txt'}) | strcmp(n,'-'), ...
+        'TreatmentFile should be a .mat, .hpdd, .txt, .tsv file of ''-'' for untreated')
+end
+end
+
+
+

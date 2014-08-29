@@ -20,16 +20,19 @@ end
 Trtfiles = setdiff(cellstr(unique(t_data.TreatmentFile)),'-');
 
 Designs = cell(length(Trtfiles),1);
+correct_barcode = Designs;
 for iTf = 1:length(Trtfiles)
     assert(exist(fullfile(folder, Trtfiles{iTf}), 'file')>0, ...
         'Treatment file %s missing in folder %s', Trtfiles{iTf}, folder)
     [~,~,ext] = fileparts(Trtfiles{iTf});
+    fprintf('\tLoading %s\n', Trtfiles{iTf})
     
     if strcmp(ext,'.mat')
         temp = load(fullfile(folder, Trtfiles{iTf}));
         Designs{iTf} = temp.Design;
-    elseif strcmp(ext,'.hpdd')
-        Designs{iTf} = hpdd_importer(hpdd_filename);
+    elseif strcmp(ext,'.hpdd')        
+        [Designs{iTf}, correct_barcode{iTf}] = hpdd_importer(fullfile(folder, Trtfiles{iTf}));
+        % because of redundant plates, barcodes have to be reassigned        
     else
         try % assume a tsv file
             Designs{iTf} = TextDesignFile_importer(fullfile(folder, Trtfiles{iTf}));
@@ -89,19 +92,32 @@ datafields = cell(1, length(fields));
 
 
 %%
-t_annotated = table;
+t_annotated = t_data(t_data.TreatmentFile=='-',:);
+
+%%%%% issue with the untreated plates ... needs to fill up the columns to
+%%%%% merge !!
+
+
 
 for iTf = 1:length(Trtfiles)        
     
     DesignNumbers = unique(t_data.DesignNumber(t_data.TreatmentFile==Trtfiles{iTf}));
-    
+    fprintf('Design %s:\n', Trtfiles{iTf} )
     for iDN = 1:length(DesignNumbers)        
-        t_design = DrugDesignToTable(Designs{iTf}(DesignNumbers(iDN)), fields, DrugNames);        
-        temp = join(t_data(t_data.TreatmentFile==Trtfiles{iTf} & ...
-            t_data.DesignNumber==DesignNumbers(iDN),:), t_design, 'keys', 'Well');
+        if ~isempty(correct_barcode{iTf})
+            DNidx = correct_barcode{iTf}.DesignNumber(DesignNumbers(iDN));
+            fprintf('\thpdd exp %i -> design %i\n', DesignNumbers(iDN), DNidx);
+        else
+            DNidx = iDN;
+        end
+        t_design = DrugDesignToTable(Designs{iTf}(DNidx), fields, DrugNames);        
+        idx = t_data.TreatmentFile==Trtfiles{iTf} & t_data.DesignNumber==DesignNumbers(iDN);
+        temp = join(t_data(idx,:), t_design, 'keys', 'Well');
+        assert(height(temp)==sum(idx))
         t_annotated = [t_annotated; temp];            
     end
     
 end
     
-assert(height(t_annotated)==height(t_data))
+assert(height(t_annotated)==height(t_data), 'table went from %i to %i rows; check labels', ...
+    height(t_data), height(t_annotated))
