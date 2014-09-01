@@ -1,7 +1,7 @@
 function [Design, t_barcode] = hpdd_importer(hpdd_filename)
 % [Design, t_barcode] = hpdd_importer(hpdd_filename)
 %   Read a hpdd file and convert the information in an array of Design structure
-%   with standard fields for treatment. Convert the metadata in a table with 
+%   with standard fields for treatment. Convert the metadata in a table with
 %   barcodes and corresponding treatment design.
 %
 %   hpdd_filename : path and file name to a treatment saved by the D300
@@ -17,7 +17,7 @@ function [Design, t_barcode] = hpdd_importer(hpdd_filename)
 %                       - DesignNumber
 %
 
-%% get the data 
+%% get the data
 
 protocol = XMLElement.parse(hpdd_filename);
 
@@ -32,7 +32,7 @@ assert(strcmp(protocol.find('ConcentrationUnit').text, ...
     'Mismatch between the units for ''ConcentrationUnit'' and ''MolarityConcentrationUnit''');
 
 
-%% properties of the drugs 
+%% properties of the drugs
 
 DrugNames = cell(length(Drugstruct),1);
 stock_conc = cell(length(Drugstruct),1);
@@ -102,11 +102,11 @@ for iP = 1:length(plates)
     
     treated_wells{iP} = false(plate_dims{iP});
 end
-    
+
 for iB = 1:length(DMSObackfill)
-    wells = DMSObackfill(iB).find('Wells').iter('Well');
-    for iW = 1:length(wells)
-        well = wells(iW);
+    Wells = DMSObackfill(iB).find('Wells').iter('Well');
+    for iW = 1:length(Wells)
+        well = Wells(iW);
         row = str2double(well.get('R')) + 1;
         col = str2double(well.get('C')) + 1;
         iP = str2double(well.get('P')) + 1;
@@ -116,7 +116,7 @@ for iB = 1:length(DMSObackfill)
         assert(col<=plate_dims{iP}(2))
         
         treated_wells{iP}(row, col) = true;
-    end    
+    end
 end
 
 
@@ -130,17 +130,37 @@ DMSOwarning = true;
 
 for iP = 1:length(plates)
     
-    wells = plates(iP).find('Wells').iter('Well');
+    Wells = plates(iP).find('Wells').iter('Well');
+    % randomization
+    randomized = ~isempty(plates(iP).find('Randomize'));
+    if randomized
+        rWells = plates(iP).find('Randomize').iter('Well');
+        assert(length(rWells)== ...
+            max(length(Wells),sum(treated_wells{iP}(:))))
+        Randomization = NaN(length(rWells),4);
+        for i=1:length(rWells)
+            assert(all(strcmp({rWells(i).attributes.name}, {'C' 'R' 'ToC' 'ToR'})))
+            Randomization(i,:) = cellfun(@str2double, {rWells(i).attributes.value});
+        end
+        Randomization = Randomization+1;
+    end
     
     for i=1:length(Design(iP).Drugs)
         Design(iP).Drugs(i).layout = zeros(Design(iP).plate_dims);
     end
     usedDrug = false(length(Design(iP).Drugs), 1);
     
-    for iW = 1:length(wells)
-        well = wells(iW);
+    for iW = 1:length(Wells)
+        well = Wells(iW);
         row = str2double(well.get('Row')) + 1;
         col = str2double(well.get('Col')) + 1;
+        
+        if randomized
+            idx = find(all(Randomization(:,3)==col & Randomization(:,4)==row,2));
+            assert(length(idx)==1)
+            col = Randomization(idx,1);
+            row = Randomization(idx,2);
+        end
         
         assert(row<=Design(iP).plate_dims(1))
         assert(col<=Design(iP).plate_dims(2))

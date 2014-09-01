@@ -2,7 +2,7 @@ function t_annotated = Annotate_CellCountData(t_data, folder, fields)
 % t_annotated = Annotate_CellCountData(t_data, folder, fields)
 %
 %   annotate the data using the treatment files
-%   adding the fields: 
+%   adding the fields:
 %       - DrugName    (assuming only one drug per well)
 %       - Conc
 %       - selected additional fields as given in input varaible 'fields' (by
@@ -30,9 +30,10 @@ for iTf = 1:length(Trtfiles)
     if strcmp(ext,'.mat')
         temp = load(fullfile(folder, Trtfiles{iTf}));
         Designs{iTf} = temp.Design;
-    elseif strcmp(ext,'.hpdd')        
+    elseif strcmp(ext,'.hpdd')
         [Designs{iTf}, correct_barcode{iTf}] = hpdd_importer(fullfile(folder, Trtfiles{iTf}));
-        % because of redundant plates, barcodes have to be reassigned        
+        % because of redundant plates, barcodes have to be reassigned
+        % barcode found in the hpdd files will overwrite other barcode
     else
         try % assume a tsv file
             Designs{iTf} = TextDesignFile_importer(fullfile(folder, Trtfiles{iTf}));
@@ -73,7 +74,7 @@ for iD=1:size(allDesigns)
 end
 t_HMSLids = unique(t_HMSLids);
 
-   
+
 %% declare the variables
 
 
@@ -96,34 +97,49 @@ datafields = cell(1, length(fields));
 
 t_annotated = table;
 
-for iTf = 1:length(Trtfiles)        
+for iTf = 1:length(Trtfiles)
     
     DesignNumbers = unique(t_data.DesignNumber(t_data.TreatmentFile==Trtfiles{iTf}));
     fprintf('Design %s:\n', Trtfiles{iTf} )
-    for iDN = 1:length(DesignNumbers)        
+    for iDN = 1:length(DesignNumbers)
         if ~isempty(correct_barcode{iTf})
             DNidx = correct_barcode{iTf}.DesignNumber(DesignNumbers(iDN));
+            assert(all(t_data.Barcode(t_data.DesignNumber==DesignNumbers(iDN))== ...
+                correct_barcode{iTf}.Barcode(DesignNumbers(iDN))), ...
+                'Mismatch between barcodes in the hpdd file and the DesignNumber')
             fprintf('\thpdd exp %i -> design %i\n', DesignNumbers(iDN), DNidx);
+            
         else
             DNidx = iDN;
         end
-        t_design = DrugDesignToTable(Designs{iTf}(DNidx), fields, DrugNames);        
+        t_design = DrugDesignToTable(Designs{iTf}(DNidx), fields, DrugNames);
         idx = t_data.TreatmentFile==Trtfiles{iTf} & t_data.DesignNumber==DesignNumbers(iDN);
         temp = join(t_data(idx,:), t_design, 'keys', 'Well');
         assert(height(temp)==sum(idx))
-        t_annotated = [t_annotated; temp];            
+        t_annotated = [t_annotated; temp];
     end
     
 end
 
-%%%%% issue with the untreated plates ... needs to fill up the columns to
-%%%%% merge !!
+% fill up the columns for the untreated plates before merging
 NDrugs = sum(strfindcell(varnames(t_annotated),'DrugName')==1);
 Untrtidx = t_data.TreatmentFile=='-';
 pert_type = repmat({'Untrt'}, sum(Untrtidx),1);
 
-t_annotated = [t_annotated;
-    [t_data(Untrtidx,:) table( pert_type)];
-    
+newvars = setdiff(varnames(t_annotated), [varnames(t_data) {'pert_type'}], 'stable');
+othervars = intersect(varnames(t_annotated), varnames(t_data), 'stable');
+
+temp = table;
+for iD=1:NDrugs
+    % add the HMSLid by default; it will be filtered afterwards
+    temp = [temp cell2table(repmat({'-'}, sum(Untrtidx),2), 'VariableName', ...
+        {sprintf('DrugName%i', iD(iD>1)), sprintf('HMSLid%i', iD(iD>1))}) ...
+        table(zeros(sum(Untrtidx),1), 'VariableName', {sprintf('Conc%i', iD(iD>1))})];
+end
+
+t_annotated = [
+    [t_data(Untrtidx,othervars) temp(:,newvars) table( pert_type)]
+    t_annotated(:,othervars) t_annotated(:,newvars)  t_annotated(:,'pert_type')];
+
 assert(height(t_annotated)==height(t_data), 'table went from %i to %i rows; check labels', ...
     height(t_data), height(t_annotated))

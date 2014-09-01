@@ -219,14 +219,14 @@ assert(~any(DesignNumber==0 & ~Untrt), 'Some wells are not ''Untrt'' and don''t 
 assert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
 
 % compile the finale table
-t_data = [table(CellLine,TreatmentFile,DesignNumber,Untrt,Time) ...
+t_data = [table(Barcode, CellLine, TreatmentFile, DesignNumber, Untrt, Time) ...
     t_raw(Usedidx, {'Well' 'Nuclei_NumberOfObjects'})];
 if ~isempty(otherVariables)
     fprintf(['\tAdded variable(s): ''' cellstr2str(otherVariables, ''', ''') '''\n'])
     eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
 end
 t_data.Properties.VariableNames{'Nuclei_NumberOfObjects'} = 'Cellcount';
-t_data = TableToCategorical(t_data,[1 2 6]);
+t_data = TableToCategorical(t_data,[1:3 7]);
 
 fprintf('\n')
 end

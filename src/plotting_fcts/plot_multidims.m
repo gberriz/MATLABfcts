@@ -73,6 +73,9 @@ for ixp=1:nCols
             subt = t_fits(t_fits.(p.xplotkey)==xplotkeys(ixp) & ...
                 t_fits.(p.yplotkey)==yplotkeys(iyp) & ...
                 t_fits.(p.colorkey)==colorkeys(iC),{p.xaxiskey p.yaxiskey});
+            if isempty(subt)
+                continue
+            end
 
             subt.(p.xaxiskey) = p.xtransform(subt.(p.xaxiskey));
             subt.(p.yaxiskey) = p.ytransform(subt.(p.yaxiskey));
