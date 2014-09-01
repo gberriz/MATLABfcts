@@ -2,7 +2,7 @@ function a = plot_multidims(t_fits, varargin)
 
 %  a = plot_multidims(t_fits, varargin)
 %       inputs: xplotkey, yplotkey, xaxiskey, yaxiskey, colorkey,
-%       xtransform, ytransform, axischanges, mean_SEM
+%       xtransform, ytransform, axischanges, mean_SEM, xspacing, yspacing
 %
 
 Generate_Plotting_parameters
