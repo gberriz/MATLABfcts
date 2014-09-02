@@ -1,26 +1,45 @@
-function h = get_subaxes(Nrows, Ncols, RowIdx, ColIdx, holded, offsets)
-% h = get_subaxes(Nrows, Ncols, RowIdx, ColIdx, holded, offsets)
+function h = get_subaxes(nRows, nCols, RowIdx, ColIdx, holded, varargin)
+% h = get_subaxes(Nrows, Ncols, RowIdx, ColIdx, holded, varargin)
 %   generate new axes such that it will fit (Nrows, Ncols) axes.
 %
 %   (Nrows, Ncols) are the number of rows and columns
 %   (RowIdx, ColIdx) are the indexes for row and column
 %
 %   holded is optional (default not hold)
-%   offsets is optional (default rather compact)
+%   optional fields are:
+%       - xspacing
+%       - yspacing
+%       - any name/parameter pairs valid as axis properties
 %
 
-if ~exist('holded','var')
+if ~exist('holded','var') || isempty(holded)
     holded = false;
 end
-if ~exist('offsets','var')
-    offsets = [.08 .9 .06 .91];
+
+p = inputParser;
+p.KeepUnmatched = true;
+addParameter(p, 'xspacing', .05, @isnumeric)
+addParameter(p, 'yspacing', .08, @isnumeric)
+
+parse(p,varargin{:})
+extra = p.Unmatched;
+p = p.Results;
+
+extravars = {};
+extrafields = fieldnames(extra);
+for i=1:length(extrafields)
+    extravars{2*i-1} = extrafields{i};
+    extravars{2*i} = extra.(extrafields{i});
 end
 
+xspacing = p.xspacing;
+axis_width = (1-(nCols+1)*xspacing)/nCols;
+yspacing = p.yspacing;
+axis_height = (1-(nRows+1)*yspacing)/nRows;
 
-temph = get_newaxes([offsets(1)+offsets(2)*(ColIdx-1)/Ncols ...
-    offsets(3)+offsets(4)*(RowIdx-1)/Nrows ...
-    -offsets(1)+(offsets(2)-.01)/Ncols ...
-    -offsets(3)+(offsets(4)-.01)/Nrows], holded);
+temph = get_newaxes([xspacing*1.5+(ColIdx-1)*(axis_width+xspacing) ...
+    yspacing*1.5+(nRows-RowIdx)*(axis_height+yspacing) axis_width axis_height],...
+    holded,extravars{:});
 
 if nargout>0
     h = temph;
