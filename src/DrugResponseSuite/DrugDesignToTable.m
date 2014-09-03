@@ -58,6 +58,7 @@ if isfield(Design1, 'Perturbations')
             warnprintf('No perturbation found in Design that matches ''Perturbations''');
         end
     end
+    fprintf('\tAdding perturbations: %s\n', strjoin(PertNames, ', '));
 else
     PertNames = {};
 end
@@ -108,7 +109,8 @@ end
 % add the HMSLid if it exists
 if exist('t_HMSLids','var')
     for iD = 1:Ndrugs
-        temp = join(t_design(:,sprintf('DrugName%i', iD(iD>1))), t_HMSLids, 'leftkeys', sprintf('DrugName%i', iD(iD>1)), ...
+        temp = join(t_design(:,sprintf('DrugName%i', iD(iD>1))), t_HMSLids, ...
+            'leftkeys', sprintf('DrugName%i', iD(iD>1)), ...
             'rightkeys', 'DrugName', 'rightvariables', 'HMSLid');
         idx = find(strcmp(varnames(t_design), sprintf('DrugName%i', iD(iD>1))));
         t_design = [t_design(:,1:idx) varnames(temp(:,'HMSLid'),{sprintf('HMSLid%i', iD)}), ...

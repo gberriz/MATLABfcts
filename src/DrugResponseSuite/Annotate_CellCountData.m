@@ -38,8 +38,9 @@ for iTf = 1:length(Trtfiles)
         try % assume a tsv file
             Designs{iTf} = TextDesignFile_importer(fullfile(folder, Trtfiles{iTf}));
         catch err
-            error(['Expecting a .mat, .hpdd or a formated tab-separated ' ...
-                'file as TreatmentFile\nError : %s'], err)
+            warnprintf(['expecting a .mat, .hpdd or a formated ' ...
+                'tab-separated file as TreatmentFile\n'])
+            rethrow(err)
         end
     end
     
@@ -113,33 +114,54 @@ for iTf = 1:length(Trtfiles)
             DNidx = iDN;
         end
         t_design = DrugDesignToTable(Designs{iTf}(DNidx), fields, DrugNames);
-        idx = t_data.TreatmentFile==Trtfiles{iTf} & t_data.DesignNumber==DesignNumbers(iDN);
-        temp = join(t_data(idx,:), t_design, 'keys', 'Well');
-        assert(height(temp)==sum(idx))
+        idx = find(t_data.TreatmentFile==Trtfiles{iTf} & t_data.DesignNumber==DesignNumbers(iDN));
+        [temp, ia] = innerjoin(t_data(idx,:), t_design, 'keys', 'Well');
+        if height(temp)<sum(idx)
+            warnprintf('Some wells (%s) have not annotations in file %s --> ignored', ...
+                strjoin(cellstr(unique(t_data.Well(idx(setdiff(1:length(idx),ia))))'),', '), ...
+                Trtfiles{iTf})
+        end
         t_annotated = [t_annotated; temp];
     end
     
 end
 
 % fill up the columns for the untreated plates before merging
-NDrugs = sum(strfindcell(varnames(t_annotated),'DrugName')==1);
 Untrtidx = t_data.TreatmentFile=='-';
-pert_type = repmat({'Untrt'}, sum(Untrtidx),1);
-
-newvars = setdiff(varnames(t_annotated), [varnames(t_data) {'pert_type'}], 'stable');
-othervars = intersect(varnames(t_annotated), varnames(t_data), 'stable');
-
-temp = table;
-for iD=1:NDrugs
-    % add the HMSLid by default; it will be filtered afterwards
-    temp = [temp cell2table(repmat({'-'}, sum(Untrtidx),2), 'VariableName', ...
-        {sprintf('DrugName%i', iD(iD>1)), sprintf('HMSLid%i', iD(iD>1))}) ...
-        table(zeros(sum(Untrtidx),1), 'VariableName', {sprintf('Conc%i', iD(iD>1))})];
+if any(Untrtidx)
+    NDrugs = sum(strfindcell(varnames(t_annotated),'DrugName')==1);
+    pert_type = repmat({'Untrt'}, sum(Untrtidx),1);
+    
+    newvars = setdiff(varnames(t_annotated), [varnames(t_data) {'pert_type'}], 'stable');
+    othervars = intersect(varnames(t_annotated), varnames(t_data), 'stable');
+    
+    temp = table;
+    for iD=1:NDrugs
+        % add the HMSLid by default; it will be filtered afterwards
+        temp = [temp cell2table(repmat({'-'}, sum(Untrtidx),2), 'VariableName', ...
+            {sprintf('DrugName%i', iD(iD>1)), sprintf('HMSLid%i', iD(iD>1))}) ...
+            table(zeros(sum(Untrtidx),1), 'VariableName', {sprintf('Conc%i', iD(iD>1))})];
+    end
+    
+    addvars = setdiff(newvars, varnames(temp));
+    for i=1:length(addvars)
+        %%% need to treat the case of SeedingNumber
+        if strcmp(newvars{i}, 'SeedingNumber')
+            error('Broadcasting of seeding number not implemented')
+        end
+        if isnumeric(t_annotated.(addvars{i}))
+            temp = [temp table(zeros(sum(Untrtidx),1), 'VariableName', addvars(i))];
+        else
+            temp = [temp cell2table(repmat({'-'}, sum(Untrtidx),1), ...
+                'VariableName', addvars(i))];
+        end
+    end
+    
+    
+    t_annotated = [
+        [t_data(Untrtidx,othervars) temp(:,newvars) table( pert_type)]
+        t_annotated(:,othervars) t_annotated(:,newvars)  t_annotated(:,'pert_type')];
 end
 
-t_annotated = [
-    [t_data(Untrtidx,othervars) temp(:,newvars) table( pert_type)]
-    t_annotated(:,othervars) t_annotated(:,newvars)  t_annotated(:,'pert_type')];
-
-assert(height(t_annotated)==height(t_data), 'table went from %i to %i rows; check labels', ...
+warnassert(height(t_annotated)==height(t_data), 'table went from %i to %i rows; check labels', ...
     height(t_data), height(t_annotated))

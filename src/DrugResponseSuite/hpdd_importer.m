@@ -132,7 +132,8 @@ for iP = 1:length(plates)
     
     Wells = plates(iP).find('Wells').iter('Well');
     % randomization
-    randomized = ~isempty(plates(iP).find('Randomize'));
+    randomized = ~isempty(plates(iP).find('Randomize')) & ...
+        ~isempty(plates(iP).find('Randomize').iter('Well'));
     if randomized
         rWells = plates(iP).find('Randomize').iter('Well');
         assert(length(rWells)== ...

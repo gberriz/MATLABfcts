@@ -10,6 +10,8 @@ elseif iscategorical(in)
     end
 elseif isnumeric(in)
     str = cellfun2(@num2str, num2cell(in));
+else
+    str = evalc('disp(in)');
 end
 
 if iscell(str) && isscalar(str)
