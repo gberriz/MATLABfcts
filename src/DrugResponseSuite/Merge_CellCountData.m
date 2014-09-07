@@ -15,7 +15,7 @@
 function [t_mean, t_processed] = Merge_CellCountData(t_annotated, plate_inkeys, cond_inkeys)
 
 %% assign and control the variables
-if exist('plate_inkeys','var')
+if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
     plate_keys = unique([{'CellLine' 'Time'} plate_inkeys]);
 else
     plate_keys = {'CellLine' 'Time'}; 
@@ -64,7 +64,7 @@ for iP = 1:height(t_plate)
     
     % found the control for treated plates (ctl_vehicle)
     t_ctrl = t_conditions(t_conditions.pert_type=='ctl_vehicle',:);
-    assert(height(t_ctrl)>0, 'No control found for %s', ...
+    assert(height(t_ctrl)>0, 'No control found for %s --> check ''pert_type''', ...
         strjoin(strcat(table2cellstr( t_plate(iP,:), 0)), '|'))
     
     t_ctrl = collapse(t_ctrl, @(x) trimmean(x,50), 'keyvars', ...
@@ -86,14 +86,17 @@ for iP = 1:height(t_plate)
     %%%%%%%%% corresponding replicates from different plates
     
     % collapse the replicates
-    temp = collapse(t_conditions, @mean, 'keyvars', [plate_keys cond_keys ], ...
+    temp = collapse(t_conditions, @mean, 'keyvars', [plate_keys cond_keys], ...
         'valvars', {'RelCellCnt' 'RelGrowth'});
+    ht = height(temp);
+    
     temp2 = unique(t_conditions(:, setdiff(varnames(t_conditions), ...
-        {'pert_type' 'RelCellCnt' 'RelGrowth' 'DesignNumber' 'Ctrlcount' 'Day0Cnt' ...
-        'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile'})));
+        {'pert_type' 'RelCellCnt' 'RelGrowth' 'DesignNumber' 'Ctrlcount' 'Day0Cnt' 'Barcode' ...
+        'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'})),'stable');
     temp = innerjoin(temp, temp2, 'keys', [setdiff(plate_keys, plate_inkeys) cond_keys ], ...
         'rightvariables', setdiff(varnames(temp2), varnames(temp)));
     
+    assert(height(temp)==ht, 'Some replicates have been merged accidentally, use ''cond_inkeys''')
     t_mean = [t_mean; temp];
 end
 

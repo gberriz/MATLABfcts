@@ -13,6 +13,8 @@ elseif isnumeric(in)
 elseif ischar(in)
     str = in;
     return
+else
+    str = evalc('disp(in)');
 end
 
 if iscell(str) && isscalar(str)

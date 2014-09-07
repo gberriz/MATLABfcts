@@ -28,6 +28,8 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo)
 %               plate design; use  -  if untreated, 1 if tab-separated file)
 %           - DesignNumber (replicate or treatment design, mandatory for
 %               .mat or .hpdd treatment files; set to 1 for other files)
+%           - Replicate (optional - to differentiate to plates with the same
+%               treatment file, and design number if .mat/.hpdd)
 %           - Time (in hours)
 %           - any Additional field with relevant plate properties to pass to the
 %               data (collagen, ...)
@@ -52,7 +54,7 @@ else
 end
 
 if ischar(plateinfo)
-    assert(exist(plateinfo,'file'), 'Barcode file %s is missing!', plateinfo)
+    assert(exist(plateinfo,'file')>0, 'Barcode file %s is missing!', plateinfo)
     t_plateinfo = tsv2table(plateinfo);
 elseif istable(plateinfo)
     t_plateinfo = plateinfo;
@@ -220,7 +222,7 @@ assert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
 
 % compile the finale table
 t_data = [table(Barcode, CellLine, TreatmentFile, DesignNumber, Untrt, Time) ...
-    t_raw(Usedidx, {'Well' 'Nuclei_NumberOfObjects'})];
+    t_raw(Usedidx, intersect({ 'Well' 'Nuclei_NumberOfObjects' 'Date'}, varnames(t_raw), 'stable'))];
 if ~isempty(otherVariables)
     fprintf(['\tAdded variable(s): ''' cellstr2str(otherVariables, ''', ''') '''\n'])
     eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
@@ -239,7 +241,7 @@ t_raw = [cell2table(Code_date,'VariableName',{'Barcode' 'Date'}) t_raw(:,2:end)]
 end
 
 function CheckPlateInfo(t_plateinfo)
-Infovars = {'Barcode' 'Time' 'CellLine' 'TreatmentFile' 'DesignNumber'};
+Infovars = {'Barcode' 'Time' 'CellLine' 'TreatmentFile'};
 for i=1:length(Infovars)
     assert(isvariable(t_plateinfo, Infovars{i}), 'Missing columns %s in the plate info',...
         Infovars{i})

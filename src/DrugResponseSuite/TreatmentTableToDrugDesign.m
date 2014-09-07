@@ -52,7 +52,7 @@ assert((plate_dims(2)/plate_dims(1))==1.5)
 treated_wells = false(plate_dims);
 treated_wells(sub2ind(plate_dims, rows, cols)) = true;
 
-if isvariable('DMSO', t_design)
+if isvariable(t_design, 'DMSO')
     idx = t_design.DMSO>0;
     treated_wells(sub2ind(plate_dims, rows(idx), cols(idx))) = ...
         true | treated_wells(sub2ind(plate_dims, rows(idx), cols(idx)));
@@ -131,10 +131,10 @@ for iP = 1:length(PertNames)
     end
     layouts{iP}(sub2ind(plate_dims, rows, cols)) = temp;    
 end
-Pertrubations = struct('Name',PertNames, 'layout', layouts);
+Perturbations = struct('Name',PertNames, 'layout', layouts);
 
 fprintf(['\tAdded perturbations(s): ''' cellstr2str(PertNames', ''', ''') '''\n'])
 %%
 
 Design =  struct('plate_dims', plate_dims, 'treated_wells', treated_wells, ...
-    'Pertrubations', Pertrubations, 'Drugs', Drugs);
+    'Perturbations', Perturbations, 'Drugs', Drugs);

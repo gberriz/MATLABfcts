@@ -20,6 +20,8 @@ p = inputParser;
 p.KeepUnmatched = true;
 addParameter(p, 'xspacing', .05, @isnumeric)
 addParameter(p, 'yspacing', .08, @isnumeric)
+addParameter(p, 'xshift', NaN, @isnumeric)
+addParameter(p, 'yshift', NaN, @isnumeric)
 
 parse(p,varargin{:})
 extra = p.Unmatched;
@@ -32,13 +34,18 @@ for i=1:length(extrafields)
     extravars{2*i} = extra.(extrafields{i});
 end
 
-xspacing = p.xspacing;
-axis_width = (1-(nCols+1)*xspacing)/nCols;
-yspacing = p.yspacing;
-axis_height = (1-(nRows+1)*yspacing)/nRows;
+if isnan(p.xshift)
+    p.xshift = 1.5*p.xspacing;
+end
+if isnan(p.yshift)
+    p.yshift = 1.2*p.yspacing;
+end
 
-temph = get_newaxes([xspacing*1.5+(ColIdx-1)*(axis_width+xspacing) ...
-    yspacing*1.5+(nRows-RowIdx)*(axis_height+yspacing) axis_width axis_height],...
+axis_width = (1-((nCols-.8)*p.xspacing+p.xshift))/nCols;
+axis_height = (1-((nRows-.3)*p.yspacing+p.yshift))/nRows;
+
+temph = get_newaxes([p.xshift+(ColIdx-1)*(axis_width+p.xspacing) ...
+    p.yshift+(nRows-RowIdx)*(axis_height+p.yspacing) axis_width axis_height],...
     holded,extravars{:});
 
 if nargout>0
