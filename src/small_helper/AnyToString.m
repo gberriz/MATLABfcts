@@ -10,6 +10,9 @@ elseif iscategorical(in)
     end
 elseif isnumeric(in)
     str = cellfun2(@num2str, num2cell(in));
+elseif ischar(in)
+    str = in;
+    return
 end
 
 if iscell(str) && isscalar(str)
