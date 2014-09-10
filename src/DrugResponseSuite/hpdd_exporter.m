@@ -60,8 +60,8 @@ for fluid_num = 1:length(fluid_data)
     fluid_ids(fluid_data(fluid_num).name) = id;
     fluid.setAttribute('ID', id);
     fluid.setAttribute('RelatedID', related_id);
-    % Convert concentration from millimolar to micromolar.
-    conc_micromolar = fluid_data(fluid_num).stock_conc * 1e3;
+    % Concentration shoudl be micromolar.
+    conc_micromolar = fluid_data(fluid_num).stock_conc;
     % Create fluid properties.
     create_text_children(fluid, ...
         {
@@ -77,22 +77,31 @@ end
 
 % Perform some checks on the Design data structures.
 for design_num = 1:length(Design)
-    % Verify that all plate maps are 24x16 (384) wells. If we have to
-    % support different plate types in the future this would need to be
-    % changed.
-    if ~all(cell2mat(cellfun2(@(x) all(size(x) == [16 24]), ...
-                              {Design(design_num).Drugs.layout})))
-        me = MException('ExportProtocol_D300:plate_size_mismatch', ...
-                        'Design %d is not 24x16=384 wells', design_num);
+    % Verify that all drug layout have the standard format
+    if size(unique(cell2mat(cellfun(@size,{Design(design_num).Drugs.layout}','uniformoutput',0)), ...
+            'rows'),1)>1
+        me = MException('ExportProtocol_D300:drug_layout_mismatch', ...
+                        'Design %d have different layout sizes for drugs', design_num);
         throw(me);
     end
-    % Verify that backfill maps are 24x16 (384) wells if it exists. If we have to
+    % Verify that all plate maps are standard format. If we have to
+    % support different plate types in the future this would need to be
+    % changed.
+    if (log2(size(Design(design_num).Drugs(1).layout,1))~=...
+            round(log2(size(Design(design_num).Drugs(1).layout,1)))) || ...
+            ((size(Design(design_num).Drugs(1).layout,2)/...
+            size(Design(design_num).Drugs(1).layout,1))~=1.5)
+        me = MException('ExportProtocol_D300:plate_size_mismatch', ...
+                        'Design %d is not a standard plate size', design_num);
+        throw(me);
+    end
+    % Verify that backfill maps are 16x24 (384) wells if it exists. If we have to
     % support different plate types in the future this would need to be
     % changed.
     if isfield(Design(design_num), 'treated_wells') && ...
-            ~all(size(Design(design_num).treated_wells) == [16 24])
+            ~all(size(Design(design_num).treated_wells) == size(Design(design_num).Drugs(1).layout))
         me = MException('ExportProtocol_D300:backfill_size_mismatch', ...
-                        'treated_wells for Design %d is not 24x16=384 wells', design_num);
+                        'treated_wells for Design %d is not matching drug layout', design_num);
         throw(me);
     end
 end
@@ -118,16 +127,16 @@ backfill.appendChild(backfill_wells);
 for plate_num = 1:height(t_barcode)
     plate = document.createElement('Plate');
     plates.appendChild(plate);
-    % Use barcode table's Replicate column as index into Design array.
-    cur_design = Design(t_barcode.Replicate(plate_num));
+    % Use barcode table's DesignNumber column as index into Design array.
+    cur_design = Design(t_barcode.DesignNumber(plate_num));
     plate_name = t_barcode.Barcode(plate_num);
     % Convert volume from microliters to nanoliters.
     volume_nanoliters = cur_design.well_volume * 1e3;
     create_text_children(plate, ...
         {
-        'PlateType'   'Default384';
-        'Rows'        int2str(16);
-        'Cols'        int2str(24);
+        'PlateType'   sprintf('Default%i', numel(cur_design.Drugs(1).layout));
+        'Rows'        int2str(size(cur_design.Drugs(1).layout,1));
+        'Cols'        int2str(size(cur_design.Drugs(1).layout,2));
         'Name'        plate_name;
         'AssayVolume' double2str(volume_nanoliters);
         'DMSOLimit'   double2str(0.02);
@@ -138,8 +147,8 @@ for plate_num = 1:height(t_barcode)
     );
     wells = document.createElement('Wells');
     plate.appendChild(wells);
-    for row = 1:16
-        for column = 1:24
+    for row = 1:size(cur_design.Drugs(1).layout,1)
+        for column = 1:size(cur_design.Drugs(1).layout,2)
             % Create main well/fluid elements for drug treatments.
             well = document.createElement('Well');
             well.setAttribute('Row', int2str(row - 1));
