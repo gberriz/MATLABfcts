@@ -1,8 +1,9 @@
-function a = plot_multidims(t_fits, varargin)
+function a = plot_multidims(t_data, varargin)
 
-%  a = plot_multidims(t_fits, varargin)
+%  a = plot_multidims(t_data, varargin)
 %       inputs: xplotkey, yplotkey, xaxiskey, yaxiskey, colorkey,
-%       xtransform, ytransform, axischanges, mean_SEM, xspacing, yspacing
+%       xtransform, ytransform, axischanges, mean_SEM, xspacing, yspacing,
+%       yval_lines
 %
 
 Generate_Plotting_parameters
@@ -23,26 +24,27 @@ addParameter(p, 'mean_SEM', true, @islogical)
 addParameter(p, 'plotcolors', Plotting_parameters.colors, @isnumeric)
 addParameter(p, 'xspacing', .03, @isnumeric)
 addParameter(p, 'yspacing', .07, @isnumeric)
+addParameter(p, 'yval_lines', [0 1], @isnumeric)
 
 parse(p,varargin{:})
 p = p.Results;
 
-xplotkeys = unique(t_fits.(p.xplotkey));
+xplotkeys = unique(t_data.(p.xplotkey));
 if strcmp(p.yplotkey, noyplot)
     yplotkeys = 1;
-    t_fits = [t_fits table(ones(height(t_fits),1), 'variablenames', {noyplot})];
+    t_data = [t_data table(ones(height(t_data),1), 'variablenames', {noyplot})];
 else
-    yplotkeys = unique(t_fits.(p.yplotkey));
+    yplotkeys = unique(t_data.(p.yplotkey));
 end
 if strcmp(p.colorkey, nocplot)
     colorkeys = 1;
-    t_fits = [t_fits table(ones(height(t_fits),1), 'variablenames', {nocplot})];
+    t_data = [t_data table(ones(height(t_data),1), 'variablenames', {nocplot})];
 else
-    colorkeys = unique(t_fits.(p.colorkey));
+    colorkeys = unique(t_data.(p.colorkey));
 end
 
 %
-t_fits = TableToCategorical(t_fits, {p.xplotkey, p.yplotkey, p.colorkey});
+t_data = TableToCategorical(t_data, {p.xplotkey, p.yplotkey, p.colorkey});
 
 %%
 
@@ -64,15 +66,18 @@ for ixp=1:nCols
         title([p.xplotkey '=' AnyToString(xplotkeys(ixp)) '; ' ...
             p.yplotkey '=' AnyToString(yplotkeys(iyp))])
 
-        xvals = t_fits.(p.xaxiskey)(t_fits.(p.xplotkey)==xplotkeys(ixp) & ...
-            t_fits.(p.yplotkey)==yplotkeys(iyp));
+        xvals = t_data.(p.xaxiskey)(t_data.(p.xplotkey)==xplotkeys(ixp) & ...
+            t_data.(p.yplotkey)==yplotkeys(iyp));
         xvals = p.xtransform(xvals);
-        plot([min(xvals(:)) max(xvals(:))], [0 0], '-', 'color', [.7 .7 .7])
+        for i=1:length(p.yval_lines)
+            plot([min(xvals(:)) max(xvals(:))], p.yval_lines(i)*[1 1], ...
+                '-', 'color', [.8 .8 .8])
+        end
                 
         for iC = 1:length(colorkeys)
-            subt = t_fits(t_fits.(p.xplotkey)==xplotkeys(ixp) & ...
-                t_fits.(p.yplotkey)==yplotkeys(iyp) & ...
-                t_fits.(p.colorkey)==colorkeys(iC),{p.xaxiskey p.yaxiskey});
+            subt = t_data(t_data.(p.xplotkey)==xplotkeys(ixp) & ...
+                t_data.(p.yplotkey)==yplotkeys(iyp) & ...
+                t_data.(p.colorkey)==colorkeys(iC),{p.xaxiskey p.yaxiskey});
             if isempty(subt)
                 continue
             end

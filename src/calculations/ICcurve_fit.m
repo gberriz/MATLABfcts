@@ -1,5 +1,5 @@
 %
-% function [xI50, Hill, Emax, Area, r2, EC50, fit_final, p, log, xI50_interval] = ...
+% function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, xI50_interval] = ...
 %     ICcurve_fit(Conc, Growth, fit_type, opt)
 %
 %   IC50 => Growth is relative to control (end/ctrl)
@@ -20,17 +20,17 @@
 %       - capped:   cap points with enhanced growth
 %
 
-function [xI50, Hill, Emax, Area, r2, EC50, fit_final, p, log, xI50_interval] = ...
+function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, xI50_interval] = ...
     ICcurve_fit(Conc, Growth, fit_type, opt)
 
 
-% parameters : E0 Emax EC50 HS (all in uM, in log10 domain)
-priors = [1 .1 1 2];
+% parameters : E0 Emax EC50 HS (all in uM)
+priors = [1 .1 median(Conc) 2];
 
 ranges = [
     .975 1.025  %E0
     0 1    %Emax
-    10.^[-4.5 1.5]  %E50
+    max(min(Conc)*1e-4,1e-7) min(max(Conc)*1e2, 1e3)  %E50
     .1 5    % HS
     ]';
 
@@ -65,7 +65,7 @@ switch fitting
         g = mean(Growth,2)';
     case 'individual'
         for i=1:size(Growth,2)
-            [xI50(i), Hill(i), Emax(i), Area(i), r2(i), fit_final{i}, p(i), log{i}] = ...
+            [xI50(i), Hill(i), Einf(i), Area(i), r2(i), fit_final{i}, p(i), log{i}] = ...
                 ICcurve_fit(Conc, Growth(:,i)', fit_type, opt);
         end
         return
@@ -82,6 +82,8 @@ end
 
 % remove the case of enhanced proliferation to avoid failure of F-test
 if capped 
+    Conc = Conc(~isnan(g));
+    g = g(~isnan(g));
     g = min(g, ranges(2,1));
 end
 
@@ -139,6 +141,7 @@ else
     end
     
 end
+Einf = 1-Emax;
 
 
 if plotting
@@ -168,7 +171,7 @@ end
             'Lower',ranges(1,:),...
             'Upper',ranges(2,:),...
             'Startpoint',priors);
-        f = fittype('b + (a-b) / ( 1 + (x/c).^d)','options',fitopt);
+        f = fittype('b + (a-b) ./ ( 1 + (x/c).^d)','options',fitopt);
         [fit_result,gof2] = fit(doses', response',f);
     end
 

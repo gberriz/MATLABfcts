@@ -1,4 +1,24 @@
 function t_fits = ExtractCurves_CellCountData(t_data, keys, pcutoff)
+% t_fits = ExtractCurves_CellCountData(t_data, keys, pcutoff)
+%   Sigmoidal fit on the drug response data (expect concentration in uM) to
+%   extract the following parameters:
+%       - IC50
+%       - Einf (effect -> = 0 if no drug response)
+%       - Hill
+%       - Area (not normalized)
+%       - EC50
+%   If the relative growth is measured, additional parameters are found:
+%       - GI50
+%       - GIinf
+%   All the outputs are saved in a table with annotations including drug
+%   concentrations and initial values.
+%
+%   keys are used for aggregation of the data; default are : CellLine,
+%   DrugName, Time, SeedingNumber, Date. 
+%
+%   pcutoff is the cutoff for the p-value of a F-test against a flat line.
+%
+
 
 %%
 if exist('keys','var')
@@ -31,19 +51,22 @@ for ik = 1:height(t_keys)
     %%
     subt = t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:);
     
+    if all(subt.Conc<1e-3) || all(subt.Conc>1e3)
+        warnprintf('Concentrations are expected in uM; fitopt have constraints')
+    end
     
-    [IC50, Hill, Emax, Area, r2, EC50, fit] = ...
+    [IC50, Hill, Einf, Area, r2, EC50, fit] = ...
         ICcurve_fit(subt.Conc, subt.RelCellCnt, 'IC50', fitopt);
     
-    t_temp = [t_keys(ik,:) table(IC50, Hill, Emax, Area, r2, EC50) ...
+    t_temp = [t_keys(ik,:) table(IC50, Hill, Einf, Area, r2, EC50) ...
         table({fit}, {subt.Conc'}, {subt.RelCellCnt'}, 'VariableNames', ...
         {'fit' 'Conc' 'RelCellCnt'})];
     
     if DoGI50
-        [GI50, ~, GImax, GIArea, GI_r2, ~, GI_fit] = ...
+        [GI50, ~, GIinf, GIArea, GI_r2, ~, GI_fit] = ...
             ICcurve_fit(subt.Conc, subt.RelGrowth, 'GI50', fitopt); 
         
-        t_temp = [t_temp table(GI50, GImax, GIArea, GI_r2) ...
+        t_temp = [t_temp table(GI50, GIinf, GIArea, GI_r2) ...
         table({GI_fit}, {subt.RelGrowth'}, 'VariableNames', {'GI_fit' 'RelGrowth'})];
     
     end
