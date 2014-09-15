@@ -1,17 +1,21 @@
-function plot_DrugDesing(Design)
+function plot_DrugDesing(Design, figurename)
 
+if ~exist('figurename','var')
+    figurename = '';
+end
 
 for iD = 1:length(Design)
     
-    get_newfigure(1e4+iD, [iD*50 20 700 600], 'Name', sprintf('Design #%i', iD))
+    get_newfigure(1e4+iD, [iD*50 20 700 600], sprintf('Design_%s_%i.pdf', figurename, iD), ...
+        'Name', sprintf('Design #%i', iD))
     
     nDisp = length(Design(iD).Drugs);
     if isfield(Design(iD), 'Perturbations')
         nDisp = nDisp + length(Design(iD).Perturbations);
     end
     
-    nCols = ceil(sqrt(nDisp));
-    nRows = ceil(nDisp/nCols);
+    nCols = ceil(sqrt(nDisp+1));
+    nRows = ceil((nDisp+1)/nCols);
     
     xspacing = .03;
     axis_width = (1-(nCols+1)*xspacing)/nCols;
@@ -75,6 +79,23 @@ for iD = 1:length(Design)
         end
         
     end
+    
+    get_newaxes(axespos(nCols, nRows),nCols*nRows,'fontsize',6);
+    
+    allDrugs = reshape([Design(iD).Drugs.layout], ...
+        [Design(iD).plate_dims length(Design(iD).Drugs)]);
+    ctrls = all(allDrugs==0,3)*1;
+    ctrls(~Design(iD).treated_wells) = NaN;
+    
+    imagesc(ctrls, DataRangeCap([.2 1]))
+    
+    title('Control wells','fontsize',8,'fontweight','bold')
+    
+    xlim([.5 Design(iD).plate_dims(2)+.5])
+    ylim([.5 Design(iD).plate_dims(1)+.5])
+    
+    set(gca,'ytick',1:2:16, 'yticklabel', cellfun(@(x) {char(x)},num2cell(65:2:80)),...
+        'xtick',1:3:30,'ydir','reverse')
     
 end
 

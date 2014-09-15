@@ -16,7 +16,7 @@ else
 end
 clf
 
-if length(varargin)==1 && mod(length(varargin),2)==1 && varargin{1}(end-3)=='.'
+if (length(varargin)==1 || mod(length(varargin),2)==1) && varargin{1}(end-3)=='.'
     varargin = ['filename' varargin];
 end
 

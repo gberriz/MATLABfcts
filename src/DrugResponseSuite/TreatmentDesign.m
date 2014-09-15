@@ -1,10 +1,10 @@
 function Designs = TreatmentDesign(DrugNames, HMSLids, SingleDoses, nReps, varargin)
-% Designs = TreatmentDesign(DrugNames, HMSLid, SingleDoses, Nreps, varargin)
+% Designs = TreatmentDesign(DrugNames, HMSLids, SingleDoses, nReps, varargin)
 %
 %   Produce randomized treatment desgins based on the specifications
 %
 %   DrugNames       label used to identify the drug
-%   HMSLid          corresponding HMSL id 
+%   HMSLid          corresponding HMSL id
 %   SingleDoses     cell array of doses vectors, order corresponds to
 %                       DrugNames, dispensed as a single agent
 %   nReps           Number of repeats (randomized replicates)
@@ -21,7 +21,7 @@ function Designs = TreatmentDesign(DrugNames, HMSLids, SingleDoses, nReps, varar
 %   edge_ctrl       default is true
 %   stock_conc      in uM, default is 1e4 (= 10mM)
 %   well_volume     in uL, default is 60 (for 384-well plates)
-%   plate_size      either [N of rows ,  N of columns] or [N of wells],
+%   plate_dims      either [N of rows ,  N of columns] or [N of wells],
 %                       default is [16 24]
 %   max_DMSOpct     maximum percent of DMSO dispensed (default 0.2%)
 %   min_volume      step volume dispensed (in uL, default is 2e-5)
@@ -41,7 +41,7 @@ addParameter(p,'Seed',1,  @(x) isscalar(x) && isnumeric(x));
 addParameter(p,'edge_ctrl',true, @(x) islogical(x) & isscalar(x));
 addParameter(p,'stock_conc',1e4, @(x) isvector(x) && isnumeric(x));     % in uM
 addParameter(p,'well_volume',60, @(x) isscalar(x) && isnumeric(x));       % in uL
-addParameter(p,'plate_size',[16 24], @(x) isvector(x) && isnumeric(x));
+addParameter(p,'plate_dims',[16 24], @(x) isvector(x) && isnumeric(x));
 
 % based on the specifications of the D300
 addParameter(p,'min_volume', 1.3e-5, @(x) isscalar(x) && isnumeric(x)); % minimum volume of 13pl (in uL)
@@ -51,7 +51,7 @@ addParameter(p,'max_DMSOpct', .2, @(x) isscalar(x) && isnumeric(x)); % maximum 0
 parse(p, varargin{:})
 p = p.Results;
 for i = {'ComboDoses' 'DrugPairs' 'Seed' 'edge_ctrl' 'stock_conc' ...
-        'well_volume' 'plate_size' 'min_volume' 'step_volume' 'max_DMSOpct'}
+        'well_volume' 'plate_dims' 'min_volume' 'step_volume' 'max_DMSOpct'}
     eval([i{:} ' = p.' i{:} ';'])
 end
 % avoid too high level of DMSO (max is 0.2%)
@@ -73,12 +73,12 @@ if length(stock_conc)==1
 end
 stock_conc = num2cell(ToColumn(stock_conc));
 
-if length(plate_size)==1
-    plate_size = sqrt(plate_size*[1/1.5 1.5]);
+if length(plate_dims)==1
+    plate_dims = sqrt(plate_dims*[1/1.5 1.5]);
 end
-assert(round(log2(plate_size(1)))==log2(plate_size(1)))
+assert(round(log2(plate_dims(1)))==log2(plate_dims(1)))
 
-nWells = prod(plate_size);
+nWells = prod(plate_dims);
 if well_volume<1e2 && nWells<100
     warnprintf('Default volume is %.0f set for 384-well plate; check if correct', ...
         well_volume)
@@ -94,14 +94,12 @@ end
 
 
 %% initialization
-s = RandStream('mt19937ar','Seed',Seed);
-RandStream.setGlobalStream(s);
 
 
 Drugs = struct('DrugName', DrugNames, 'HMSLid', ToColumn(HMSLids),...
-    'stock_conc', stock_conc, 'layout', zeros(plate_size));
-Designs = struct('plate_dims', repmat({plate_size}, nReps, 1), ...
-    'treated_wells', repmat({true(plate_size)}, nReps, 1), ...
+    'stock_conc', stock_conc, 'layout', zeros(plate_dims));
+Designs = struct('plate_dims', repmat({plate_dims}, nReps, 1), ...
+    'treated_wells', repmat({true(plate_dims)}, nReps, 1), ...
     'well_volume', repmat({well_volume}, nReps, 1), ...
     'Drugs', repmat({Drugs}, nReps, 1), 'Seed', num2cell(Seed-1+(1:nReps)'));
 
@@ -133,7 +131,7 @@ assert(ctrl_cnt>5, 'Too many well used (%i out of %i), need at least 6 control w
     nTreatments, nWells)
 
 
-fixedctrlpos = false(plate_size);
+fixedctrlpos = false(plate_dims);
 if edge_ctrl
     % specific position of the controls on the edges
     
@@ -141,16 +139,16 @@ if edge_ctrl
     
     if ctrl_cnt<14 % only 6 controls on the edge
         disp('Only 6 controls on the edge, would be better with at least 14 controls in total')
-        fixedctrlpos(round(1+((plate_size(1)-1)*(0:3))/3), round(1+((plate_size(2)-1)*(1:2))/3)) = true;
-        fixedctrlpos(round(1+(plate_size(1)-1)/2),round(1+(plate_size(2)*(0:3))/3)) = true;
+        fixedctrlpos(round(1+((plate_dims(1)-1)*(0:3))/3), round(1+((plate_dims(2)-1)*(1:2))/3)) = true;
+        fixedctrlpos(round(1+(plate_dims(1)-1)/2),round(1+(plate_dims(2)*(0:3))/3)) = true;
     else % 2 controls on each edge, 6 regularly spread in the middle.
-        fixedctrlpos(round(1+((plate_size(1)-1)*(0:3))/3), round(1+((plate_size(2)-1)*(1:2))/3)) = true;
-        fixedctrlpos(round(1+((plate_size(1)-1)*(1:2))/3), round(1+((plate_size(2)-1)*(0:3))/3)) = true;
+        fixedctrlpos(round(1+((plate_dims(1)-1)*(0:3))/3), round(1+((plate_dims(2)-1)*(1:2))/3)) = true;
+        fixedctrlpos(round(1+((plate_dims(1)-1)*(1:2))/3), round(1+((plate_dims(2)-1)*(0:3))/3)) = true;
     end
     
     if ctrl_cnt>=20 % put the corners as control (should be then discarded)
         fixedctrlpos([1 end], [1 end]) = true;
-    elseif ctrl_cnt > (prod(plate_size-1)+6) % remove all edges --> not treated
+    elseif ctrl_cnt > (prod(plate_dims-1)+6) % remove all edges --> not treated
         fixedctrlpos([1 end], :) = true;
         fixedctrlpos(:, [1 end]) = true;
         for iR=1:nReps
@@ -159,7 +157,7 @@ if edge_ctrl
         end
     end
 end
-assert(all(size(fixedctrlpos)==plate_size))
+assert(all(size(fixedctrlpos)==plate_dims))
 ctrlidx = find(fixedctrlpos);
 
 
@@ -200,7 +198,7 @@ for iR = 1:nReps
         Designs(iR).Drugs(iD).layout(order(1:nTreatments)) = allTreatments(iD,:);
     end
     
-    allDrugs = reshape([Designs(iR).Drugs.layout], [plate_size length(DrugNames)]);
+    allDrugs = reshape([Designs(iR).Drugs.layout], [plate_dims length(DrugNames)]);
     nDrugs = sum(allDrugs>0,3);
     assert(all(squeeze(sum(sum((allDrugs>0).*repmat(nDrugs==1,1,1,length(DrugNames)),2),1))==...
         cellfun(@length,SingleDoses)))
@@ -219,49 +217,4 @@ end
 end
 
 
-function new_Doses = round_Doses(old_Doses, nominal_conc, DName, tag, ...
-    min_volume, step_volume, max_volume, well_volume)
-    % adjust doses to match the specifications of the D300
-
-min_dose = nominal_conc *min_volume/well_volume;
-step_dose = nominal_conc *step_volume/well_volume;
-max_dose = nominal_conc *max_volume/well_volume;
-new_Doses = old_Doses;
-fprintf('Processing %s (%s doses):\n', DName, tag)
-if any(new_Doses<min_dose)
-    warnprintf('%i dose(s) below minimal conc (set to %.2g)', ...
-        sum(new_Doses<min_dose), min_dose);
-    new_Doses = max(new_Doses, min_dose);
-end
-if any(new_Doses>max_dose)
-    warnprintf('%i dose(s) above max conc (set to %.2g)', ...
-        sum(new_Doses>max_dose), max_dose);
-    new_Doses = min(new_Doses, max_dose);
-end
-if any( ((mod(new_Doses,step_dose)./new_Doses)>.02) & (new_Doses>1.02*min_dose) )
-    idx = ((mod(new_Doses,step_dose)./new_Doses)>.02) & (new_Doses>1.02*min_dose);
-    fprintf('\tNote: %i doses round down because more than 2%% difference\n', ...
-        sum(idx));
-    % case of the lowest doses
-    idx = (new_Doses<mean([min_dose, step_dose])) & (new_Doses>1.02*min_dose);
-    new_Doses(idx) = min_dose;
-    idx = (new_Doses>mean([min_dose, step_dose])) & (new_Doses<step_dose/1.02);
-    new_Doses(idx) = step_dose;    
-    % other cases
-    idx = ((mod(new_Doses,step_dose)./new_Doses)>.02) & (new_Doses>1.02*step_dose);
-    new_Doses(idx) = step_dose*round(new_Doses(idx)/step_dose);
-end
-if any(new_Doses~=old_Doses)
-    fprintf('\tChanged doses:')
-    for iDoses = ToRow(find(new_Doses~=old_Doses))
-        fprintf('\t%-7.2g', old_Doses(iDoses))
-    end
-    fprintf('\n\t    (%3i)  -->', sum(new_Doses~=old_Doses))
-    for iDoses = ToRow(find(new_Doses~=old_Doses))
-        fprintf('\t%-7.2g', new_Doses(iDoses))
-    end
-    fprintf('\n')
-end
-
-end
 

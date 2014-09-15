@@ -1,5 +1,5 @@
-function hpdd_exporter(base_pathname, Design, t_barcode)
-%HPDD_IMPORTER(hpdd_filename, Design)
+function hpdd_exporter(hpdd_filename, Design, t_barcode)
+%HPDD_IMPORTER(hpdd_filename, Design, t_barcode)
 %   Write an hpdd file based on array of Designs and a plate barcode table.
 %
 %   base_pathname : path and file name to a D300 protocol file ('.hpdd'
@@ -10,9 +10,10 @@ function hpdd_exporter(base_pathname, Design, t_barcode)
 %                       - well_volume (in uL)
 %                       - Drugs (structure with DrugName, HMSLid, stock_conc
 %                           and layout - concentration given in uM)
-%   t_barcode :     table with columns:
+%   t_barcode :     table (or file name to a tsv table) with columns:
 %                       - Barcode
-%                       - TreatmentFile (input)
+%                       - TreatmentFile (which should match the name where 
+%                           'Deisgn is saved')
 %                       - DesignNumber
 
 document = com.mathworks.xml.XMLUtils.createDocument('Protocol');
@@ -105,6 +106,14 @@ for design_num = 1:length(Design)
         throw(me);
     end
 end
+
+% load the table is a file name was passed
+if ischar(t_barcode)
+    t_barcode = tsv2table(t_barcode);
+else
+    assert(istable(t_barcode), ['Barcodes should be a table or a tsv file' ...
+        ' with columns Barcode, DesignNumber'])
+end
     
 % Create Plates container.
 plates = document.createElement('Plates');
@@ -186,7 +195,7 @@ for plate_num = 1:height(t_barcode)
     plate.appendChild(document.createElement('Randomize'));
 end
 
-xmlwrite([base_pathname '.hpdd'], document);
+xmlwrite([hpdd_filename '.hpdd'], document);
 
 end
 
