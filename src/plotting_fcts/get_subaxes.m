@@ -3,7 +3,9 @@ function h = get_subaxes(nRows, nCols, RowIdx, ColIdx, holded, varargin)
 %   generate new axes such that it will fit (Nrows, Ncols) axes.
 %
 %   (Nrows, Ncols) are the number of rows and columns
-%   (RowIdx, ColIdx) are the indexes for row and column
+%   (RowIdx, ColIdx) are the indexes for row and column ; if ColIdx=0, will
+%       behave as the MATLAB subplot (filling up each row one after
+%       another)
 %
 %   holded is optional (default not hold)
 %   optional fields are:
@@ -14,6 +16,11 @@ function h = get_subaxes(nRows, nCols, RowIdx, ColIdx, holded, varargin)
 
 if ~exist('holded','var') || isempty(holded)
     holded = false;
+end
+
+if ~exist('ColIdx','var') || isempty(ColIdx) || ColIdx==0
+    ColIdx = mod(RowIdx-1,nCols)+1;
+    RowIdx = ceil(RowIdx/nCols);
 end
 
 p = inputParser;
