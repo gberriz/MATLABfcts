@@ -54,7 +54,7 @@ end
 allActThreshold = [];
 allf_mod = [];
     
-if ~exist('ActThreshold','var')
+if ~exist('ActThreshold','var') || isempty(ActThreshold)
         optimThreshold = @(x) sum(x-allMOMPval(allMOMPval<x)) + sum(allSurval(allSurval>x)-x);
 %     optimThreshold = @(x) mean([allMOMPval<x allSurval>x]) + ...
 %         regularterm*(sum(x-allMOMPval(allMOMPval<x)) + sum(allSurval(allSurval>x)-x));
@@ -66,7 +66,7 @@ if ~exist('ActThreshold','var')
 elseif ActThreshold==-1
     ActThreshold = TRAIL_prop.allActThreshold;
     f_mod = TRAIL_prop.allf_mod;
-
+    allActThreshold = ActThreshold;
 else
     f_mod = @(x) 20+(.5*ActThreshold)./x;
 end
