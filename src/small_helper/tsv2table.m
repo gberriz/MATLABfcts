@@ -47,6 +47,13 @@ function t = readtsv(filename,varargin)
 %                          Specifying the format can significantly improve speed for
 %                          some large files.
 
+if ~isempty(varargin) && (any(strcmpi(varargin,'KeepQuote') || strcmpi(varargin,'KpQ')))
+    Rmq = false;
+    varargin = varargin(~strcmp(varargin,'KeepQuote') && ~strcmpi(varargin,'KpQ'));
+else
+    Rmq = true;
+end
+
 varargin = [{'Delimiter', '\t', 'FileType', 'text'} varargin];
 
 warning('off','MATLAB:codetools:ModifiedVarnames')
@@ -55,5 +62,14 @@ t = table.readFromFile(filename,varargin);
 warning('on','MATLAB:codetools:ModifiedVarnames')
 warning('on', 'MATLAB:table:ModifiedVarnames')
 
-
-
+if Rmq
+    for i=1:size(t,2)
+        if iscellstr(t.(i))
+            t.(i) = cellfun(@(x)x((x~='"') | [false true(1,length(x)-2) false]),...
+                t.(i),'uniformoutput',0);
+        end
+    end
+end
+    
+    
+    
