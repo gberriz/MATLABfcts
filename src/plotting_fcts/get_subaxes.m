@@ -29,6 +29,8 @@ addParameter(p, 'xspacing', .05, @isnumeric)
 addParameter(p, 'yspacing', .08, @isnumeric)
 addParameter(p, 'xshift', NaN, @isnumeric)
 addParameter(p, 'yshift', NaN, @isnumeric)
+addParameter(p, 'xRshift', 0, @isnumeric)
+addParameter(p, 'yRshift', 0, @isnumeric)
 
 parse(p,varargin{:})
 extra = p.Unmatched;
@@ -48,8 +50,8 @@ if isnan(p.yshift)
     p.yshift = 1.2*p.yspacing;
 end
 
-axis_width = (1-((nCols-.8)*p.xspacing+p.xshift))/nCols;
-axis_height = (1-((nRows-.3)*p.yspacing+p.yshift))/nRows;
+axis_width = (1-((nCols-.8)*p.xspacing+p.xshift+p.xRshift))/nCols;
+axis_height = (1-((nRows-.3)*p.yspacing+p.yshift+p.yRshift))/nRows;
 
 temph = get_newaxes([p.xshift+(ColIdx-1)*(axis_width+p.xspacing) ...
     p.yshift+(nRows-RowIdx)*(axis_height+p.yspacing) axis_width axis_height],...
