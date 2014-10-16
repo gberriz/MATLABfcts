@@ -65,8 +65,9 @@ warning('on', 'MATLAB:table:ModifiedVarnames')
 if Rmq
     for i=1:size(t,2)
         if iscellstr(t.(i))
-            t.(i) = cellfun(@(x)x((x~='"') | [false true(1,length(x)-2) false]),...
-                t.(i),'uniformoutput',0);
+            idx = cellfun(@length, t.(i))>=2;
+            t.(i)(idx) = cellfun(@(x)x((x~='"') | [false true(1,length(x)-2) false]),...
+                t.(i)(idx),'uniformoutput',0);
         end
     end
 end

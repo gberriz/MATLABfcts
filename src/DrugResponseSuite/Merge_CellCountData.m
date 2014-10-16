@@ -34,10 +34,22 @@ assert(all(ismember([plate_keys cond_keys 'pert_type'], t_annotated.Properties.V
     'Column(s) [ %s ] missing from t_data', strjoin(setdiff([plate_keys cond_keys 'pert_type'], ...
     unique(t_annotated.Properties.VariableNames)),' '))
 
-
-%% decide if growth inhibition can be calculated (need untreated & time=0)
+% decide if growth inhibition can be calculated (need untreated & time=0)
 EvaluateGI = any(t_annotated.Untrt & t_annotated.Time==0);
 
+
+labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'DesignNumber' 'Barcode' ...
+    'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
+numericfields = setdiff(t_annotated.Properties.VariableNames( ...
+    all(cellfun(@isnumeric, table2cell(t_annotated)))), [plate_keys cond_keys labelfields]);
+if ~isempty(numericfields)
+    fprintf('\tThese numeric fields will be averages (set as cond_inkeys to use them as key:\n');
+    for i=1:length(numericfields)
+        fprintf('\t - %s\n', numericfields{i});
+    end
+end
+    
+%% 
 
 % find the number of different of plates to merge and group them based on
 % the plate_keys (with Time==0)
@@ -68,8 +80,11 @@ for iP = 1:height(t_plate)
         strjoin(strcat(table2cellstr( t_plate(iP,:), 0)), '|'))
     
     t_ctrl = collapse(t_ctrl, @(x) trimmean(x,50), 'keyvars', ...
-        {'DesignNumber'}, 'valvars', {'Cellcount'});
+        {'DesignNumber'}, 'valvars', [{'Cellcount'} numericfields]);
     t_ctrl.Properties.VariableNames{'Cellcount'} = 'Ctrlcount';
+    for i=1:length(numericfields)
+        t_ctrl.Properties.VariableNames{numericfields{i}} = ['Ctrl_' numericfields{i}];
+    end
     t_ctrl = [t_ctrl table(repmat(Day0Cnt, height(t_ctrl),1), 'VariableNames', {'Day0Cnt'})];
         
     % report the ctrl values in the table
@@ -87,12 +102,11 @@ for iP = 1:height(t_plate)
     
     % collapse the replicates
     temp = collapse(t_conditions, @mean, 'keyvars', [plate_keys cond_keys], ...
-        'valvars', {'RelCellCnt' 'RelGrowth'});
+        'valvars', [{'RelCellCnt' 'RelGrowth'} numericfields strcat('Ctrl_', numericfields)]);
     ht = height(temp);
     
     temp2 = unique(t_conditions(:, setdiff(varnames(t_conditions), ...
-        {'pert_type' 'RelCellCnt' 'RelGrowth' 'DesignNumber' 'Ctrlcount' 'Day0Cnt' 'Barcode' ...
-        'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'})),'stable');
+        [labelfields numericfields])),'stable');
     temp = innerjoin(temp, temp2, 'keys', [setdiff(plate_keys, plate_inkeys) cond_keys ], ...
         'rightvariables', setdiff(varnames(temp2), varnames(temp)));
     
@@ -104,6 +118,7 @@ if ~EvaluateGI
     t_processed.RelGrowth = [];
     t_processed.Day0Cnt = [];
     t_mean.RelGrowth = [];
+    t_mean.Day0Cnt = [];
 end
 
 t_mean = sortrows(t_mean, [plate_keys cond_keys]);

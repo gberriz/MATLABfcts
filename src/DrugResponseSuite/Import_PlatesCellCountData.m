@@ -1,4 +1,4 @@
-function t_data = Import_PlatesCellCountData(filename, plateinfo)
+function t_data = Import_PlatesCellCountData(filename, plateinfo, varargin)
 % t_data = Import_PlatesCellCountData(filename, plateinfo)
 %
 %   merge the information in the barcode (either file or table) with the
@@ -11,9 +11,15 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo)
 %               -> or two columns Barcode and Date
 %           - Well
 %           - NumberOfAnalyzedFields
-%           - Nuclei_NumberOfObjects
-%           note: currently is not checking for other column names or
-%           storing them
+%           - Nuclei - Number Of Objects; can be changed to another field with
+%               option 'NobjField', e.g. 
+%               Import...(..., 'NobjField', 'Nuclei Selected - Number of Objects Nuclei Selected')
+%           note: this allows to get multiple fields from the raw datafile;
+%               the first field will be converted to Cellcount, other field
+%               names will not be changed (except being made compatible).
+%               For example: Import...(..., 'NobjField', ...
+%                   {'Nuclei Selected - Number of Objects', ...
+%                    'Nuclei - Number Of Objects'} )
 %
 %   Alternatively, filename can be a Nx[1-2] cell array with a filename and
 %   corresponding barcode. Files will be read in order and if it is a Nx2
@@ -42,6 +48,12 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo)
 %
 %
 
+p = inputParser;
+addParameter(p,'NobjField',{'Nuclei_NumberOfObjects'},@(x) isstr(x) || iscellstr(x));
+parse(p,varargin{:})
+NobjField = p.Results.NobjField;
+if ischar(NobjField), NobjField = {NobjField}; end
+NobjField = matlab.internal.tableUtils.makeValidName(NobjField,'silent');
 
 %% check for proper inputs
 if ischar(filename)
@@ -222,12 +234,12 @@ assert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
 
 % compile the finale table
 t_data = [table(Barcode, CellLine, TreatmentFile, DesignNumber, Untrt, Time) ...
-    t_raw(Usedidx, intersect({ 'Well' 'Nuclei_NumberOfObjects' 'Date'}, varnames(t_raw), 'stable'))];
+    t_raw(Usedidx, intersect([{'Well'} NobjField {'Date'}], varnames(t_raw), 'stable'))];
 if ~isempty(otherVariables)
     fprintf(['\tAdded variable(s): ''' cellstr2str(otherVariables, ''', ''') '''\n'])
     eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
 end
-t_data.Properties.VariableNames{'Nuclei_NumberOfObjects'} = 'Cellcount';
+t_data.Properties.VariableNames{NobjField{1}} = 'Cellcount';
 t_data = TableToCategorical(t_data,[1:3 7]);
 
 fprintf('\n')
