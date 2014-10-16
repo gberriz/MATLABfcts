@@ -30,6 +30,8 @@ for iE = 1:lD
             compiled_data.ExpKey.Legend{iE})
     end
     
+    filtered_data.MOMPfilter{iE} = Goodidx;
+    
     for f = fieldnames(compiled_data)'
         if isstruct(filtered_data.(f{:}))
         for f2 = fieldnames(filtered_data.(f{:})(iE))'
