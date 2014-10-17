@@ -66,7 +66,7 @@ cutoff2 = cutoff +windowSize +2;
 Process_data.T = Process_data.fullT(1:cutoff);
 T2 = Process_data.fullT(1:cutoff2); % slightly longer T for smoothing
 
-for iW=1:Process_data.Nwells
+for iW=2%1:Process_data.Nwells
 %     warning('iW not complete')
     fprintf('\n** Analyzing the well %s (%s) **\n', Process_data.Wells{iW,3}, ...
         Process_data.WellLabel{iW})
@@ -218,8 +218,16 @@ for iW=1:Process_data.Nwells
         
         % end of the trajectory (last point);
         if isinf(idx_momp(Cidx))  % surviving cell
-            idx=cutoff;
-            idx2=cutoff2;
+            if any(isnan(FRET(1:cutoff2,Cidx))) % tracking lost between cutoff and cutoff2
+                idx=cutoff;
+                nanidx = find(isnan(FRET(:,Cidx)),1,'first');
+                % patch a few representative frames to have a good smoothing
+                FRET(nanidx:(nanidx+ceil(windowSize/3)-1),Cidx) = FRET((nanidx-1):-1:(nanidx-ceil(windowSize/3)),Cidx); 
+                idx2=min(cutoff2, find(~isnan(FRET(:,Cidx)),1,'last'));
+            else
+                idx=cutoff;
+                idx2=cutoff2;
+            end
         else        % MOMP
             assert(idx_momp(Cidx)>0)
             idx = min( [find(T2 <= (T2(idx_momp(Cidx)+1)+TafterMOMP),1,'last'), ...
@@ -314,6 +322,7 @@ for iW=1:Process_data.Nwells
         Process_data.stats(iW).MaxActivityTime(j) = ...
             Process_data.T(Process_data.stats(iW).MaxActivityIdx(j));
         
+                
         % plotting
         if plotting && j<abs(plotting) && temp_plot=='y'
             figure(994);clf
