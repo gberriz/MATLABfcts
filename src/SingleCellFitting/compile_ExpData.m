@@ -28,12 +28,15 @@ Fatefields = {'Surviving' 'MompTime' 'FRETSurviving' 'FRETMompTime' 'FRETPreMomp
     'MaxActivityTime' 'MaxFRETPreFRETMomp' 'FRETMompTimeIdx' 'FRETPreMompTimeIdx'};
 Trajfields = {'ICTraj' 'C8Activity'};
 
+Rawfields = {'fret' 'area' 'edge'};
+rawTrajfields = {'Prob'};
+
 temp = cell(1,length(Selectedfields));
 warning('off', 'MATLAB:codetools:ModifiedVarnames')
 warning('off','MATLAB:table:RowsAddedExistingVars');
 
 compiled_data = struct('ExpKey',table( temp{:},'VariableNames', Selectedfields),...
-    'fits',struct,'Traj',struct,'Tracking',table,'Fate',struct);
+    'fits',struct,'Traj',struct,'Tracking',table,'Fate',struct,'rawdata',struct);
 
 cnt = 0;
 allrfp0 = cell(0,1);
@@ -115,6 +118,20 @@ for iF=1:length(filelist)
                 Fitted_data.goodTraj(iW).(ifield{:});
         end
         compiled_data.Traj(cnt).T = Fitted_data.T;
+        
+        
+        for ifield = Rawfields
+            compiled_data.rawdata(cnt).(ifield{:}) = ...
+                Fitted_data.rawdata(iW).(ifield{:});
+        end
+        
+        for ifield = rawTrajfields
+            compiled_data.rawdata(cnt).(ifield{:}) = ...
+                Fitted_data.Traj(iW).(ifield{:});
+        end
+        compiled_data.rawdata(cnt).SelectedCells = ...
+            Fitted_data.Traj(iW).goodtrack;
+        
         
         if isfield(Fitted_data,'rfp0')
             allrfp0{cnt} = Fitted_data.rfp0{iW};

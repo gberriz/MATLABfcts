@@ -66,7 +66,7 @@ cutoff2 = cutoff +windowSize +2;
 Process_data.T = Process_data.fullT(1:cutoff);
 T2 = Process_data.fullT(1:cutoff2); % slightly longer T for smoothing
 
-for iW=2%1:Process_data.Nwells
+for iW=1:Process_data.Nwells
 %     warning('iW not complete')
     fprintf('\n** Analyzing the well %s (%s) **\n', Process_data.Wells{iW,3}, ...
         Process_data.WellLabel{iW})
