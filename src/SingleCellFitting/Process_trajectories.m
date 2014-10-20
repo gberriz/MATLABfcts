@@ -58,16 +58,15 @@ ctrl = median(ctrl,2);
 Process_data.ctrl = ctrl;
 
 
-
-
 % Determine the cutoff (in minutes) to consider survival
 cutoff = find(Process_data.fullT>=maxT, 1, 'first');
 cutoff2 = cutoff +windowSize +2;
 Process_data.T = Process_data.fullT(1:cutoff);
 T2 = Process_data.fullT(1:cutoff2); % slightly longer T for smoothing
 
+warning('********************')
+    warning('iW not complete')
 for iW=1:Process_data.Nwells
-%     warning('iW not complete')
     fprintf('\n** Analyzing the well %s (%s) **\n', Process_data.Wells{iW,3}, ...
         Process_data.WellLabel{iW})
     
@@ -221,8 +220,9 @@ for iW=1:Process_data.Nwells
             if any(isnan(FRET(1:cutoff2,Cidx))) % tracking lost between cutoff and cutoff2
                 idx=cutoff;
                 nanidx = find(isnan(FRET(:,Cidx)),1,'first');
+                maxidx = min(cutoff2, nanidx+ceil(windowSize/3)-1);
                 % patch a few representative frames to have a good smoothing
-                FRET(nanidx:(nanidx+ceil(windowSize/3)-1),Cidx) = FRET((nanidx-1):-1:(nanidx-ceil(windowSize/3)),Cidx); 
+                FRET(nanidx:maxidx,Cidx) = FRET((nanidx-1):-1:(2*nanidx-maxidx-1),Cidx); 
                 idx2=min(cutoff2, find(~isnan(FRET(:,Cidx)),1,'last'));
             else
                 idx=cutoff;
@@ -434,11 +434,13 @@ for iW=1:Process_data.Nwells
                 Process_data.T( Process_data.stats(iW).FRETPreMompTimeIdx(j) );
             
             % finally find the last values value prior to the MOMP
-            temp = max(1e-10,smooth(Process_data.goodTraj(iW).C8Activity(1:(Process_data.stats(iW).FRETPreMompTimeIdx(j)+2),j),3)); % add 2 frames for smoothing
+            lastframe = min(Process_data.stats(iW).FRETPreMompTimeIdx(j)+2, ...
+                find(~isnan(Process_data.goodTraj(iW).C8Activity),1,'last'));
+            temp = max(1e-10,smooth(Process_data.goodTraj(iW).C8Activity(1:lastframe,j),3)); % add 2 frames for smoothing
             [Process_data.stats(iW).MaxActivityPreFRETMomp(j), ...
                 Process_data.stats(iW).MaxActivityIdxPreFRETMomp(j)] = nanmax(temp(1:(end-2))); % remove 2 frames of the smoothing
             Process_data.stats(iW).MaxFRETPreFRETMomp(j) = Process_data.goodTraj(iW).ICTraj(Process_data.stats(iW).MaxActivityIdxPreFRETMomp(j) ,j);
-            
+            assert(~isnan(Process_data.stats(iW).MaxActivityPreFRETMomp(j)))
         else
             MompCandidateValues = [];
         end

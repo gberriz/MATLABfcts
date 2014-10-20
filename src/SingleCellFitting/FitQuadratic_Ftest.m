@@ -22,6 +22,7 @@ Fitted_data.fitfct = fittype('(a*(x-b).^2)*(x>b)','options',s);
 p_thres = 0.05; % threshold for the F-test against a flat model
 windowSize = Process_data.parameters.ProcesswindowSize;
 
+% warning('********************')
 for iW=1:Process_data.Nwells
     
     fprintf('\n** Analyzing %i cells in well %s (%s) **\n', ...
@@ -40,18 +41,18 @@ for iW=1:Process_data.Nwells
     Fitted_data.fit(iW).FitToMax = true(1,length(Process_data.stats(iW).Endidx));
     
     for j=1:Process_data.NgoodTraj(iW)
-        % define the trajectory to fit: maxactivity or end-5
         if ~Process_data.stats(iW).FRETSurviving(j)
             endfit = Process_data.stats(iW).FRETPreMompTimeIdx(j);
             endfit1 = endfit;
-            endfit_max = Process_data.stats(iW).FRETPreMompTimeIdx(j);
+            endfit_max = Process_data.stats(iW).FRETPreMompTimeIdx(j); 
         else
             endfit = Process_data.stats(iW).MaxActivityIdx(j);
             endfit1 = endfit;
-            endfit_max = endfit+2*windowSize;
+            endfit_max = min(endfit+2*windowSize, ...
+                find(~isnan(Process_data.goodTraj(iW).ICTraj(:,j)),1,'last'));
         end
         
-        traj =  Process_data.goodTraj(iW).ICTraj(1:endfit,j);
+        traj = Process_data.goodTraj(iW).ICTraj(1:endfit,j);
         
         if isnan(endfit)
             Fitted_data.fit(iW).badidx(j) = true;
@@ -94,10 +95,16 @@ for iW=1:Process_data.Nwells
         
         
         if doing_peaks
-            [~, idx2] = findpeaks(smooth(Process_data.goodTraj(iW).C8Activity(...
+            traj = smooth(Process_data.goodTraj(iW).C8Activity(...
                 min(windowSize,endfit_max-2):min(endfit_max, ...
-                length(Process_data.T)-2*windowSize),j),3), ...
-                'MINPEAKHEIGHT', Process_data.stats(iW).MaxActivity(j)/3);
+                length(Process_data.T)-2*windowSize),j),3);
+            if mean(diff(traj)>0)>.9
+                idx2 = argmax(traj);
+                fprintf('special case of a short increase trajectory')
+            else
+                [~, idx2] = findpeaks(traj,'MINPEAKHEIGHT', Process_data.stats(iW).MaxActivity(j)/3);
+            end
+            
             idx2 = idx2+windowSize-1;
             idx2 = idx2( idx2>idx_start);
             %                 if isempty(idx2) && any(smooth(...
@@ -119,7 +126,8 @@ for iW=1:Process_data.Nwells
                 c2s = {};
                 
                 for i2=1:length(idx2)
-                    endfit2 = idx2(i2);
+                    endfit2 = min(idx2(i2), ...
+                        find(~isnan(Process_data.goodTraj(iW).ICTraj(:,j)),1,'last'));
                     traj = Process_data.goodTraj(iW).ICTraj(1:endfit2,j);
                     
                     [MinIC, MinTimeIC] = nanmin(traj);
@@ -202,14 +210,17 @@ for iW=1:Process_data.Nwells
             if endfit1>idx_start
                 plot(Process_data.T(idx_start:endfit1), coeff(Process_data.T(idx_start:endfit1)-fit_start),'b','linewidth',2)
             end
-            if doing_peaks
+            if doing_peaks && ~Fitted_data.fit(iW).flat_fit(j)
                 plot(Process_data.T(idx_start:endfit2), coeff2( Process_data.T(idx_start:endfit2)' -fit_start),'r','linewidth',2)
                 plot(Process_data.T(endfit2)*[1 1], [0 Process_data.goodTraj(iW).ICTraj(endfit2,j)], 'ok-','linewidth',1)
+            elseif Fitted_data.fit(iW).flat_fit(j)
+                 plot(Process_data.T([1 idx]), [0 0],'r','linewidth',2)
             end
             plot(Fitted_data.fit(iW).endfit(j)+[-30 0 10], ...
                 Fitted_data.fit(iW).k(j)*(Fitted_data.fit(iW).endfit(j)-...
                 Fitted_data.fit(iW).Delay(j))^2 + ...
                 [-30 0 10]*Fitted_data.fit(iW).MaxFitActivity(j), 'xk-','markersize',15,'linewidth',2)
+            xlim(Process_data.T([1 end]))
             
             subplot(133)
             hold on
@@ -218,7 +229,7 @@ for iW=1:Process_data.Nwells
             plot(Process_data.T([1 idx]), [0 0],'c')
             plot(Process_data.stats(iW).MaxActivityTime(j)*[1 1], ...
                 [0 Process_data.stats(iW).MaxActivity(j)], 'ok-')
-            if doing_peaks
+            if doing_peaks  && ~Fitted_data.fit(iW).flat_fit(j)
                 plot(Process_data.T(endfit2)*[1 1], [0 Process_data.goodTraj(iW).C8Activity(endfit2,j)], 'ok-','linewidth',1)
             end
             if ~isnan(Process_data.stats(iW).FRETPreMompTimeIdx(j))
@@ -226,7 +237,7 @@ for iW=1:Process_data.Nwells
                     [0 Process_data.stats(iW).FRETMompActivity(j)], '-r.')
             end
             plot(Fitted_data.fit(iW).endfit(j), Fitted_data.fit(iW).MaxFitActivity(j), 'xk','markersize',15)
-            
+            xlim(Process_data.T([1 end]))
             if plotting>0
                 temp_plot = input('    Do you want more? y/n [y]: ', 's');
                 if isempty(temp_plot)

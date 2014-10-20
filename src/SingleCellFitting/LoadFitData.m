@@ -11,12 +11,10 @@ if ~exist('savefilename','var')
 end
 
 Raw_data = Load_Plate_Data(plate_design);
-save(savefilename, 'Raw_data')
 %
 
 MOMP_data = Evaluate_MOMPTime(Raw_data);
 save(savefilename, 'MOMP_data')
-load(savefilename)
 
 Process_data = Process_trajectories(MOMP_data);
 Fitted_data = FitQuadratic_Ftest(Process_data);

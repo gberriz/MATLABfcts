@@ -45,7 +45,7 @@ for iF=1:length(filelist)
     
     load([folder filelist{iF}])
     
-    Drugidx = find(strcmp(SelectedDrug, Fitted_data.Drugs));    
+    Drugidx = find(strcmp(SelectedDrug, Fitted_data.Drugs));
     if isempty(Drugidx)
         fprintf(' no %s treatment -> skip\n\n', SelectedDrug);
         continue
@@ -65,7 +65,7 @@ for iF=1:length(filelist)
         fprintf(' no %s treatment without another drug -> skip\n\n', SelectedDrug);
         continue
     end
-        
+    
     fprintf('\n  Drug used: %s\n', cellstr2str(Fitted_data.Drugs))
     fprintf('\n  found %i wells with %s (and ev. %s):\n', length(Widx), SelectedDrug, ...
         cellstr2str(coDrugs));
@@ -89,21 +89,21 @@ for iF=1:length(filelist)
         compiled_data.ExpKey = [ compiled_data.ExpKey
             cell2table([num2cell(doses) ...
             Fitted_data.Experimentalist Fitted_data.Date Fitted_data.WellLabel{iW}], ...
-            'VariableNames', Selectedfields)];   
+            'VariableNames', Selectedfields)];
         
         for ifield = Fitfields
             compiled_data.fits(cnt).(ifield{:}) = ...
                 Fitted_data.fit(iW).(ifield{:});
         end
         
-        compiled_data.Tracking(cnt,'Tracking') = {Fitted_data.Ntrajectories(iW)};        
+        compiled_data.Tracking(cnt,'Tracking') = {Fitted_data.Ntrajectories(iW)};
         for iK=Fitted_data.Legends.ErrorType.keys
             VarName = internal.matlab.codetools.genvalidnames({Fitted_data.Legends.ErrorType(iK{:})});
             compiled_data.Tracking(cnt,VarName) = ...
                 {sum(Fitted_data.Traj(iW).ErrorType==iK{:})};
         end
         
-        compiled_data.Fate(cnt).('NGoodTraj') = Fitted_data.NgoodTraj(iW);        
+        compiled_data.Fate(cnt).('NGoodTraj') = Fitted_data.NgoodTraj(iW);
         for ifield = Fatefields
             if islogical(Fitted_data.stats(iW).(ifield{:}))
                 compiled_data.Fate(cnt).(['N' ifield{:}]) = ...
