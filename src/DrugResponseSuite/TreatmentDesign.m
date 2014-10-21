@@ -146,15 +146,15 @@ if edge_ctrl
         fixedctrlpos(round(1+((plate_dims(1)-1)*(1:2))/3), round(1+((plate_dims(2)-1)*(0:3))/3)) = true;
     end
     
-    if ctrl_cnt>=20 % put the corners as control (should be then discarded)
-        fixedctrlpos([1 end], [1 end]) = true;
-    elseif ctrl_cnt > (prod(plate_dims-1)+6) % remove all edges --> not treated
+    if ctrl_cnt >= (sum(2*plate_dims)-4 +6) % remove all edges --> not treated
         fixedctrlpos([1 end], :) = true;
         fixedctrlpos(:, [1 end]) = true;
         for iR=1:nReps
-            Designs(iR).treated_wells([1 end], :) = true;
-            Designs(iR).treated_wells(:, [1 end]) = true;
+            Designs(iR).treated_wells([1 end], :) = false;
+            Designs(iR).treated_wells(:, [1 end]) = false;
         end
+    elseif ctrl_cnt>=20 % put the corners as control (should be then discarded)
+        fixedctrlpos([1 end], [1 end]) = true;        
     end
 end
 assert(all(size(fixedctrlpos)==plate_dims))

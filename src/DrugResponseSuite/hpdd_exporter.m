@@ -1,16 +1,16 @@
-function hpdd_exporter(hpdd_filename, Design, t_barcode)
-%HPDD_IMPORTER(hpdd_filename, Design, t_barcode)
+function hpdd_exporter(hpdd_filename, Designs, t_plateinfo)
+%HPDD_IMPORTER(hpdd_filename, Designs, t_plateinfo)
 %   Write an hpdd file based on array of Designs and a plate barcode table.
 %
 %   base_pathname : path and file name to a D300 protocol file ('.hpdd'
 %                       automatically appended -- do not include it here)
-%   Design :        array of design structures with the following fields:
+%   Designs :       array of design structures with the following fields:
 %                       - plate_dims (plate dimension)
 %                       - treated_wells (wells treated with DMSO)
 %                       - well_volume (in uL)
 %                       - Drugs (structure with DrugName, HMSLid, stock_conc
 %                           and layout - concentration given in uM)
-%   t_barcode :     table (or file name to a tsv table) with columns:
+%   t_plateinfo :   table (or file name to a tsv table) with columns:
 %                       - Barcode
 %                       - TreatmentFile (which should match the name where 
 %                           'Deisgn is saved')
@@ -34,9 +34,9 @@ create_text_children(protocol, ...
     'ConcentrationUnit'         [MICRO 'M'];
     'MolarityConcentrationUnit' [MICRO 'M'];
     'MassConcentrationUnit'     'ng_mL';
-    'ShakePerFluid'             logical2str(0);
+    'ShakePerFluid'             logical2str(true);
     'ShakePlateDuration'        int2str(5);
-    'ShakePerWell'              logical2str(0);
+    'ShakePerWell'              logical2str(false);
     'ShakeThresholdVolume'      int2str(100);
     'BackfillOrder'             'LastPriority';
     'BackfillNoDispense'        logical2str(0);
@@ -46,7 +46,7 @@ create_text_children(protocol, ...
 % Add Fluids list.
 fluids = document.createElement('Fluids');
 protocol.appendChild(fluids);
-fluid_data = get_drugs(Design);
+fluid_data = get_DesignDrugs(Designs);
 % Map from drug name to string id for XML output.
 fluid_ids = containers.Map;
 for fluid_num = 1:length(fluid_data)
@@ -77,9 +77,9 @@ for fluid_num = 1:length(fluid_data)
 end
 
 % Perform some checks on the Design data structures.
-for design_num = 1:length(Design)
+for design_num = 1:length(Designs)
     % Verify that all drug layout have the standard format
-    if size(unique(cell2mat(cellfun(@size,{Design(design_num).Drugs.layout}','uniformoutput',0)), ...
+    if size(unique(cell2mat(cellfun(@size,{Designs(design_num).Drugs.layout}','uniformoutput',0)), ...
             'rows'),1)>1
         me = MException('ExportProtocol_D300:drug_layout_mismatch', ...
                         'Design %d have different layout sizes for drugs', design_num);
@@ -88,10 +88,10 @@ for design_num = 1:length(Design)
     % Verify that all plate maps are standard format. If we have to
     % support different plate types in the future this would need to be
     % changed.
-    if (log2(size(Design(design_num).Drugs(1).layout,1))~=...
-            round(log2(size(Design(design_num).Drugs(1).layout,1)))) || ...
-            ((size(Design(design_num).Drugs(1).layout,2)/...
-            size(Design(design_num).Drugs(1).layout,1))~=1.5)
+    if (log2(size(Designs(design_num).Drugs(1).layout,1))~=...
+            round(log2(size(Designs(design_num).Drugs(1).layout,1)))) || ...
+            ((size(Designs(design_num).Drugs(1).layout,2)/...
+            size(Designs(design_num).Drugs(1).layout,1))~=1.5)
         me = MException('ExportProtocol_D300:plate_size_mismatch', ...
                         'Design %d is not a standard plate size', design_num);
         throw(me);
@@ -99,8 +99,8 @@ for design_num = 1:length(Design)
     % Verify that backfill maps are 16x24 (384) wells if it exists. If we have to
     % support different plate types in the future this would need to be
     % changed.
-    if isfield(Design(design_num), 'treated_wells') && ...
-            ~all(size(Design(design_num).treated_wells) == size(Design(design_num).Drugs(1).layout))
+    if isfield(Designs(design_num), 'treated_wells') && ...
+            ~all(size(Designs(design_num).treated_wells) == size(Designs(design_num).Drugs(1).layout))
         me = MException('ExportProtocol_D300:backfill_size_mismatch', ...
                         'treated_wells for Design %d is not matching drug layout', design_num);
         throw(me);
@@ -108,10 +108,10 @@ for design_num = 1:length(Design)
 end
 
 % load the table is a file name was passed
-if ischar(t_barcode)
-    t_barcode = tsv2table(t_barcode);
+if ischar(t_plateinfo)
+    t_plateinfo = tsv2table(t_plateinfo);
 else
-    assert(istable(t_barcode), ['Barcodes should be a table or a tsv file' ...
+    assert(istable(t_plateinfo), ['Barcodes should be a table or a tsv file' ...
         ' with columns Barcode, DesignNumber'])
 end
     
@@ -133,12 +133,24 @@ backfill.appendChild(backfill_wells);
 % FIXME For a six-plate experiment, saw two backfill elements each with half of
 %   the wells in it. Why?
 
-for plate_num = 1:height(t_barcode)
+assert(length(setdiff(unique(t_plateinfo.TreatmentFile),'-'))==1, ...
+    ['Only one treatment file can be specified in the plate info file; ' ...
+    'it should correspond to .mat file where the variable ''Designs'' is saved'])
+
+t_trt_plates = t_plateinfo(~strcmp(t_plateinfo.TreatmentFile,'-'),:);
+
+for plate_num = 1:height(t_trt_plates)
+    
     plate = document.createElement('Plate');
     plates.appendChild(plate);
     % Use barcode table's DesignNumber column as index into Design array.
-    cur_design = Design(t_barcode.DesignNumber(plate_num));
-    plate_name = t_barcode.Barcode(plate_num);
+    cur_design = Designs(t_trt_plates.DesignNumber(plate_num));
+    plate_name = t_trt_plates.Barcode(plate_num);
+    if isvariable(t_trt_plates, 'PlateShaking')
+        PlateShaking = t_trt_plates.PlateShaking(plate_num);
+    else
+        PlateShaking = false;
+    end
     % Convert volume from microliters to nanoliters.
     volume_nanoliters = cur_design.well_volume * 1e3;
     create_text_children(plate, ...
@@ -149,7 +161,7 @@ for plate_num = 1:height(t_barcode)
         'Name'        plate_name;
         'AssayVolume' double2str(volume_nanoliters);
         'DMSOLimit'   double2str(0.02);
-        'DontShake'   logical2str(0);
+        'DontShake'   logical2str(~PlateShaking);
     % FIXME: I came across an AqueousLimit element in a different
     % officially-generated file. What is that?
         } ...
@@ -197,6 +209,8 @@ end
 
 xmlwrite([hpdd_filename '.hpdd'], document);
 
+Write_DesignTreatment_summary([hpdd_filename '_summary.tsv'], Designs, t_trt_plates)
+
 end
 
 
@@ -212,33 +226,6 @@ end
 end
 
 
-function drugs = get_drugs( design )
-% Get list of unique drugs from design. Checks that stock_conc
-% is the same for all same-named drugs.
-drugs = struct('name', {}, 'stock_conc', {});
-for design_num = 1:length(design)
-    for drug_num = 1:length(design(design_num).Drugs)
-        drug = design(design_num).Drugs(drug_num);
-        name = drug2displayname(drug);
-        stock_conc = drug.stock_conc;
-        match = find(strcmp(name, {drugs.name}));
-        if ~isempty(match)
-            if drugs(match).stock_conc ~= stock_conc
-                me = MException(...
-                    'hpdd_exporter:concentration_mismatch', ...
-                    'Drug %s has different stock_conc values', name ...
-                );
-                throw(me);
-            end
-        else
-            drugs(end+1) = struct( ...
-                'name', name, ...
-                'stock_conc', stock_conc ...
-            ); %#ok<AGROW>
-        end
-    end
-end
-end
 
 
 function name = drug2displayname(drug)
@@ -265,3 +252,5 @@ else
     T = 'False';
 end
 end
+
+
