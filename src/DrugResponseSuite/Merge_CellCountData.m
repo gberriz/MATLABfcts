@@ -1,4 +1,8 @@
-% [t_mean, t_processed] = Merge_CellCountData(t_annotated, plate_inkeys, cond_inkeys)
+
+function [t_mean, t_processed] = Merge_CellCountData(t_annotated, plate_inkeys, ...
+    cond_inkeys, plate_reps, numericfields)
+% [t_mean, t_processed] = Merge_CellCountData(t_annotated, plate_inkeys, cond_inkeys, 
+%                               plate_reps, numericfields)
 %
 %   process the data from cell count. The data will be split for controls according
 %   to plate_keys (with 'CellLine' 'TreatmentFile' 'Time' as mandatory and
@@ -7,25 +11,30 @@
 %   Needs also the columns 'Untrt' (for Day0 or control plate), 'pert_type' (looking for value
 %   'ctl_vehicle' or 'trt_cp'/'trt_poscon') and 'DesignNumber' (serves as
 %   replicates/ plate number)
+%   Set 'plate_reps' as true if there are replicates on the same plates
+%   (this will bypass the check in creating t_mean).
 %
 %   outputs are:    t_processed with the values for all treated wells
 %                   t_mean where replicates are averaged
 %
-
-function [t_mean, t_processed] = Merge_CellCountData(t_annotated, plate_inkeys, cond_inkeys)
+fprintf('Merge the cell count data, normalize by controls:\n');
 
 %% assign and control the variables
 if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
     plate_keys = unique([{'CellLine' 'Time'} plate_inkeys]);
 else
-    plate_keys = {'CellLine' 'Time'}; 
+    plate_keys = {'CellLine' 'Time'};
     plate_inkeys = {};
 end
-if exist('cond_inkeys','var')
+if exist('cond_inkeys','var') && ~isempty(cond_inkeys)
     cond_keys = unique([{'DrugName' 'Conc'} cond_inkeys]);
 else
     cond_keys = {'DrugName' 'Conc'};
 end
+if ~exist('plate_reps','var') || isempty(plate_reps)
+    plate_reps = false;
+end
+
 cond_keys = [cond_keys ...
     intersect(varnames(t_annotated), strcat('DrugName', cellfun(@(x) {num2str(x)}, num2cell(2:9)))) ...
     intersect(varnames(t_annotated), strcat('Conc', cellfun(@(x) {num2str(x)}, num2cell(2:9))))];
@@ -40,16 +49,17 @@ EvaluateGI = any(t_annotated.Untrt & t_annotated.Time==0);
 
 labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'DesignNumber' 'Barcode' ...
     'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
-numericfields = setdiff(t_annotated.Properties.VariableNames( ...
-    all(cellfun(@isnumeric, table2cell(t_annotated)))), [plate_keys cond_keys labelfields]);
-if ~isempty(numericfields)
-    fprintf('\tThese numeric fields will be averages (set as cond_inkeys to use them as key:\n');
-    for i=1:length(numericfields)
-        fprintf('\t - %s\n', numericfields{i});
+if ~exist('numericfields','var')
+    numericfields = setdiff(t_annotated.Properties.VariableNames( ...
+        all(cellfun(@isnumeric, table2cell(t_annotated)))), [plate_keys cond_keys labelfields]);
+    if ~isempty(numericfields)
+        fprintf('\tThese numeric fields will be averaged (set as cond_inkeys to use them as key:\n');
+        for i=1:length(numericfields)
+            fprintf('\t - %s\n', numericfields{i});
+        end
     end
 end
-    
-%% 
+%%
 
 % find the number of different of plates to merge and group them based on
 % the plate_keys (with Time==0)
@@ -63,13 +73,15 @@ t_mean = table;
 for iP = 1:height(t_plate)
     %
     % find the cell count at day 0
-    if EvaluateGI        
+    if EvaluateGI
         temp = t_plate(iP,setdiff(plate_keys, {'TreatmentFile'}, 'stable'));
         temp.Time = 0;
         Day0Cnt = trimmean( t_annotated.Cellcount(eqtable(temp, ...
             t_annotated(:,setdiff(plate_keys, {'TreatmentFile'}, 'stable')))), 50);
+        Relvars = {'RelCellCnt' 'RelGrowth'};
     else
         Day0Cnt = NaN;
+        Relvars = {'RelCellCnt'};
     end
     
     t_conditions = t_annotated(eqtable(t_plate(iP,:), t_annotated(:,plate_keys)) , :);
@@ -86,7 +98,7 @@ for iP = 1:height(t_plate)
         t_ctrl.Properties.VariableNames{numericfields{i}} = ['Ctrl_' numericfields{i}];
     end
     t_ctrl = [t_ctrl table(repmat(Day0Cnt, height(t_ctrl),1), 'VariableNames', {'Day0Cnt'})];
-        
+    
     % report the ctrl values in the table
     t_conditions = innerjoin(t_conditions(ismember(t_conditions.pert_type, ...
         {'trt_cp' 'trt_poscon'}),:), t_ctrl);
@@ -94,6 +106,13 @@ for iP = 1:height(t_plate)
     t_conditions = [t_conditions array2table([t_conditions.Cellcount./t_conditions.Ctrlcount ...
         (t_conditions.Cellcount-t_conditions.Day0Cnt)./(t_conditions.Ctrlcount-t_conditions.Day0Cnt)], ...
         'variablenames', {'RelCellCnt' 'RelGrowth'})];
+    
+    
+    if ~EvaluateGI
+        t_conditions.RelGrowth = [];
+        t_conditions.Day0Cnt = [];
+    end
+    
     t_processed = [t_processed; t_conditions];
     
     
@@ -102,24 +121,20 @@ for iP = 1:height(t_plate)
     
     % collapse the replicates
     temp = collapse(t_conditions, @mean, 'keyvars', [plate_keys cond_keys], ...
-        'valvars', [{'RelCellCnt' 'RelGrowth'} numericfields strcat('Ctrl_', numericfields)]);
+        'valvars', [Relvars {'Ctrlcount'} numericfields strcat('Ctrl_', numericfields)]);
     ht = height(temp);
     
     temp2 = unique(t_conditions(:, setdiff(varnames(t_conditions), ...
-        [labelfields numericfields])),'stable');
+        [labelfields numericfields {'Ctrlcount'}])),'stable');
     temp = innerjoin(temp, temp2, 'keys', [setdiff(plate_keys, plate_inkeys) cond_keys ], ...
         'rightvariables', setdiff(varnames(temp2), varnames(temp)));
     
-    assert(height(temp)==ht, 'Some replicates have been merged accidentally, use ''cond_inkeys''')
+    assert(plate_reps || height(temp)==ht, ['Some replicates have been merged accidentally,' ...
+        ' this may be due to replicate on the same plate (set plate_reps=true), or use ''cond_inkeys'''])
     t_mean = [t_mean; temp];
 end
 
-if ~EvaluateGI    
-    t_processed.RelGrowth = [];
-    t_processed.Day0Cnt = [];
-    t_mean.RelGrowth = [];
-    t_mean.Day0Cnt = [];
-end
 
 t_mean = sortrows(t_mean, [plate_keys cond_keys]);
-    
+
+end

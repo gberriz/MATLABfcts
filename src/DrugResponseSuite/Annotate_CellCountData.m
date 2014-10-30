@@ -3,14 +3,14 @@ function t_annotated = Annotate_CellCountData(t_data, folder, fields)
 %
 %   annotate the data using the treatment files
 %   adding the fields:
-%       - DrugName    (assuming only one drug per well)
+%       - DrugName
 %       - Conc
 %       - selected additional fields as given in input varaible 'fields' (by
 %           default ALL 'Perturbations' in the array of structures Design)
 %
 %   variable folder is to specify where the TreatmentFiles are stored.
 %
-
+fprintf('Annotate Cell count data with plate designs:\n');
 
 if ~exist('folder','var') || isempty(folder)
     folder = '';
@@ -20,13 +20,16 @@ end
 Trtfiles = setdiff(cellstr(unique(t_data.TreatmentFile)),'-');
 
 Designs = cell(length(Trtfiles),1);
+DesignNumbers = cell(length(Trtfiles),1);
 correct_barcode = Designs;
+allDesigns = {};
 for iTf = 1:length(Trtfiles)
     assert(exist(fullfile(folder, Trtfiles{iTf}), 'file')>0, ...
         'Treatment file %s missing in folder %s', Trtfiles{iTf}, folder)
     [~,~,ext] = fileparts(Trtfiles{iTf});
     fprintf('\tLoading %s\n', Trtfiles{iTf})
     
+    DesignNumbers{iTf} = unique(t_data.DesignNumber(t_data.TreatmentFile==Trtfiles{iTf}));
     if strcmp(ext,'.mat')
         temp = load(fullfile(folder, Trtfiles{iTf}));
         Designs{iTf} = temp.Design;
@@ -43,7 +46,8 @@ for iTf = 1:length(Trtfiles)
             rethrow(err)
         end
     end
-    
+    allDesigns = [allDesigns;
+        num2cell(Designs{iTf}(DesignNumbers{iTf}))];
 end
 
 %% look up all the drugs and perturbations in the designs
@@ -52,15 +56,14 @@ Ndrugs = 1;
 Perturbations = {};
 DrugNames = {};
 t_HMSLids = table;
-allDesigns = [Designs{:}];
-for iD=1:size(allDesigns)
+for iD=1:numel(allDesigns)
     % check for multiple drugs in the same well
-    DrugConc = reshape([allDesigns(iD).Drugs.layout], [allDesigns(iD).plate_dims ...
-        length(allDesigns(iD).Drugs)]);
-    DrugNames = unique([DrugNames {allDesigns(iD).Drugs.DrugName}],'stable');
-    if isfield(allDesigns(iD).Drugs,'HMSLid')
-        t_HMSLids = [ t_HMSLids; table({allDesigns(iD).Drugs.DrugName}', ...
-            {allDesigns(iD).Drugs.HMSLid}','VariableNames', {'DrugName' 'HMSLid'})];
+    DrugConc = reshape([allDesigns{iD}.Drugs.layout], [allDesigns{iD}.plate_dims ...
+        length(allDesigns{iD}.Drugs)]);
+    DrugNames = unique([DrugNames {allDesigns{iD}.Drugs.DrugName}],'stable');
+    if isfield(allDesigns{iD}.Drugs,'HMSLid')
+        t_HMSLids = [ t_HMSLids; table({allDesigns{iD}.Drugs.DrugName}', ...
+            {allDesigns{iD}.Drugs.HMSLid}','VariableNames', {'DrugName' 'HMSLid'})];
     end
     if any(any(sum(DrugConc>0,3)>Ndrugs))
         Ndrugs = max(max(sum(DrugConc>0,3)));
@@ -69,8 +72,8 @@ for iD=1:size(allDesigns)
     end
     
     % store all possible perturbations
-    if isfield(allDesigns(iD), 'Perturbations')
-        Perturbations = unique([Perturbations {allDesigns(iD).Perturbations.Name}], 'stable');
+    if isfield(allDesigns{iD}, 'Perturbations')
+        Perturbations = unique([Perturbations {allDesigns{iD}.Perturbations.Name}], 'stable');
     end
 end
 t_HMSLids = unique(t_HMSLids);
@@ -111,12 +114,12 @@ for iTf = 1:length(Trtfiles)
             fprintf('\thpdd exp %i -> design %i\n', DesignNumbers(iDN), DNidx);
             
         else
-            DNidx = iDN;
+            DNidx = DesignNumbers(iDN);
         end
         t_design = DrugDesignToTable(Designs{iTf}(DNidx), fields, DrugNames);
         idx = find(t_data.TreatmentFile==Trtfiles{iTf} & t_data.DesignNumber==DesignNumbers(iDN));
         [temp, ia] = innerjoin(t_data(idx,:), t_design, 'keys', 'Well');
-        if height(temp)<sum(idx)
+        if height(temp)<length(idx)
             warnprintf('Some wells (%s) have not annotations in file %s --> ignored', ...
                 strjoin(cellstr(unique(t_data.Well(idx(setdiff(1:length(idx),ia))))'),', '), ...
                 Trtfiles{iTf})

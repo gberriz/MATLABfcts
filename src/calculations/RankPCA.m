@@ -1,4 +1,10 @@
 function [coeff, scores, explained, latent] = RankPCA(data, cutoff)
+% [coeff, scores, explained, latent] = RankPCA(data, cutoff)
+%   PCA analysis based on the gene ranks.
+%   cutoff is used to filter the data with low standard deviation (default
+%   value is 1e-6)
+%
+
 
 if ~exist('cutoff','var')
     cutoff = 1e-6;

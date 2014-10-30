@@ -1,12 +1,17 @@
-function plot_DrugDesing(Design, figurename)
+function plot_DrugDesing(Design, figurename, folder)
+% plot_DrugDesing(Design, figurename, folder)
 
 if ~exist('figurename','var')
     figurename = '';
 end
+if ~exist('folder','var')
+    folder = '.';
+end
 
 for iD = 1:length(Design)
     
-    get_newfigure(1e4+iD, [iD*50 20 700 600], sprintf('Design_%s_%i.pdf', figurename, iD), ...
+    get_newfigure(1e4+iD, [iD*50 20 700 600], [folder filesep ...
+        sprintf('Design_%s_%i.pdf', figurename, iD)], ...
         'Name', sprintf('Design #%i', iD))
     
     nDisp = length(Design(iD).Drugs);

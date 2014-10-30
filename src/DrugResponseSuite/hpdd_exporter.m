@@ -15,6 +15,7 @@ function hpdd_exporter(hpdd_filename, Designs, t_plateinfo)
 %                       - TreatmentFile (which should match the name where 
 %                           'Deisgn is saved')
 %                       - DesignNumber
+%                       - PlateShaking
 
 document = com.mathworks.xml.XMLUtils.createDocument('Protocol');
 protocol = document.getDocumentElement;

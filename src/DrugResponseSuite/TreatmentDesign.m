@@ -112,7 +112,7 @@ if ~isempty(ComboDoses)
     if any(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboDoses, SingleDoses))
         fprintf('\n')
         warnprintf('Some doses for the combo are not part of the single doses for %s', ...
-            strjoin(DrugNames(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboDoses, SingleDoses)),', '))
+            strjoin(ToRow(DrugNames(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboDoses, SingleDoses))),', '))
     end
     
     nTreatments = sum(cellfun(@length,SingleDoses)) + ...

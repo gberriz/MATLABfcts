@@ -18,7 +18,8 @@ addParameter(p, 'xaxiskey', @isstr)
 addParameter(p, 'yaxiskey', @isstr)
 addParameter(p, 'colorkey', nocplot, @isstr)
 addParameter(p, 'xtransform', @(x)x, @(x)isa(x,'function_handle'));
-addParameter(p, 'ytransform', @(x)x, @(x)isa(x,'function_handle'))
+addParameter(p, 'ytransform', @(x)x, @(x) isa(x,'function_handle') || ...
+    all(cellfun(@(y) isa(y,'function_handle'), x)))
 addParameter(p, 'axischanges', @(x) set(x,'fontsize',6), @(x) isa(x,'function_handle'))
 addParameter(p, 'mean_SEM', true, @islogical)
 addParameter(p, 'plotcolors', Plotting_parameters.colors, @isnumeric)
@@ -53,7 +54,12 @@ if strcmp(p.colorkey, nocplot)
 else
     colorkeys = unique(t_data.(p.colorkey));
 end
-
+if ischar(p.yaxiskey)
+    p.yaxiskey = {p.yaxiskey};
+end
+if isa(p.ytransform,'function_handle')
+    p.ytransform = {p.ytransform};
+end
 %
 t_data = TableToCategorical(t_data, [p.xplotkey, p.yplotkey, {p.colorkey}]);
 
@@ -74,6 +80,7 @@ yspacing = p.yspacing;
 axis_height = (1-(nRows+1)*yspacing)/nRows;
 assert(axis_height>0, 'Too many rows, reduce yspacing')
 
+linetypes = {'-' ':' '--'};
 for iyp = 1:nRows
     for ixp=1:nCols
         
@@ -117,35 +124,44 @@ for iyp = 1:nRows
         for iC = 1:length(colorkeys)
             subt = t_data(eqtable(t_data(:,p.xplotkey),xplotkeys(xidx,:)) & ...
                 eqtable(t_data(:,p.yplotkey),yplotkeys(yidx,:)) & ...
-                t_data.(p.colorkey)==colorkeys(iC),{p.xaxiskey p.yaxiskey});
+                t_data.(p.colorkey)==colorkeys(iC),[{p.xaxiskey} p.yaxiskey]);
             if isempty(subt)
                 continue
             end
 
-            subt.(p.xaxiskey) = p.xtransform(subt.(p.xaxiskey));
-            subt.(p.yaxiskey) = p.ytransform(subt.(p.yaxiskey));
+            subt.(p.xaxiskey) = p.xtransform(subt.(p.xaxiskey));            
+                for iyak = 1:length(p.yaxiskey)
+                    subt.(p.yaxiskey{iyak}) = p.ytransform{iyak}(subt.(p.yaxiskey{iyak}));
+                end            
             subt = sortrows(subt, p.xaxiskey);
-
+            
             if ~p.mean_SEM
-            h(iC) = plot(subt.(p.xaxiskey), subt.(p.yaxiskey), '.-', ...
-                'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
+                for iyak = 1:length(p.yaxiskey)
+                    temph = plot(subt.(p.xaxiskey), subt.(p.yaxiskey), ['.' linetypes{iyak}], ...
+                        'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
+                    if iyak==1, h(iC) = temph;end
+                end
+                
             else
-                y_mean = collapse(subt, @mean, 'keyvars', {p.xaxiskey}, 'valvars', {p.yaxiskey});
-                y_SEM = collapse(subt, @SEM,  'keyvars', {p.xaxiskey}, 'valvars', {p.yaxiskey});
-                if height(y_SEM) == height(subt)
-                    h(iC) = plot(subt.(p.xaxiskey), subt.(p.yaxiskey), '.-', ...
-                        'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
-                else
-                    h(iC) = errorbar(y_mean.(p.xaxiskey), y_mean.(p.yaxiskey),...
-                        y_SEM.(p.yaxiskey),'.-', ...
-                        'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
+                y_mean = collapse(subt, @mean, 'keyvars', {p.xaxiskey}, 'valvars', p.yaxiskey);
+                y_SEM = collapse(subt, @SEM,  'keyvars', {p.xaxiskey}, 'valvars', p.yaxiskey);
+                for iyak = 1:length(p.yaxiskey)
+                    if height(y_SEM) == height(subt)
+                        temph = plot(subt.(p.xaxiskey), subt.(p.yaxiskey{iyak}), ['.' linetypes{iyak}], ...
+                            'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
+                    else
+                        temph = errorbar(y_mean.(p.xaxiskey), y_mean.(p.yaxiskey{iyak}),...
+                            y_SEM.(p.yaxiskey{iyak}), ['.' linetypes{iyak}], ...
+                            'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
+                    end
+                    if iyak==1, h(iC) = temph;end
                 end
             end
         end
 
         p.axischanges(gca)
         if iyp==nRows, xlabel(gca,p.xaxiskey,'fontweight','bold'), end
-        if ixp==1, ylabel(gca, p.yaxiskey,'fontweight','bold'), end
+        if ixp==1, ylabel(gca, strjoin(p.yaxiskey),'fontweight','bold'), end
 
         if (ixp==nCols && iyp==nRows) || xidx==size(xplotkeys,1)
             hl = legend(h, strcat(p.colorkey, '=', AnyToString(colorkeys)), ...

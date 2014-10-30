@@ -47,13 +47,18 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo, varargin)
 %   number of fields (stored in column Cellcount).
 %
 %
+fprintf('Import Cell count data from Columbus files:\n');
 
 p = inputParser;
 addParameter(p,'NobjField',{'Nuclei_NumberOfObjects'},@(x) isstr(x) || iscellstr(x));
 parse(p,varargin{:})
 NobjField = p.Results.NobjField;
 if ischar(NobjField), NobjField = {NobjField}; end
-NobjField = matlab.internal.tableUtils.makeValidName(NobjField,'silent');
+try
+    NobjField = matlab.internal.tableUtils.makeValidName(NobjField,'silent');
+catch
+    NobjField = ReducName( ReplaceName(NobjField,['-/\:?!,.' 250:1e3], '_'), ' ');
+end
 
 %% check for proper inputs
 if ischar(filename)
