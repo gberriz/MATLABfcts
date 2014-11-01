@@ -1,0 +1,2 @@
+global GitFolder
+cd(GitFolder)

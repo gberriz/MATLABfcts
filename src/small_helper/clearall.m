@@ -1,13 +1,19 @@
 clear all
 close all
-Generate_Plotting_parameters
 clc
+beep off
 
-global GitFolder
-if exist('d:\GitHub\','dir')
-    GitFolder = 'd:\GitHub\';
-elseif exist('m:\GitHub\','dir')
-    GitFolder = 'm:\GitHub\';
-end
+Generate_Plotting_parameters
 
+GlobalFolder
 
+% function GlobalFolder:
+% 
+% global GitFolder
+% GitFolder = '....\GitHub\';
+% 
+% global DropBoxFolder
+% DropBoxFolder = '.....\dropbox\';
+% 
+% global WorkDir
+% WorkDir = '....\work';
