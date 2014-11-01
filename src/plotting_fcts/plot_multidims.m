@@ -58,7 +58,7 @@ if ischar(p.yaxiskey)
     p.yaxiskey = {p.yaxiskey};
 end
 if isa(p.ytransform,'function_handle')
-    p.ytransform = {p.ytransform};
+    p.ytransform = repmat({p.ytransform},length(p.yaxiskey),1);
 end
 %
 t_data = TableToCategorical(t_data, [p.xplotkey, p.yplotkey, {p.colorkey}]);
