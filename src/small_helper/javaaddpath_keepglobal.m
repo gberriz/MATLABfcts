@@ -7,12 +7,12 @@ function javaaddpath_keepglobal(dpath, varargin)
 %  When loading Java classes, MATLAB always searches the static Java path
 %  before the dynamic Java path.  The static path is fixed at startup and
 %  cannot be changed.  It contains, in the following order:
-% 
+%
 %     - MATLAB's built-in Java path
 %     - the contents of javaclasspath.txt in the startup directory
 %     - the contents of javaclasspath.txt in the preferences directory
 %       (see 'prefdir')
-% 
+%
 %  Enter 'javaclasspath' to see the static and current dynamic paths.
 %
 %  JAVAADDPATH(DIRJAR)  ... adds directories or jar files
@@ -21,14 +21,15 @@ function javaaddpath_keepglobal(dpath, varargin)
 %
 %  JAVAADDPATH(..., '-END') appends the specified directories.
 %
-%  Use the functional form of JAVAADDPATH, such as 
-%  JAVAADDPATH({'dirjar','dirjar',...}), when the directory 
+%  Use the functional form of JAVAADDPATH, such as
+%  JAVAADDPATH({'dirjar','dirjar',...}), when the directory
 %  specification is stored in a string or cell array of
 %  strings.
 %
 
 g = who('global');
 BaseVars = evalin('base','who');
+CallerVars = evalin('caller','who');
 for i=1:length(g)
     eval(sprintf('global %s', g{i}))
     eval(sprintf('%s_x = %s;', g{i}, g{i}))
@@ -38,8 +39,11 @@ javaaddpath(dpath, varargin{:})
 
 for i=1:length(g)
     eval(sprintf('global %s', g{i}))
-    eval(sprintf('%s = %s_x;', g{i}, g{i}))
     if ismember(g{i}, BaseVars)
-        eval(sprintf('assignin(''base'', g{i}, %s);', g{i}))
+        evalin('base',sprintf('global %s', g{i}))
     end
+    if ismember(g{i}, CallerVars)
+        evalin('caller',sprintf('global %s', g{i}))
+    end
+    eval(sprintf('%s = %s_x;', g{i}, g{i}))
 end

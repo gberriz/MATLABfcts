@@ -1,4 +1,6 @@
 function h = plot_violin(x, y, ybins, width, varargin)
+% h = plot_violin(x, y, ybins, width, varargin)
+%   
 
 if length(x)>1
     assert(any (length(x) == size(y)), 'x and y must have a common dimension')
@@ -39,7 +41,11 @@ else
 end
 
 ydist = ksdensity(y, ybins, 'width', ydiff*1.3);
+range = max(find(ydist>1e-6*max(ydist),1,'first')-2,1):...
+    min(find(ydist>1e-6*max(ydist),1,'last')+2,length(ydist));
+
 ydist = ToRow(ydist)*width/2/max(ydist);
 
-h = plot([x+ydist NaN x-ydist], [ybins NaN ybins], varargin{:});
+h = plot([x+ydist(range) NaN x-ydist(range)], [ybins(range) NaN ybins(range)], ...
+    varargin{:});
 h(2) = plot(x, median(y), '.k');
