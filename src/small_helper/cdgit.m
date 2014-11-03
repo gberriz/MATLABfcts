@@ -1,2 +1,2 @@
-global GitFolder
+
 cd(GitFolder)

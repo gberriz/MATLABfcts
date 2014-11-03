@@ -1,2 +1,2 @@
-global DropBoxFolder
+
 cd(DropBoxFolder)
