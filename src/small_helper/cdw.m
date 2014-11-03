@@ -1,2 +1,1 @@
-global WorkDir
-cd(WorkDir)
+cd(WorkFolder)
