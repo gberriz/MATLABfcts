@@ -1,9 +1,13 @@
-function t = readtsv(filename,varargin)
-%READTSV Create a table by reading from a tsv file.
-%   Use the READTSV function to create a table by reading column-oriented data
-%   from a file.  READTSV assume a text file with tab delimitation.
+function t = tsv2table(filename,varargin)
+% TSV2TABLE Create a table by reading from a tsv file.
+%   Use the TSV2TABLE function to create a table by reading column-oriented data
+%   from a file.  TSV2TABLE assume a text file with tab delimitation.
 %
-%   T = READTSV(FILENAME) creates a table by reading from the tsv file FILENAME.
+%   T = TSV2TABLE(FILENAME) creates a table by reading from the tsv file FILENAME.
+%   T = TSV2TABLE(FILENAME, 'KeepQuote') creates a table by reading from the tsv 
+%       file FILENAME. Entries that have quotes (") are kept (by default: deleted)
+%   T = TSV2TABLE(FILENAME,..., varargin) creates a table by reading from the tsv 
+%       file FILENAME. varargin are default READTSV options (see below).
 %
 %          Reading from a delimited text file creates one variable in T for
 %          each column in the file.  Variable names are taken from the first row
@@ -47,9 +51,9 @@ function t = readtsv(filename,varargin)
 %                          Specifying the format can significantly improve speed for
 %                          some large files.
 
-if ~isempty(varargin) && (any(strcmpi(varargin,'KeepQuote') || strcmpi(varargin,'KpQ')))
+if ~isempty(varargin) && (any(strcmpi(varargin,'KeepQuote') | strcmpi(varargin,'KpQ')))
     Rmq = false;
-    varargin = varargin(~strcmp(varargin,'KeepQuote') && ~strcmpi(varargin,'KpQ'));
+    varargin = varargin(~strcmp(varargin,'KeepQuote') & ~strcmpi(varargin,'KpQ'));
 else
     Rmq = true;
 end
