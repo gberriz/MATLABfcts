@@ -53,7 +53,7 @@ if ~exist('numericfields','var')
     numericfields = setdiff(t_annotated.Properties.VariableNames( ...
         all(cellfun(@isnumeric, table2cell(t_annotated)))), [plate_keys cond_keys labelfields]);
     if ~isempty(numericfields)
-        fprintf('\tThese numeric fields will be averaged (set as cond_inkeys to use them as key:\n');
+        fprintf('\tThese numeric fields will be averaged (set as cond_inkeys to use them as key):\n');
         for i=1:length(numericfields)
             fprintf('\t - %s\n', numericfields{i});
         end

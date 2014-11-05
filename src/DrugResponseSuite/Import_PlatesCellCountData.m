@@ -131,13 +131,28 @@ for i=1:size(CorrectionVarNames,1)
     end
 end
 
+% report error if missing field for cell count
+if ~ismember(NobjField{1}, varnames(t_raw))
+    warnprintf('Missing the field %s used for cell count', NobjField{1})
+    disp('Available fields:')
+    disp(varnames(t_raw)')
+    error('Use optional input ''NobjField'' for specifying fields')
+end
+assert(all(ismember(NobjField, varnames(t_raw))), ...
+    'Not all fields in ''NobjField'' are present in the file')
+    
+
 % check the number of fields
 if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
     warnprintf('%i wells with missing fields', sum(t_raw.NumberOfAnalyzedFields<Nref))
+    FieldCorrected = NobjField(strfindcell(NobjField,'Number')>0);
+    warnprintf('Correcting fields:\n\t%s', strjoin(FieldCorrected,'\n\t'))    
     for i = find(t_raw.NumberOfAnalyzedFields~=Nref)'
-        t_raw.Nuclei_NumberOfObjects(i) = t_raw.Nuclei_NumberOfObjects(i)*...
-            (Nref/t_raw.NumberOfAnalyzedFields(i));
+        for j=1:length(FieldCorrected)
+            t_raw.(FieldCorrected{j})(i) = t_raw.(FieldCorrected{j})(i)*...
+                (Nref/t_raw.NumberOfAnalyzedFields(i));
+        end
     end
 end
 
