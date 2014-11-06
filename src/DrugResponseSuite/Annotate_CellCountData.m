@@ -104,7 +104,7 @@ t_annotated = table;
 for iTf = 1:length(Trtfiles)
     
     DesignNumbers = unique(t_data.DesignNumber(t_data.TreatmentFile==Trtfiles{iTf}));
-    fprintf('Design %s:\n', Trtfiles{iTf} )
+    fprintf('\tDesign %s:\n', Trtfiles{iTf} )
     for iDN = 1:length(DesignNumbers)
         if ~isempty(correct_barcode{iTf})
             DNidx = correct_barcode{iTf}.DesignNumber(DesignNumbers(iDN));
@@ -120,7 +120,7 @@ for iTf = 1:length(Trtfiles)
         idx = find(t_data.TreatmentFile==Trtfiles{iTf} & t_data.DesignNumber==DesignNumbers(iDN));
         [temp, ia] = innerjoin(t_data(idx,:), t_design, 'keys', 'Well');
         if height(temp)<length(idx)
-            warnprintf('Some wells (%s) have not annotations in file %s --> ignored', ...
+            warnprintf('Some wells (%s) have no annotations in file %s --> ignored', ...
                 strjoin(cellstr(unique(t_data.Well(idx(setdiff(1:length(idx),ia))))'),', '), ...
                 Trtfiles{iTf})
         end

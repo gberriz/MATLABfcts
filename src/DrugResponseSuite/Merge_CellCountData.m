@@ -121,14 +121,15 @@ for iP = 1:height(t_plate)
     
     % collapse the replicates
     temp = collapse(t_conditions, @mean, 'keyvars', [plate_keys cond_keys], ...
-        'valvars', [Relvars {'Ctrlcount'} numericfields strcat('Ctrl_', numericfields)]);
+        'valvars', [Relvars {'Cellcount' 'Ctrlcount'} numericfields strcat('Ctrl_', numericfields)]);
     ht = height(temp);
     
     temp2 = unique(t_conditions(:, setdiff(varnames(t_conditions), ...
-        [labelfields numericfields {'Ctrlcount'}])),'stable');
+        [strcat('Ctrl_', numericfields) labelfields numericfields {'Ctrlcount'}])),'stable');
     temp = innerjoin(temp, temp2, 'keys', [setdiff(plate_keys, plate_inkeys) cond_keys ], ...
         'rightvariables', setdiff(varnames(temp2), varnames(temp)));
     
+    assert(height(temp)<=ht, 'merging failed; need to debug')
     assert(plate_reps || height(temp)==ht, ['Some replicates have been merged accidentally,' ...
         ' this may be due to replicate on the same plate (set plate_reps=true), or use ''cond_inkeys'''])
     t_mean = [t_mean; temp];

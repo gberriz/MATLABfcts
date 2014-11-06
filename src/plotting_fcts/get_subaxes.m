@@ -30,7 +30,9 @@ addParameter(p, 'yspacing', .08, @isnumeric)
 addParameter(p, 'xshift', NaN, @isnumeric)
 addParameter(p, 'yshift', NaN, @isnumeric)
 addParameter(p, 'xRshift', 0, @isnumeric)
-addParameter(p, 'yRshift', 0, @isnumeric)
+addParameter(p, 'yTshift', 0, @isnumeric)
+addParameter(p, 'xLshift', 0, @isnumeric)
+addParameter(p, 'yBshift', 0, @isnumeric)
 
 parse(p,varargin{:})
 extra = p.Unmatched;
@@ -50,11 +52,11 @@ if isnan(p.yshift)
     p.yshift = 1.2*p.yspacing;
 end
 
-axis_width = (1-((nCols-.8)*p.xspacing+p.xshift+p.xRshift))/nCols;
-axis_height = (1-((nRows-.3)*p.yspacing+p.yshift+p.yRshift))/nRows;
+axis_width = (1-((nCols-.8)*p.xspacing+p.xshift+p.xRshift+p.xLshift))/nCols;
+axis_height = (1-((nRows-.3)*p.yspacing+p.yshift+p.yTshift+p.yBshift))/nRows;
 
-temph = get_newaxes([p.xshift+(ColIdx-1)*(axis_width+p.xspacing) ...
-    p.yshift+(nRows-RowIdx)*(axis_height+p.yspacing) axis_width axis_height],...
+temph = get_newaxes([p.xshift+(ColIdx-1)*(axis_width+p.xspacing)+p.xLshift ...
+    p.yshift+(nRows-RowIdx)*(axis_height+p.yspacing)+p.yBshift axis_width axis_height],...
     holded,extravars{:});
 
 if nargout>0

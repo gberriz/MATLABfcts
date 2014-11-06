@@ -147,7 +147,7 @@ if length(unique(t_raw.NumberOfAnalyzedFields))>1
     Nref = median(t_raw.NumberOfAnalyzedFields);
     warnprintf('%i wells with missing fields', sum(t_raw.NumberOfAnalyzedFields<Nref))
     FieldCorrected = NobjField(strfindcell(NobjField,'Number')>0);
-    warnprintf('Correcting fields:\n\t%s', strjoin(FieldCorrected,'\n\t'))    
+    warnprintf('Correcting for field number:\n\t - %s', strjoin(FieldCorrected,'\n\t - '))    
     for i = find(t_raw.NumberOfAnalyzedFields~=Nref)'
         for j=1:length(FieldCorrected)
             t_raw.(FieldCorrected{j})(i) = t_raw.(FieldCorrected{j})(i)*...
