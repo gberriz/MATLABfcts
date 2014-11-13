@@ -109,32 +109,20 @@ Designs = struct('plate_dims', repmat({plate_dims}, nReps, 1), ...
 SingleDoses = cellfun2(@(x,y,z) round_Doses(x,y,z,'Single',min_volume, ...
     step_volume, max_volume, well_volume), SingleDoses, stock_conc, DrugNames);
 
-% if isempty(ComboLists) && ~isempty(ComboDoses)
-% ComboLists = [ComboDoses(DrugPairs(:,1)) ComboDoses(DrugPairs(:,2))];
-% end
+if isempty(ComboLists) && ~isempty(ComboDoses)
+    ComboLists = [ComboDoses(DrugPairs(:,1)) ComboDoses(DrugPairs(:,2))];
+end
 
-if ~isempty(ComboDoses)
-    ComboDoses = cellfun2(@(x,y,z) round_Doses(x,y,z,'Combo',min_volume, ...
-        step_volume, max_volume, well_volume), ComboDoses, stock_conc, DrugNames);
-    if any(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboDoses, SingleDoses))
-        fprintf('\n')
-        warnprintf('Some doses for the combo are not part of the single doses for %s', ...
-            strjoin(ToRow(DrugNames(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboDoses, SingleDoses))),', '))
-    end
-    
-    nTreatments = sum(cellfun(@length,SingleDoses)) + ...
-        sum(cellfun(@(x,y) length(x)*length(y), ComboDoses(DrugPairs(:,1)), ...
-        ComboDoses(DrugPairs(:,2))));
-    
-elseif ~isempty(ComboLists)
+if ~isempty(ComboLists)
     ComboLists(:) = cellfun2(@(x,y,z) round_Doses(x,y,z,'Combo',min_volume, ...
         step_volume, max_volume, well_volume), ComboLists(:), stock_conc, DrugNames);
-    if any(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboLists(:), SingleDoses))
-        fprintf('\n')
-        warnprintf('Some doses for the combo are not part of the single doses for %s', ...
-            strjoin(ToRow(DrugNames(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboLists(:), SingleDoses))),', '))
+    fprintf('\n')
+    for iD = 1:length(SingleDoses)
+        if any(~ismember([ComboLists{DrugPairs==iD}], SingleDoses{iD}))
+            warnprintf('Some doses for the combo are not part of the single doses for %s', ...
+                DrugNames{iD})
+        end
     end
-    
     nTreatments = sum(cellfun(@length,SingleDoses)) + ...
         sum(cellfun(@(x,y) length(x)*length(y), ComboLists(:,1), ...
         ComboLists(:,2)));
@@ -168,25 +156,13 @@ for iD = 1:length(DrugNames)
     cnt = cnt + length(SingleDoses{iD});
 end
 for iCo = 1:size(DrugPairs,1)
-    if ~isempty(ComboDoses)
-        for iD1 = 1:length(ComboDoses{DrugPairs(iCo,1)})
-            allTreatments(DrugPairs(iCo,1), cnt+(1:length(ComboDoses{DrugPairs(iCo,2)}))) = ...
-                ComboDoses{DrugPairs(iCo,1)}(iD1);
-            allTreatments(DrugPairs(iCo,2), cnt+(1:length(ComboDoses{DrugPairs(iCo,2)}))) = ...
-                ComboDoses{DrugPairs(iCo,2)};
-            cnt = cnt + length(ComboDoses{DrugPairs(iCo,2)});
-        end
-    else % using DrugList
-        for iD1 = 1:length(ComboLists{iCo,1})
-            allTreatments(DrugPairs(iCo,1), cnt+(1:length(ComboLists{iCo,2}))) = ...
-                ComboLists{iCo,1}(iD1);
-            allTreatments(DrugPairs(iCo,2), cnt+(1:length(ComboLists{iCo,2}))) = ...
-                ComboLists{iCo,2};
-            cnt = cnt + length(ComboLists{iCo,2});
-        end
-        
+    for iD1 = 1:length(ComboLists{iCo,1})
+        allTreatments(DrugPairs(iCo,1), cnt+(1:length(ComboLists{iCo,2}))) = ...
+            ComboLists{iCo,1}(iD1);
+        allTreatments(DrugPairs(iCo,2), cnt+(1:length(ComboLists{iCo,2}))) = ...
+            ComboLists{iCo,2};
+        cnt = cnt + length(ComboLists{iCo,2});
     end
-    
 end
 
 assert(cnt==nTreatments)
@@ -203,10 +179,10 @@ for iR = 1:nReps
     nDrugs = sum(allDrugs>0,3);
     assert(all(squeeze(sum(sum((allDrugs>0).*repmat(nDrugs==1,1,1,length(DrugNames)),2),1))==...
         cellfun(@length,SingleDoses)))
-%     for iCo = 1:size(DrugPairs,1)
-%         assert(sum(sum( all(allDrugs(:,:,DrugPairs(iCo,:))>0,3)))== ...
-%             length(ComboDoses{DrugPairs(iCo,1)})*length(ComboDoses{DrugPairs(iCo,2)}))
-%     end
+    for iCo = 1:size(DrugPairs,1)
+        assert(sum(sum( all(allDrugs(:,:,DrugPairs(iCo,:))>0,3)))== ...
+            length(ComboLists{iCo,1})*length(ComboLists{iCo,2}))
+    end
     
 end
 
