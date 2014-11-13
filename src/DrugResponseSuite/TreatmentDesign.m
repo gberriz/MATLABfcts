@@ -36,6 +36,7 @@ function Designs = TreatmentDesign(DrugNames, HMSLids, SingleDoses, nReps, varar
 p = inputParser;
 
 addParameter(p,'ComboDoses',[], @(x) all(cellfun(@isnumeric,x)));
+addParameter(p,'ComboLists',[], @(x) all(cellfun(@isnumeric,x(:))));
 addParameter(p,'DrugPairs',zeros(0,2), @isnumeric);
 addParameter(p,'Seed',1,  @(x) isscalar(x) && isnumeric(x));
 addParameter(p,'edge_ctrl',true, @(x) islogical(x) & isscalar(x));
@@ -50,7 +51,7 @@ addParameter(p,'max_DMSOpct', .2, @(x) isscalar(x) && isnumeric(x)); % maximum 0
 
 parse(p, varargin{:})
 p = p.Results;
-for i = {'ComboDoses' 'DrugPairs' 'Seed' 'edge_ctrl' 'stock_conc' ...
+for i = {'ComboDoses' 'ComboLists' 'DrugPairs' 'Seed' 'edge_ctrl' 'stock_conc' ...
         'well_volume' 'plate_dims' 'min_volume' 'step_volume' 'max_DMSOpct'}
     eval([i{:} ' = p.' i{:} ';'])
 end
@@ -62,9 +63,11 @@ DrugNames = ToColumn(DrugNames);
 assert((length(DrugNames)==length(HMSLids)) || isempty(HMSLids))
 assert(length(DrugNames)==length(SingleDoses))
 
+assert(isempty(DrugPairs) || (~isempty(ComboDoses) || ~isempty(ComboLists)))
 assert(all(DrugPairs(:)<=length(DrugNames)) || isempty(DrugPairs))
 assert((length(DrugNames)==length(ComboDoses)) || isempty(ComboDoses))
 assert(size(DrugPairs,2)==2)
+assert(all(size(DrugPairs)==size(ComboLists)) || isempty(ComboLists))
 
 assert((length(DrugNames)==length(stock_conc)) || (length(stock_conc)==1))
 assert(all(stock_conc>20 & stock_conc<5e4), 'Stock concentration should be in uM')
@@ -106,6 +109,10 @@ Designs = struct('plate_dims', repmat({plate_dims}, nReps, 1), ...
 SingleDoses = cellfun2(@(x,y,z) round_Doses(x,y,z,'Single',min_volume, ...
     step_volume, max_volume, well_volume), SingleDoses, stock_conc, DrugNames);
 
+% if isempty(ComboLists) && ~isempty(ComboDoses)
+% ComboLists = [ComboDoses(DrugPairs(:,1)) ComboDoses(DrugPairs(:,2))];
+% end
+
 if ~isempty(ComboDoses)
     ComboDoses = cellfun2(@(x,y,z) round_Doses(x,y,z,'Combo',min_volume, ...
         step_volume, max_volume, well_volume), ComboDoses, stock_conc, DrugNames);
@@ -118,6 +125,19 @@ if ~isempty(ComboDoses)
     nTreatments = sum(cellfun(@length,SingleDoses)) + ...
         sum(cellfun(@(x,y) length(x)*length(y), ComboDoses(DrugPairs(:,1)), ...
         ComboDoses(DrugPairs(:,2))));
+    
+elseif ~isempty(ComboLists)
+    ComboLists(:) = cellfun2(@(x,y,z) round_Doses(x,y,z,'Combo',min_volume, ...
+        step_volume, max_volume, well_volume), ComboLists(:), stock_conc, DrugNames);
+    if any(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboLists(:), SingleDoses))
+        fprintf('\n')
+        warnprintf('Some doses for the combo are not part of the single doses for %s', ...
+            strjoin(ToRow(DrugNames(cellfun(@(x,y) any(~ismember(x,y) & ~isempty(y)), ComboLists(:), SingleDoses))),', '))
+    end
+    
+    nTreatments = sum(cellfun(@length,SingleDoses)) + ...
+        sum(cellfun(@(x,y) length(x)*length(y), ComboLists(:,1), ...
+        ComboLists(:,2)));
 else
     nTreatments = sum(cellfun(@length,SingleDoses));
 end
@@ -131,35 +151,14 @@ assert(ctrl_cnt>5, 'Too many well used (%i out of %i), need at least 6 control w
     nTreatments, nWells)
 
 
-fixedctrlpos = false(plate_dims);
 if edge_ctrl
-    % specific position of the controls on the edges
-    
-    assert(ctrl_cnt>=12, 'For controls on the edge, need at least 12 controls')
-    
-    if ctrl_cnt<14 % only 6 controls on the edge
-        disp('Only 6 controls on the edge, would be better with at least 14 controls in total')
-        fixedctrlpos(round(1+((plate_dims(1)-1)*(0:3))/3), round(1+((plate_dims(2)-1)*(1:2))/3)) = true;
-        fixedctrlpos(round(1+(plate_dims(1)-1)/2),round(1+(plate_dims(2)*(0:3))/3)) = true;
-    else % 2 controls on each edge, 6 regularly spread in the middle.
-        fixedctrlpos(round(1+((plate_dims(1)-1)*(0:3))/3), round(1+((plate_dims(2)-1)*(1:2))/3)) = true;
-        fixedctrlpos(round(1+((plate_dims(1)-1)*(1:2))/3), round(1+((plate_dims(2)-1)*(0:3))/3)) = true;
+    [ctrlidx, treated_wells] = DefineFixedControlPositions(plate_dims, ctrl_cnt);
+    for iR=1:nReps
+        Designs(iR).treated_wells = treated_wells;
     end
-    
-    if ctrl_cnt >= (sum(2*plate_dims)-4 +6) % remove all edges --> not treated
-        fixedctrlpos([1 end], :) = true;
-        fixedctrlpos(:, [1 end]) = true;
-        for iR=1:nReps
-            Designs(iR).treated_wells([1 end], :) = false;
-            Designs(iR).treated_wells(:, [1 end]) = false;
-        end
-    elseif ctrl_cnt>=20 % put the corners as control (should be then discarded)
-        fixedctrlpos([1 end], [1 end]) = true;        
-    end
+else
+    ctrlidx = [];
 end
-assert(all(size(fixedctrlpos)==plate_dims))
-ctrlidx = find(fixedctrlpos);
-
 
 %% define all possible treatments
 allTreatments = zeros(length(DrugNames), nTreatments);
@@ -169,14 +168,27 @@ for iD = 1:length(DrugNames)
     cnt = cnt + length(SingleDoses{iD});
 end
 for iCo = 1:size(DrugPairs,1)
-    for iD1 = 1:length(ComboDoses{DrugPairs(iCo,1)})
-        allTreatments(DrugPairs(iCo,1), cnt+(1:length(ComboDoses{DrugPairs(iCo,2)}))) = ...
-            ComboDoses{DrugPairs(iCo,1)}(iD1);
-        allTreatments(DrugPairs(iCo,2), cnt+(1:length(ComboDoses{DrugPairs(iCo,2)}))) = ...
-            ComboDoses{DrugPairs(iCo,2)};
-        cnt = cnt + length(ComboDoses{DrugPairs(iCo,2)});
+    if ~isempty(ComboDoses)
+        for iD1 = 1:length(ComboDoses{DrugPairs(iCo,1)})
+            allTreatments(DrugPairs(iCo,1), cnt+(1:length(ComboDoses{DrugPairs(iCo,2)}))) = ...
+                ComboDoses{DrugPairs(iCo,1)}(iD1);
+            allTreatments(DrugPairs(iCo,2), cnt+(1:length(ComboDoses{DrugPairs(iCo,2)}))) = ...
+                ComboDoses{DrugPairs(iCo,2)};
+            cnt = cnt + length(ComboDoses{DrugPairs(iCo,2)});
+        end
+    else % using DrugList
+        for iD1 = 1:length(ComboLists{iCo,1})
+            allTreatments(DrugPairs(iCo,1), cnt+(1:length(ComboLists{iCo,2}))) = ...
+                ComboLists{iCo,1}(iD1);
+            allTreatments(DrugPairs(iCo,2), cnt+(1:length(ComboLists{iCo,2}))) = ...
+                ComboLists{iCo,2};
+            cnt = cnt + length(ComboLists{iCo,2});
+        end
+        
     end
+    
 end
+
 assert(cnt==nTreatments)
 assert(all(any(allTreatments>0)))
 
@@ -184,32 +196,17 @@ assert(all(any(allTreatments>0)))
 %% assign the design for each replicate
 for iR = 1:nReps
     
-    s = RandStream('mt19937ar','Seed',Seed+iR-1);
-    RandStream.setGlobalStream(s);
-    if Seed>0
-        idx = randperm(nWells); % randomize the order
-    else
-        idx = 1:nWells;
-    end
-    idx(ctrlidx) = nWells+1; % put the 'fixed control' as control
-    order = sortidx(idx,'ascend'); % find the order for the treatment on the plate
-    
-    for iD = 1:length(DrugNames)
-        Designs(iR).Drugs(iD).layout(order(1:nTreatments)) = allTreatments(iD,:);
-    end
+    Designs(iR).Drugs = RandomizePlatePositions(Designs(iR).Drugs, ...
+        allTreatments, nWells, plate_dims, ctrlidx, ctrl_cnt, Seed+iR-1);
     
     allDrugs = reshape([Designs(iR).Drugs.layout], [plate_dims length(DrugNames)]);
     nDrugs = sum(allDrugs>0,3);
     assert(all(squeeze(sum(sum((allDrugs>0).*repmat(nDrugs==1,1,1,length(DrugNames)),2),1))==...
         cellfun(@length,SingleDoses)))
-    for iCo = 1:size(DrugPairs,1)
-        assert(sum(sum( all(allDrugs(:,:,DrugPairs(iCo,:))>0,3)))== ...
-            length(ComboDoses{DrugPairs(iCo,1)})*length(ComboDoses{DrugPairs(iCo,2)}))
-    end
-    
-    Treated = any(allDrugs>0,3);
-    assert(~any(Treated(ctrlidx)))
-    assert(sum(~Treated(:))==ctrl_cnt)
+%     for iCo = 1:size(DrugPairs,1)
+%         assert(sum(sum( all(allDrugs(:,:,DrugPairs(iCo,:))>0,3)))== ...
+%             length(ComboDoses{DrugPairs(iCo,1)})*length(ComboDoses{DrugPairs(iCo,2)}))
+%     end
     
 end
 
