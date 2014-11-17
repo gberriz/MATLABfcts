@@ -10,7 +10,7 @@ assert(ctrl_cnt>=12, 'For controls on the edge, need at least 12 controls')
 if ctrl_cnt<14 % only 6 controls on the edge
     disp('Only 6 controls on the edge, would be better with at least 14 controls in total')
     fixedctrlpos(round(1+((plate_dims(1)-1)*(0:3))/3), round(1+((plate_dims(2)-1)*(1:2))/3)) = true;
-    fixedctrlpos(round(1+(plate_dims(1)-1)/2),round(1+(plate_dims(2)*(0:3))/3)) = true;
+    fixedctrlpos(round(1+(plate_dims(1)-1)/2),round(1+((plate_dims(2)-1)*(0:3))/3)) = true;
 else % 2 controls on each edge, 6 regularly spread in the middle.
     fixedctrlpos(round(1+((plate_dims(1)-1)*(0:3))/3), round(1+((plate_dims(2)-1)*(1:2))/3)) = true;
     fixedctrlpos(round(1+((plate_dims(1)-1)*(1:2))/3), round(1+((plate_dims(2)-1)*(0:3))/3)) = true;

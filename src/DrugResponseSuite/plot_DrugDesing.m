@@ -37,19 +37,26 @@ for iD = 1:length(Design)
         get_newaxes(axespos(iC, iR),1,...
             'fontsize',6);
         
-        conc = log10(Design(iD).Drugs(iDr).layout);
-        [range, conc] = DataRangeCap(conc);
-        conc(~Design(iD).treated_wells) = NaN;
-        
-        imagesc(conc, range)
-        
-        title(Design(iD).Drugs(iDr).DrugName,'fontsize',8,'fontweight','bold')
+        title(sprintf('%s [%.2g - %.2g]', Design(iD).Drugs(iDr).DrugName, ...
+            min(Design(iD).Drugs(iDr).layout(Design(iD).Drugs(iDr).layout(:)>0)), ...
+            max(Design(iD).Drugs(iDr).layout(:))), ...
+            'fontsize',8,'fontweight','bold')
         
         xlim([.5 Design(iD).plate_dims(2)+.5])
         ylim([.5 Design(iD).plate_dims(1)+.5])
         
         set(gca,'ytick',1:2:16, 'yticklabel', cellfun(@(x) {char(x)},num2cell(65:2:80)),...
             'xtick',1:3:30,'ydir','reverse')
+        
+        if all(Design(iD).Drugs(iDr).layout(:)==0)
+            continue
+        end
+        conc = log10(Design(iD).Drugs(iDr).layout);
+        [range, conc] = DataRangeCap(conc);
+        conc(~Design(iD).treated_wells) = NaN;
+        
+        imagesc(conc, range)
+        
     end
     
     

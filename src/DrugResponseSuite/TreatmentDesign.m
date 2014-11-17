@@ -115,7 +115,8 @@ end
 
 if ~isempty(ComboLists)
     ComboLists(:) = cellfun2(@(x,y,z) round_Doses(x,y,z,'Combo',min_volume, ...
-        step_volume, max_volume, well_volume), ComboLists(:), stock_conc, DrugNames);
+        step_volume, max_volume, well_volume), ComboLists(:), ...
+        stock_conc(DrugPairs(:)), DrugNames(DrugPairs(:)));
     fprintf('\n')
     for iD = 1:length(SingleDoses)
         if any(~ismember([ComboLists{DrugPairs==iD}], SingleDoses{iD}))
