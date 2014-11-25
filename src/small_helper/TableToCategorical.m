@@ -5,7 +5,7 @@ function t_out = TableToCategorical(t_in, varidx)
 %       set varidx=0 for all string columns (default)
 %
 
-if ~exist('varidx')
+if ~exist('varidx','var')
     varidx=0;
 end
 if isnumeric(varidx)
