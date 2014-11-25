@@ -1,6 +1,6 @@
 function h = plot_violin(x, y, ybins, width, varargin)
 % h = plot_violin(x, y, ybins, width, varargin)
-%   
+%
 
 if length(x)>1
     assert(any (length(x) == size(y)), 'x and y must have a common dimension')
@@ -46,6 +46,15 @@ range = max(find(ydist>1e-6*max(ydist),1,'first')-2,1):...
 
 ydist = ToRow(ydist)*width/2/max(ydist);
 
+
+ish = ishold;
+hold on
+
 h = plot([x+ydist(range) NaN x-ydist(range)], [ybins(range) NaN ybins(range)], ...
     varargin{:});
 h(2) = plot(x, median(y), '.k');
+
+
+if ~ish
+    hold off
+end
