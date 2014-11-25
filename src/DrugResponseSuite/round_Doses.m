@@ -38,12 +38,9 @@ if any( ((mod(temp_Doses,step_dose)./temp_Doses)>.02) & (temp_Doses>1.02*min_dos
 end
 if any(temp_Doses~=old_NZ_Doses)
     fprintf('\tChanged doses:')
-    for iDoses = ToRow(find(temp_Doses~=old_NZ_Doses))
-        fprintf('\t%-7.2g', old_NZ_Doses(iDoses))
-    end
-    fprintf('\n\t    (%3i)  -->', sum(temp_Doses~=old_NZ_Doses))
-    for iDoses = ToRow(find(temp_Doses~=old_NZ_Doses))
-        fprintf('\t%-7.2g', temp_Doses(iDoses))
+    temp_old = unique(old_NZ_Doses(temp_Doses~=old_NZ_Doses));
+    for iDoses = ToRow(temp_old)
+        fprintf('\n\t\t%-7.2g --> %.2g',iDoses, temp_Doses(find(old_NZ_Doses==iDoses,1,'first')));
     end
     fprintf('\n')
 end

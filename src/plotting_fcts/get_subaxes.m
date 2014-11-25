@@ -11,6 +11,12 @@ function h = get_subaxes(nRows, nCols, RowIdx, ColIdx, holded, varargin)
 %   optional fields are:
 %       - xspacing
 %       - yspacing
+%       - xshift
+%       - yshift
+%       - xLshift
+%       - xRshift
+%       - yBshift
+%       - yTshift
 %       - any name/parameter pairs valid as axis properties
 %
 
@@ -52,8 +58,8 @@ if isnan(p.yshift)
     p.yshift = 1.2*p.yspacing;
 end
 
-axis_width = (1-((nCols-.8)*p.xspacing+p.xshift+p.xRshift+p.xLshift))/nCols;
-axis_height = (1-((nRows-.3)*p.yspacing+p.yshift+p.yTshift+p.yBshift))/nRows;
+axis_width = (1-((nCols-1)*p.xspacing+2*p.xshift+p.xRshift+p.xLshift))/nCols;
+axis_height = (1-((nRows-1)*p.yspacing+2*p.yshift+p.yTshift+p.yBshift))/nRows;
 
 temph = get_newaxes([p.xshift+(ColIdx-1)*(axis_width+p.xspacing)+p.xLshift ...
     p.yshift+(nRows-RowIdx)*(axis_height+p.yspacing)+p.yBshift axis_width axis_height],...

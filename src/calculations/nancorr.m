@@ -51,6 +51,7 @@ for i=1:maxi
     end
     for j=max(minj,i+1):size(X,2)
         idx = idx1 & ~isnan(X(:,j));
+        if ~any(idx), continue, end
         n(i,j) = sum(idx);
         [r(i,j), p(i,j)] = corr(X(idx,i), X(idx,j),'type',type);
         n(j,i) = n(i,j);
