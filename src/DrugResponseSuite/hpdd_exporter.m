@@ -140,6 +140,14 @@ assert(length(setdiff(unique(t_plateinfo.TreatmentFile),'-'))==1, ...
 
 t_trt_plates = t_plateinfo(~strcmp(t_plateinfo.TreatmentFile,'-'),:);
 
+try
+    t_trt_plates.DesignNumber = cellfun(@str2num,t_trt_plates.DesignNumber);
+catch
+    disp('Plates with a TreatmentFile should have a numeric value for DesignNumber')
+    disp(t_trt_plates(:,'DesignNumber'))
+    error('Check plate info file')
+end
+
 for plate_num = 1:height(t_trt_plates)
     
     plate = document.createElement('Plate');
