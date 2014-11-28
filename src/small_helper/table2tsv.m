@@ -1,4 +1,9 @@
-function table2tsv(a,filename)
-% table2tsv(a,filename)
+function table2tsv(a,filename, PrintHeaders)
+% table2tsv(a, filename, PrintHeaders)
+%   default: printing column headers (PrintHeaders = TRUE)
 
-cell2tsv(filename, table2cellstr(a) );
+if ~exist('PrintHeaders','var')
+    PrintHeaders = true;
+end
+
+cell2tsv(filename, table2cellstr(a, PrintHeaders) );
