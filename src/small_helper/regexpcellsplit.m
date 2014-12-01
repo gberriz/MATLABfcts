@@ -12,8 +12,8 @@ function parts = regexpcellsplit(strcell, express, selected)
 %
 
 parts = cell(size(strcell));
-temp = regexp(strcell(:,1),express,'split');
-for i=1:length(temp)
+temp = regexp(strcell,express,'split');
+for i=1:numel(temp)
     if exist('selected','var')
         if selected<0 && -selected>length(temp{i})
             parts{i} = '';
