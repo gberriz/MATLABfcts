@@ -1,12 +1,12 @@
-function DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
+function axis_handles = DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
   PlotOptions, colorthreshold)
-% function DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
+% function axis_handles = DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
 %   PlotOptions, colorthreshold)
 
 labels = cellstr2str( table2cellstr(t_SampleLabels,0));
 
 
-get_newaxes(AxisPos)
+axis_handles = get_newaxes(AxisPos);
 tree = linkage(SampleDist,'average');
 if ~exist('colorthreshold','var') || isempty(colorthreshold)
     [h,~,outperm] = dendrogram(tree,0,'labels',labels,'orientation','left');
@@ -37,7 +37,7 @@ xlim([0 1.1])
 fields = varnames(t_SampleLabels);
 
 for iF = 1:length(fields)
-    get_newaxes([AxisPos(1)+AxisPos(3)+(iF-1)*xwidth AxisPos(2) xwidth AxisPos(4)],1)
+    axis_handles(iF+1) = get_newaxes([AxisPos(1)+AxisPos(3)+(iF-1)*xwidth AxisPos(2) xwidth AxisPos(4)],1);
     
     for i=1:length(PlotOptions.(fields{iF}))
         temp = t_SampleLabels.(fields{iF});
