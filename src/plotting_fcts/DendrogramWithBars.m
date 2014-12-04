@@ -1,10 +1,12 @@
-function axis_handles = DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
+function [axis_handles, bar_handles] = DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
   PlotOptions, colorthreshold)
-% function axis_handles = DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
+% function [axis_handles, bar_handles] = DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
 %   PlotOptions, colorthreshold)
 
 labels = cellstr2str( table2cellstr(t_SampleLabels,0));
 
+
+SampleDist = squareform(SampleDist,'tovector');
 
 axis_handles = get_newaxes(AxisPos);
 tree = linkage(SampleDist,'average');
@@ -35,7 +37,7 @@ xlim([0 1.1])
 
 %%
 fields = varnames(t_SampleLabels);
-
+bar_handles = cell(length(fields),1);
 for iF = 1:length(fields)
     axis_handles(iF+1) = get_newaxes([AxisPos(1)+AxisPos(3)+(iF-1)*xwidth AxisPos(2) xwidth AxisPos(4)],1);
     
@@ -43,13 +45,14 @@ for iF = 1:length(fields)
         temp = t_SampleLabels.(fields{iF});
         temp = temp(outperm);
         idx = find(temp==PlotOptions.(fields{iF})(i));
-        barh([-2;-1;idx], ones(size(idx,1)+2,1), 1, 'facecolor', ...
-            PlotOptions.([fields{iF} 'Colors'])(i,:), ...
-            'linestyle','none')
+        bar_handles{iF}(i) = barh([-2;-1;idx], ones(size(idx,1)+2,1), 1, 'facecolor', ...
+            PlotOptions.([fields{iF} 'Colors'])(i,:), 'linestyle','none');
     end
     
-    for i = find(any(diff(SampleColor,1)~=0,2))'
-        plot([0 1], [i i]+.5, '-k')
+    if exist('SampleColor','var')
+        for i = find(any(diff(SampleColor,1)~=0,2))'
+            plot([0 1], [i i]+.5, '-k')
+        end
     end
     
     ylim([.5 length(labels)+.5])
