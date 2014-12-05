@@ -12,7 +12,7 @@ function hpdd_exporter(hpdd_filename, Designs, t_plateinfo)
 %                           and layout - concentration given in uM)
 %   t_plateinfo :   table (or file name to a tsv table) with columns:
 %                       - Barcode
-%                       - TreatmentFile (which should match the name where 
+%                       - TreatmentFile (which should match the name where
 %                           'Deisgn is saved')
 %                       - DesignNumber
 %                       - PlateShaking
@@ -42,7 +42,7 @@ create_text_children(protocol, ...
     'BackfillOrder'             'LastPriority';
     'BackfillNoDispense'        logical2str(0);
     } ...
-);
+    );
 
 % Add Fluids list.
 fluids = document.createElement('Fluids');
@@ -74,36 +74,35 @@ for fluid_num = 1:length(fluid_data)
         % just play it safe and use the same units we used up top.
         'ConcentrationUnit' [MICRO 'M'];
         } ...
-    );
+        );
 end
 
 % Perform some checks on the Design data structures.
 for design_num = 1:length(Designs)
+    % Verify that the plate design has a standard format
+    if mod(log2(Designs(design_num).plate_dims(1)),1) ~= 0 || ...
+            (Designs(design_num).plate_dims(2)/Designs(design_num).plate_dims(1))~=1.5
+        me = MException('ExportProtocol_D300:plate_layout_unknown', ...
+            'Design %d is not a standard plate size', design_num);
+        throw(me);
+    end
+    
     % Verify that all drug layout have the standard format
-    if size(unique(cell2mat(cellfun(@size,{Designs(design_num).Drugs.layout}','uniformoutput',0)), ...
-            'rows'),1)>1
-        me = MException('ExportProtocol_D300:drug_layout_mismatch', ...
-                        'Design %d have different layout sizes for drugs', design_num);
-        throw(me);
+    for iD = 1:length(Designs(design_num).Drugs)
+        if ~all(size(Designs(design_num).Drugs(iD).layout) == Designs(design_num).plate_dims)
+            me = MException('ExportProtocol_D300:drug_layout_mismatch', ...
+                'Drug %i for Design %d is not matching plate layout', iD, design_num);
+            throw(me);
+        end
     end
-    % Verify that all plate maps are standard format. If we have to
-    % support different plate types in the future this would need to be
-    % changed.
-    if (log2(size(Designs(design_num).Drugs(1).layout,1))~=...
-            round(log2(size(Designs(design_num).Drugs(1).layout,1)))) || ...
-            ((size(Designs(design_num).Drugs(1).layout,2)/...
-            size(Designs(design_num).Drugs(1).layout,1))~=1.5)
-        me = MException('ExportProtocol_D300:plate_size_mismatch', ...
-                        'Design %d is not a standard plate size', design_num);
-        throw(me);
-    end
-    % Verify that backfill maps are 16x24 (384) wells if it exists. If we have to
-    % support different plate types in the future this would need to be
-    % changed.
+    
+    % Verify that backfill maps are 2n x 3n (24/96/384/...) wells if it
+    % exists. If we have to support different plate types in the future
+    % this would need to be changed.
     if isfield(Designs(design_num), 'treated_wells') && ...
-            ~all(size(Designs(design_num).treated_wells) == size(Designs(design_num).Drugs(1).layout))
+            ~all(size(Designs(design_num).treated_wells) == Designs(design_num).plate_dims)
         me = MException('ExportProtocol_D300:backfill_size_mismatch', ...
-                        'treated_wells for Design %d is not matching drug layout', design_num);
+            'treated_wells for Design %d is not matching plate layout', design_num);
         throw(me);
     end
 end
@@ -115,7 +114,7 @@ else
     assert(istable(t_plateinfo), ['Barcodes should be a table or a tsv file' ...
         ' with columns Barcode, DesignNumber'])
 end
-    
+
 % Create Plates container.
 plates = document.createElement('Plates');
 protocol.appendChild(plates);
@@ -150,10 +149,15 @@ end
 
 for plate_num = 1:height(t_trt_plates)
     
-    plate = document.createElement('Plate');
-    plates.appendChild(plate);
     % Use barcode table's DesignNumber column as index into Design array.
     cur_design = Designs(t_trt_plates.DesignNumber(plate_num));
+    if ~isfield(cur_design,'Drugs') || isempty(cur_design.Drugs) || ...
+            all(reshape([cur_design.Drugs.layout],[],1)==0)
+        warnprintf('Plate  %s  is ignored because no drug treatment was found', ...
+            char(t_trt_plates.Barcode(plate_num)))
+        continue
+    end
+    
     plate_name = t_trt_plates.Barcode(plate_num);
     if isvariable(t_trt_plates, 'PlateShaking')
         PlateShaking = t_trt_plates.PlateShaking(plate_num);
@@ -162,6 +166,11 @@ for plate_num = 1:height(t_trt_plates)
     end
     % Convert volume from microliters to nanoliters.
     volume_nanoliters = cur_design.well_volume * 1e3;
+    
+    % creat the plate
+    plate = document.createElement('Plate');
+    plates.appendChild(plate);
+    
     create_text_children(plate, ...
         {
         'PlateType'   sprintf('Default%i', numel(cur_design.Drugs(1).layout));
@@ -171,10 +180,10 @@ for plate_num = 1:height(t_trt_plates)
         'AssayVolume' double2str(volume_nanoliters);
         'DMSOLimit'   double2str(0.02);
         'DontShake'   logical2str(~PlateShaking);
-    % FIXME: I came across an AqueousLimit element in a different
-    % officially-generated file. What is that?
+        % FIXME: I came across an AqueousLimit element in a different
+        % officially-generated file. What is that?
         } ...
-    );
+        );
     wells = document.createElement('Wells');
     plate.appendChild(wells);
     for row = 1:size(cur_design.Drugs(1).layout,1)

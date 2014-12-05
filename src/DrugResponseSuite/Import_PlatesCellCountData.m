@@ -80,6 +80,7 @@ else
 end
 
 CheckPlateInfo(t_plateinfo)
+t_plateinfo.DesignNumber = cellstr2mat(t_plateinfo.DesignNumber);
 %% load the cell count data
 
 if ischar(filename)
@@ -164,7 +165,7 @@ t_raw.Well(well_idx) = strcat(cellcell2cellstr(regexp(t_raw.Well(well_idx),'^(\w
 %%
 plate_barcodes = unique(t_raw.Barcode);
 
-assert(length(plate_barcodes)>=height(t_plateinfo), ...
+warnassert(length(plate_barcodes)>=height(t_plateinfo), ...
     'Found %i plates, but expected %i plates; missing %s', ...
     length(plate_barcodes), height(t_plateinfo), ...
     strjoin(setdiff(t_plateinfo.Barcode,plate_barcodes)',' ') );
@@ -232,7 +233,6 @@ for i = 1:length(otherVariables)
 end
 
 % broadcast the properties
-assert(cnt<=length(plate_barcodes))
 if cnt<length(plate_barcodes)
     warning('some entries in the result file are unused!')
     Usedidx = ~cell2mat(cellfun2(@isempty,CellLine));
@@ -250,7 +250,7 @@ end
 % Evaluate the untreated plates
 Untrt = cellfun(@(x) strcmp(x,'-') || isempty(x), TreatmentFile) ;
 assert(~any(DesignNumber==0 & ~Untrt), 'Some wells are not ''Untrt'' and don''t have a DesignNumber')
-assert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
+warnassert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
 
 % compile the finale table
 t_data = [table(Barcode, CellLine, TreatmentFile, DesignNumber, Untrt, Time) ...
@@ -260,7 +260,7 @@ if ~isempty(otherVariables)
     eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
 end
 t_data.Properties.VariableNames{NobjField{1}} = 'Cellcount';
-t_data = TableToCategorical(t_data,[1:3 7]);
+t_data = TableToCategorical(t_data);
 
 fprintf('\n')
 end

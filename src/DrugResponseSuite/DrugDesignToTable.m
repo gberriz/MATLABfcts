@@ -40,15 +40,18 @@ function t_design = DrugDesignToTable(Design1, Perturbations, DrugOrder)
 Well = ConvertRowColToWells(rows, cols);
 
 % get all drugs and match the order
-DrugNames = {Design1.Drugs.DrugName};
-if exist('DrugOrder','var')
-    [temp, order] = ismember(DrugOrder, DrugNames);
-    order = [order(temp) find(~ismember(DrugNames, DrugOrder))];
-    DrugNames = DrugNames(order);
+if ~isfield(Design1,'Drugs') || isempty(Design1.Drugs) 
+    DrugNames = {};
 else
-    order = 1:length(DrugNames);
+    DrugNames = {Design1.Drugs.DrugName};
+    if exist('DrugOrder','var')
+        [temp, order] = ismember(DrugOrder, DrugNames);
+        order = [order(temp) find(~ismember(DrugNames, DrugOrder))];
+        DrugNames = DrugNames(order);
+    else
+        order = 1:length(DrugNames);
+    end
 end
-
 % get all perturbations
 if isfield(Design1, 'Perturbations')
     PertNames = {Design1.Perturbations.Name};
@@ -64,25 +67,36 @@ else
 end
 
 if isfield(Design1.Drugs,'HMSLid')
-    t_HMSLids = table([{Design1.Drugs.DrugName} {'-'}]', [{Design1.Drugs.HMSLid} {'-'}]', ...
+    HMSLids = {Design1.Drugs.HMSLid};
+    t_HMSLids = table([DrugNames {'-'}]', [HMSLids(order) {'-'}]', ...
         'VariableNames', {'DrugName' 'HMSLid'});
     t_HMSLids.HMSLid(cellfun(@isempty,t_HMSLids.HMSLid)) = {'-'};
+else
+    %%%% to be replaced by a link to the LINCS database for good
+    %%%% annotations
+    t_HMSLids = table([DrugNames {'-'}]', repmat({'-'},length(DrugNames)+1,1), ...
+        'VariableNames', {'DrugName' 'HMSLid'});
 end
 
 %%
 
 % determine the number of Drug Columns
-Ndrugs = 1;
-DrugConc = reshape([Design1.Drugs(order).layout], ...
-    [Design1.plate_dims length(DrugNames)]);
-if any(any(sum(DrugConc>0,3)>Ndrugs))
-    Ndrugs = max(max(sum(DrugConc>0,3)));
-    warnprintf('some wells have %i drugs, additional columns in output', ...
-        Ndrugs)
+if ~isfield(Design1,'Drugs') || isempty(Design1.Drugs) 
+    Ndrugs = 1;
+    DrugConc = zeros([Design1.plate_dims 0]);
+else
+    Ndrugs = 1;
+    DrugConc = reshape([Design1.Drugs(order).layout], ...
+        [Design1.plate_dims length(DrugNames)]);
+    if any(any(sum(DrugConc>0,3)>Ndrugs))
+        Ndrugs = max(max(sum(DrugConc>0,3)));
+        warnprintf('some wells have %i drugs, additional columns in output', ...
+            Ndrugs)
+    end
+    % this is not the optimal way of storing multiple drugs because of the
+    % hierarcy between DrugName and Conc as well as the redudancy and possible
+    % swapping between Drug1 and Drug2 ; it makes matching between condition hard
 end
-% this is not the optimal way of storing multiple drugs because of the
-% hierarcy between DrugName and Conc as well as the redudancy and possible
-% swapping between Drug1 and Drug2 ; it makes matching between condition hard
 
 
 % set the table columns
@@ -106,19 +120,17 @@ for iW = 1:height(t_design)
     end
 end
 
-% add the HMSLid if it exists
-if exist('t_HMSLids','var')
-    for iD = 1:Ndrugs
-        temp = join(t_design(:,sprintf('DrugName%i', iD(iD>1))), t_HMSLids, ...
-            'leftkeys', sprintf('DrugName%i', iD(iD>1)), ...
-            'rightkeys', 'DrugName', 'rightvariables', 'HMSLid');
-        idx = find(strcmp(varnames(t_design), sprintf('DrugName%i', iD(iD>1))));
-        t_design = [t_design(:,1:idx) varnames(temp(:,'HMSLid'),{sprintf('HMSLid%i', iD)}), ...
-            t_design(:,(idx+1):end)];
-    end
-    % correct the small trick to avoid having the same column name
-    t_design.Properties.VariableNames{'HMSLid1'} = 'HMSLid';
+% add the HMSLid 
+for iD = 1:Ndrugs
+    temp = join(t_design(:,sprintf('DrugName%i', iD(iD>1))), t_HMSLids, ...
+        'leftkeys', sprintf('DrugName%i', iD(iD>1)), ...
+        'rightkeys', 'DrugName', 'rightvariables', 'HMSLid');
+    idx = find(strcmp(varnames(t_design), sprintf('DrugName%i', iD(iD>1))));
+    t_design = [t_design(:,1:idx) varnames(temp(:,'HMSLid'),{sprintf('HMSLid%i', iD)}), ...
+        t_design(:,(idx+1):end)];
 end
+% correct the small trick to avoid having the same column name
+t_design.Properties.VariableNames{'HMSLid1'} = 'HMSLid';
 
 % add the perturbation columns
 for iP = 1:length(PertNames)

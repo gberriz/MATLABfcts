@@ -108,8 +108,8 @@ for iyp = 1:nRows
         if isvariable(yplotkeys,'noyplot')
             title([strjoin(p.xplotkey,',') '=' strjoin(table2cellstr(xplotkeys(xidx,:),0),',')])
         else
-            title([strjoin(p.xplotkey,',') '=' strjoin(table2cellstr(xplotkeys(xidx,:),0),',') '; ' ...
-                strjoin(p.yplotkey,',') '=' strjoin(table2cellstr(yplotkeys(yidx,:),0),',')])
+            title({[strjoin(p.xplotkey,',') '=' strjoin(table2cellstr(xplotkeys(xidx,:),0),',') ';'];
+                [strjoin(p.yplotkey,',') '=' strjoin(table2cellstr(yplotkeys(yidx,:),0),',')]})
         end
         
         

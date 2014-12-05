@@ -94,21 +94,23 @@ for iD = 1:length(Design)
     
     get_newaxes(axespos(nCols, nRows),nCols*nRows,'fontsize',6);
     
-    allDrugs = reshape([Design(iD).Drugs.layout], ...
-        [Design(iD).plate_dims length(Design(iD).Drugs)]);
-    ctrls = all(allDrugs==0,3)*1;
-    ctrls(~Design(iD).treated_wells) = NaN;
-    
-    imagesc(ctrls, DataRangeCap([.2 1]))
-    
-    title('Control wells','fontsize',8,'fontweight','bold')
-    
-    xlim([.5 Design(iD).plate_dims(2)+.5])
-    ylim([.5 Design(iD).plate_dims(1)+.5])
-    
-    set(gca,'ytick',1:2:16, 'yticklabel', cellfun(@(x) {char(x)},num2cell(65:2:80)),...
-        'xtick',1:3:30,'ydir','reverse')
-    
+    if ~isempty(Design(iD).Drugs)
+        allDrugs = reshape([Design(iD).Drugs.layout], ...
+            [Design(iD).plate_dims length(Design(iD).Drugs)]);
+        ctrls = all(allDrugs==0,3)*1;
+        ctrls(~Design(iD).treated_wells) = NaN;
+        
+        imagesc(ctrls, DataRangeCap([.2 1]))
+        
+        title('Control wells','fontsize',8,'fontweight','bold')
+        
+        xlim([.5 Design(iD).plate_dims(2)+.5])
+        ylim([.5 Design(iD).plate_dims(1)+.5])
+        
+        set(gca,'ytick',1:2:16, 'yticklabel', cellfun(@(x) {char(x)},num2cell(65:2:80)),...
+            'xtick',1:3:30,'ydir','reverse')
+        
+    end
 end
 
 

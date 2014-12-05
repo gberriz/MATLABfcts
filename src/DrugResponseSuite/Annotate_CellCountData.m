@@ -32,7 +32,7 @@ for iTf = 1:length(Trtfiles)
     DesignNumbers{iTf} = unique(t_data.DesignNumber(t_data.TreatmentFile==Trtfiles{iTf}));
     if strcmp(ext,'.mat')
         temp = load(fullfile(folder, Trtfiles{iTf}));
-        Designs{iTf} = temp.Design;
+        try Designs{iTf} = temp.Design; catch, Designs{iTf} = temp.Designs; end
     elseif strcmp(ext,'.hpdd')
         [Designs{iTf}, correct_barcode{iTf}] = hpdd_importer(fullfile(folder, Trtfiles{iTf}));
         % because of redundant plates, barcodes have to be reassigned
@@ -57,7 +57,12 @@ Perturbations = {};
 DrugNames = {};
 t_HMSLids = table;
 for iD=1:numel(allDesigns)
+    
     % check for multiple drugs in the same well
+    if ~isfield(allDesigns{iD},'Drugs') || isempty(allDesigns{iD}.Drugs) 
+        continue
+    end
+    
     DrugConc = reshape([allDesigns{iD}.Drugs.layout], [allDesigns{iD}.plate_dims ...
         length(allDesigns{iD}.Drugs)]);
     DrugNames = unique([DrugNames {allDesigns{iD}.Drugs.DrugName}],'stable');
