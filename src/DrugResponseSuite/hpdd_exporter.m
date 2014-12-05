@@ -35,9 +35,9 @@ create_text_children(protocol, ...
     'ConcentrationUnit'         [MICRO 'M'];
     'MolarityConcentrationUnit' [MICRO 'M'];
     'MassConcentrationUnit'     'ng_mL';
-    'ShakePerFluid'             logical2str(true);
+    'ShakePerFluid'             logical2str(false);
     'ShakePlateDuration'        int2str(5);
-    'ShakePerWell'              logical2str(false);
+    'ShakePerWell'              logical2str(true);
     'ShakeThresholdVolume'      int2str(100);
     'BackfillOrder'             'LastPriority';
     'BackfillNoDispense'        logical2str(0);
@@ -139,14 +139,17 @@ assert(length(setdiff(unique(t_plateinfo.TreatmentFile),'-'))==1, ...
 
 t_trt_plates = t_plateinfo(~strcmp(t_plateinfo.TreatmentFile,'-'),:);
 
-try
-    t_trt_plates.DesignNumber = cellfun(@str2num,t_trt_plates.DesignNumber);
-catch
-    disp('Plates with a TreatmentFile should have a numeric value for DesignNumber')
-    disp(t_trt_plates(:,'DesignNumber'))
-    error('Check plate info file')
+if ~isnumeric(t_trt_plates.DesignNumber)
+    try
+        t_trt_plates.DesignNumber = cellfun(@str2num,t_trt_plates.DesignNumber);
+    catch
+        disp('Plates with a TreatmentFile should have a numeric value for DesignNumber')
+        disp(t_trt_plates(:,'DesignNumber'))
+        error('Check plate info file')
+    end
 end
 
+plate_cnt = 0;
 for plate_num = 1:height(t_trt_plates)
     
     % Use barcode table's DesignNumber column as index into Design array.
@@ -154,15 +157,18 @@ for plate_num = 1:height(t_trt_plates)
     if ~isfield(cur_design,'Drugs') || isempty(cur_design.Drugs) || ...
             all(reshape([cur_design.Drugs.layout],[],1)==0)
         warnprintf('Plate  %s  is ignored because no drug treatment was found', ...
-            char(t_trt_plates.Barcode(plate_num)))
+            char(t_trt_plates.Barcode(plate_num)))        
         continue
     end
+    % if plates are skipped, the plate number in the hpdd file is not the
+    % same as plate_num
+    plate_cnt = plate_cnt + 1;
     
     plate_name = t_trt_plates.Barcode(plate_num);
     if isvariable(t_trt_plates, 'PlateShaking')
         PlateShaking = t_trt_plates.PlateShaking(plate_num);
     else
-        PlateShaking = false;
+        PlateShaking = true;
     end
     % Convert volume from microliters to nanoliters.
     volume_nanoliters = cur_design.well_volume * 1e3;
@@ -179,9 +185,10 @@ for plate_num = 1:height(t_trt_plates)
         'Name'        plate_name;
         'AssayVolume' double2str(volume_nanoliters);
         'DMSOLimit'   double2str(0.02);
+        'AqueousLimit' double2str(0.05);
         'DontShake'   logical2str(~PlateShaking);
-        % FIXME: I came across an AqueousLimit element in a different
-        % officially-generated file. What is that?
+        % FIXME: AqueousLimit (may be an issue for old version of the hpdd
+        % software (unchecked)
         } ...
         );
     wells = document.createElement('Wells');
@@ -208,6 +215,7 @@ for plate_num = 1:height(t_trt_plates)
             if well.hasChildNodes
                 wells.appendChild(well);
             end
+            
             % Create backfill well element. If treated_wells is not present we
             % apply backfill to all wells. If it is present, we look up the
             % current well address in it to determine whether to apply backfill.
@@ -215,7 +223,7 @@ for plate_num = 1:height(t_trt_plates)
                     cur_design.treated_wells(row,column)
                 backfill_well = document.createElement('Well');
                 backfill_wells.appendChild(backfill_well);
-                backfill_well.setAttribute('P', int2str(plate_num - 1));
+                backfill_well.setAttribute('P', int2str(plate_cnt - 1));
                 backfill_well.setAttribute('R', int2str(row - 1));
                 backfill_well.setAttribute('C', int2str(column - 1));
             end
