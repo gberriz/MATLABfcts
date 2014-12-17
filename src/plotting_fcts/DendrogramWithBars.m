@@ -5,8 +5,9 @@ function [axis_handles, bar_handles] = DendrogramWithBars(SampleDist, t_SampleLa
 
 labels = cellstr2str( table2cellstr(t_SampleLabels,0));
 
-
-SampleDist = squareform(SampleDist,'tovector');
+if ~isvector(SampleDist)
+    SampleDist = squareform(SampleDist,'tovector');
+end
 
 axis_handles = get_newaxes(AxisPos);
 tree = linkage(SampleDist,'average');

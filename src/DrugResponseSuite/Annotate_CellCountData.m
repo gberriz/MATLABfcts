@@ -129,6 +129,7 @@ for iTf = 1:length(Trtfiles)
                 strjoin(cellstr(unique(t_data.Well(idx(setdiff(1:length(idx),ia))))'),', '), ...
                 Trtfiles{iTf})
         end
+        temp = AddDrugNameColumn(temp, Ndrugs);
         t_annotated = [t_annotated; temp];
     end
     
