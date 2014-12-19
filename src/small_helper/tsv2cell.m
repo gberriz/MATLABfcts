@@ -1,4 +1,5 @@
 function cellArray = tsv2cell(fileName)
+% cellArray = tsv2cell(fileName)
   fid = fopen(fileName,'r');   %# Open the file
   cellArray = cell(100,1);     %# Preallocate a cell array (ideally slightly
                                %#   larger than is needed)

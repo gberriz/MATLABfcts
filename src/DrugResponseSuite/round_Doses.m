@@ -12,19 +12,24 @@ max_dose = nominal_conc *max_volume/well_volume;
 temp_Doses = old_Doses(old_Doses>0);
 old_NZ_Doses = temp_Doses;
 new_Doses = old_Doses;
-fprintf('Processing %s (%s doses):\n', DName, tag)
+
+info_flag = false;
+
 if any(temp_Doses<min_dose)
+    info_flag = write_info(info_flag);
     warnprintf('%i dose(s) below minimal conc (set to %.2g)', ...
         sum(temp_Doses<min_dose), min_dose);
     temp_Doses = max(temp_Doses, min_dose);
 end
 if any(temp_Doses>max_dose)
+    info_flag = write_info(info_flag);
     warnprintf('%i dose(s) above max conc (set to %.2g)', ...
         sum(temp_Doses>max_dose), max_dose);
     temp_Doses = min(temp_Doses, max_dose);
 end
 if any( ((mod(temp_Doses,step_dose)./temp_Doses)>.02) & (temp_Doses>1.02*min_dose) )
     idx = ((mod(temp_Doses,step_dose)./temp_Doses)>.02) & (temp_Doses>1.02*min_dose);
+    info_flag = write_info(info_flag);
     fprintf('\tNote: %i doses round down because more than 2%% difference\n', ...
         sum(idx));
     % case of the lowest doses
@@ -37,6 +42,7 @@ if any( ((mod(temp_Doses,step_dose)./temp_Doses)>.02) & (temp_Doses>1.02*min_dos
     temp_Doses(idx) = step_dose*round(temp_Doses(idx)/step_dose);
 end
 if any(temp_Doses~=old_NZ_Doses)
+    info_flag = write_info(info_flag);
     fprintf('\tChanged doses:')
     temp_old = unique(old_NZ_Doses(temp_Doses~=old_NZ_Doses));
     for iDoses = ToRow(temp_old)
@@ -47,3 +53,12 @@ end
 
 new_Doses(old_Doses>0) = temp_Doses;
 
+
+function info_flag = write_info(info_flag)
+    if ~info_flag 
+        fprintf('Processing %s (%s doses):\n', DName, tag)
+        info_flag = true;
+    end
+end
+
+end

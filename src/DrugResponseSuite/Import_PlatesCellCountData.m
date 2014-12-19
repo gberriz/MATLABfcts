@@ -242,6 +242,7 @@ if cnt<length(plate_barcodes)
     CellLine = CellLine(Usedidx);
     DesignNumber = DesignNumber(Usedidx);
     Time = Time(Usedidx);
+    Barcode = Barcode(Usedidx);
     for i = 1:length(otherVariables)
         eval([otherVariables{i} ' = ' otherVariables{i} '(Usedidx);'])
     end
