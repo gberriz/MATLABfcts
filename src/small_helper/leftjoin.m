@@ -1,4 +1,9 @@
 function [t_out, Ridx] = leftjoin(t_left, t_right, varargin)
+% [t_out, Ridx] = leftjoin(t_left, t_right, varargin)
+%   outerjoin for talbe to the left, maintain order of t_left
+%
+%   Ridx are the indexes in t_right corresponding to the rows of t_left
+%
 
 [t_out, idx, Ridx] = outerjoin(t_left, t_right, 'type', 'left', ...
      'MergeKeys', true, varargin{:});

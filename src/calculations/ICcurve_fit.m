@@ -2,6 +2,26 @@
 % function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, xI50_interval] = ...
 %     ICcurve_fit(Conc, Growth, fit_type, opt)
 %
+%   Inputs:
+%   ---------
+%
+%   Conc:   expected in uM, NOT logged
+%   Growth: normalized to control (=1) fit_type
+%   fit_type:   'GI50' or 'IC50' (default)
+%
+%   options:
+%       - plotting: plot the curves [false]
+%       - priors:   seed for the fitting
+%       - ranges:   range for the fitting
+%       - fitting:  average/individual for replicates [average]
+%       - pcutoff:  cutoff for F-test [0.05]
+%       - capped:   cap points with enhanced growth [true]
+%       - extrapolrange: maximum fold to extrapolate xI50 [10]
+%
+%   Outputs:
+%   ----------
+%   concentrations are output in uM
+%
 %   IC50 => Growth is relative to control (end/ctrl)
 %   GI50 => Growth is relative to growth of the control:
 %               (end-day0)/(ctrl-day0)
@@ -11,16 +31,8 @@
 %   Area => sum of (1-cell count) devided by range --> average per order of
 %   magnitude.
 %
-%   options:
-%       - plotting: plot the curves
-%       - priors:   seed for the fitting
-%       - ranges:   range for the fitting
-%       - fitting:  average/individual for replicates
-%       - pcutoff:  cutoff for F-test
-%       - capped:   cap points with enhanced growth
-%
 
-function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, xI50_interval] = ...
+function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log] = ...
     ICcurve_fit(Conc, Growth, fit_type, opt)
 
 
@@ -38,13 +50,14 @@ plotting = 0;
 fitting = 'average';
 pcutoff = .05;
 capped = true;
+extrapolrange = 10;
 
 if ~exist('fit_type','var') || isempty(fit_type)
     fit_type = 'IC50';
 end
 
 if exist('opt','var')
-    fields = {'plotting', 'priors', 'ranges', 'fitting', 'pcutoff' 'capped'};
+    fields = {'plotting', 'priors', 'ranges', 'fitting', 'pcutoff' 'capped' 'extrapolrange'};
     for field = fields
         if isfield(opt,field{:})
             eval([field{:} ' = opt.' field{:} ';'])
@@ -126,14 +139,19 @@ else
     EC50 = fit_res.c;
     Area = sum(1-g);
     
+    xI50 = fit_res.c*((((fit_res.a-fit_res.b)/(.5-fit_res.b))-1)^(1/fit_res.d));
     if any(fit_growth<.5) && any(fit_growth>.5) % interpolation
-        xI50 = fit_res.c*((((fit_res.a-fit_res.b)/(.5-fit_res.b))-1)^(1/fit_res.d));
+        log = [log '\t' fit_type ' in the range of data']; 
     elseif all(fit_growth>.5)
-        xI50 = Inf;
-        log = [log '\t' fit_type '>10*max(Conc) --> +Inf'];
+        if xI50>extrapolrange*max(Conc)
+            xI50 = Inf;
+            log = [log '\t' fit_type '>' num2str(extrapolrange) '*max(Conc) --> +Inf'];
+        end
     elseif all(fit_growth<.5)
-        xI50 = -Inf;
-        log = [log '\t' fit_type '<min(Conc)/10 --> -Inf'];
+        if xI50<max(Conc)/extrapolrange
+            xI50 = -Inf;
+            log = [log '\t' fit_type '<min(Conc)/' num2str(extrapolrange) ' --> -Inf'];
+        end
     else
         xI50 = NaN;
         warning(['undefined ' fit_type])

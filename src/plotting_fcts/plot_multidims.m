@@ -1,6 +1,6 @@
-function a = plot_multidims(t_data, varargin)
+function [a, hl] = plot_multidims(t_data, varargin)
 
-%  a = plot_multidims(t_data, varargin)
+%  [a, hl] = plot_multidims(t_data, varargin)
 %       inputs: xplotkey, yplotkey, xaxiskey, yaxiskey, colorkey,
 %       xtransform, ytransform, axischanges, mean_SEM, xspacing, yspacing,
 %       yval_lines
