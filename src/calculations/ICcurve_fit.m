@@ -78,10 +78,14 @@ switch fitting
         g = mean(Growth,2)';
     case 'individual'
         for i=1:size(Growth,2)
-            [xI50(i), Hill(i), Einf(i), Area(i), r2(i), fit_final{i}, p(i), log{i}] = ...
+            [xI50(i), Hill(i), Einf(i), Area(i), r2(i), EC50(i), fit_final{i}, p(i), log{i}] = ...
                 ICcurve_fit(Conc, Growth(:,i)', fit_type, opt);
         end
         return
+        
+    otherwise
+        error('wrong input for ''fitting''')
+        
 end
 
 % 'IC50'
@@ -120,7 +124,7 @@ if p>=pcutoff
     xI50 = +Inf;
     EC50 = +Inf;
     Hill = 0;
-    Emax = mean(g(end-[2 1 0]));
+    Einf = 1- mean(g(end-[2 1 0]));
     log = ['**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
     fit_final = fit_res_flat;
     
@@ -131,7 +135,7 @@ else
     
     fit_growth = fit_res(xc);
     
-    Emax = fit_res.b;
+    Einf = 1- fit_res.b;
     Hill = fit_res.d;
     fit_final = fit_res;
     
@@ -140,15 +144,15 @@ else
     Area = sum(1-g);
     
     xI50 = fit_res.c*((((fit_res.a-fit_res.b)/(.5-fit_res.b))-1)^(1/fit_res.d));
-    if any(fit_growth<.5) && any(fit_growth>.5) % interpolation
+    if any(fit_growth<.5) && any(fit_growth>.5) % inter/extrapolation is fine
         log = [log '\t' fit_type ' in the range of data']; 
     elseif all(fit_growth>.5)
-        if xI50>extrapolrange*max(Conc)
+        if xI50>extrapolrange*max(Conc) || imag(xI50)~=0
             xI50 = Inf;
             log = [log '\t' fit_type '>' num2str(extrapolrange) '*max(Conc) --> +Inf'];
         end
-    elseif all(fit_growth<.5)
-        if xI50<max(Conc)/extrapolrange
+    elseif all(fit_growth<.5) || imag(xI50)~=0
+        if xI50<min(Conc)/extrapolrange
             xI50 = -Inf;
             log = [log '\t' fit_type '<min(Conc)/' num2str(extrapolrange) ' --> -Inf'];
         end
@@ -159,19 +163,17 @@ else
     end
     
 end
-Einf = 1-Emax;
 
 
 if plotting
     
-    if exist('RelativeGrowth','var')
-        errorbar(log10(Conc), mean(RelativeGrowth,1), std(RelativeGrowth,[],1) ,'.k-');
-    end
+    errorbar(log10(Conc), mean(Growth,2), std(Growth,[],2) ,'.k-');
+    
     hold on
     plot(log10(xc), fit_res(xc),'-r')
     
-    plot(log10(EC50)*[1 1], [0 Emax+(fit_res.a-Emax)/2], '.b-')
-    plot(log10(Conc([1 end]))+[1 0], [1 1]*Emax, '.b-')
+    plot(log10(EC50)*[1 1], [0 fit_res.b+(fit_res.a-fit_res.b)/2], '.b-')
+    plot(log10(Conc([1 end]))+[1 0], [1 1]*fit_res.b, '.b-')
     
     plot(log10(xI50)*[1 1], [0 .5], '.b-')
     
@@ -181,6 +183,8 @@ if plotting
     end
     
     title(sprintf('r^2 = %.3f', r2))
+    xlim(log10([min(Conc)/extrapolrange extrapolrange*max(Conc)]))
+    ylim([min(min(Growth(:)), max(-.5,1-Einf)) max(Growth(:))*1.05])
 end
 
 
@@ -199,7 +203,7 @@ end
             'Upper',ranges(2,1),...   % max E0
             'Startpoint',priors(1));
         f = fittype('b+0*x','options',fitopt);
-        [fit_result,gof2] = fit(doses', response',f);
+        [fit_result,gof2] = fit(doses', response',f,'Robust','on');
     end
 
 end
