@@ -28,7 +28,7 @@ Drugs(2) = temp;
 
 %% evaluate the GI50 for each drug independently
 %%%%%%  values for GIxx should be specified as an input %%%
-extraGIs = sort(ToRow([20 35 65 80 95]),'ascend'); 
+extraGIs = sort(ToRow([20 35 65 80 95]),'ascend');
 GIvalues = [50 extraGIs];
 GIs = Inf(length(GIvalues),2); % already set to max concentration
 Hills = NaN(1,2);
@@ -38,15 +38,12 @@ Emaxs = Hills;
 r2s = Hills;
 NormFactor = Hills;
 t_normdata = t_data(:,{'DrugName' 'Conc' 'DrugName2' 'Conc2' 'RelGrowth'});
-t_normdata.RelConc = NaN(height(t_normdata),1);
-t_normdata.RelConc2 = NaN(height(t_normdata),1);
-t_normdata.RelConc2(t_normdata.Conc2==0) = 0;
 for i=1:2
     t_temp = sortrows(t_data(t_data.DrugName==Drugs(i) & t_data.DrugName2=='-',:), ...
         'Conc');
     Emaxs(i) = 1-min(t_temp.RelGrowth);
     
-    opt = struct('pcutoff',.1,'extrapolrange',30, 'plotting',1);
+    opt = struct('pcutoff',.1,'extrapolrange',30,'Robust',true);
     [GIs(1,i), Hills(i), Einfs(i), ~, r2s(i), EC50s(i), fitfct] = ...
         ICcurve_fit(t_temp.Conc, t_temp.RelGrowth, 'GI50', opt);
     %%%% replace by the actual subfunction and stack it in the file
@@ -62,16 +59,20 @@ for i=1:2
         if Einfs(i)>extraGIs(j)/100
             GIs(1+j,i) = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
                 median(t_temp.Conc), fitopts);
+        else
+            GIs(1+j,i) = max(t_temp.Conc)*1.5;
         end
     end
     %%%%%% the other GI should directly be evaluated in the ICcurve_fit
     %%%%%% function and capped as the GI50 if the values are extrapolated
     
+    
     %%%%%%%%%%%%%%
     %%%%  how to deal with normalization when there is no GI50 for normalization ????
     %%%%  use EC50??? instead (with a warning?)
     %%%%%%%%%%%%%%
-    if isfinite(GIs(1,i))
+    
+    if isfinite(GIs(1,1))
         NormConc{i} = 'GI50';
         NormFactor(i) = GIs(1,i);
     else
@@ -80,74 +81,69 @@ for i=1:2
         warnprintf('Normalization by EC50 instead of GI50')
     end
     
-    idx = t_data.DrugName==Drugs(i);
-    t_normdata.RelConc(idx) = t_normdata.Conc(idx)/NormFactor(i);
-    idx = t_data.DrugName2==Drugs(i);
-    t_normdata.RelConc2(idx) = t_normdata.Conc2(idx)/NormFactor(i);
 end
 
-assert(all(~isnan(t_normdata.RelConc)))
-assert(all(~isnan(t_normdata.RelConc2)))
 
 %% caculate the ratios on which to fit the sigmoidal cruves
 
 t_temp = t_normdata(t_normdata.DrugName==Drugs(1) & t_normdata.DrugName2==Drugs(2),...
-    {'Conc' 'Conc2' 'RelConc' 'RelConc2' 'RelGrowth'});
+    {'Conc' 'Conc2' 'RelGrowth'});
 
-BAratio = 1e-2*round(log10(t_temp.RelConc2./t_temp.RelConc)*1e2);
+BAratio = 1e-2*round(log10(t_temp.Conc2./t_temp.Conc)*1e2);
 t_temp = [t_temp table(BAratio) ...
-    table(t_temp.RelConc+t_temp.RelConc2, 'variablename', {'RelConcTot'}) ];
+    table(t_temp.Conc+t_temp.Conc2, 'variablename', {'ConcTot'}) ];
 BAratio = unique(t_temp.BAratio,'sorted');
 ratiocounts = hist(t_temp.BAratio, BAratio);
 
 BAratio = BAratio(ratiocounts>4);
 fprintf('\tFitting for %i ratios:\n', length(BAratio));
 
-t_rfits = [table(BAratio) array2table(NaN(length(BAratio),5+length(extraGIs)), ...
-    'variablenames', ...
-    [{'GI50' 'Hill' 'Einf' 'r2' 'Emax'} strcat('GI', num2cellstr(extraGIs))])];
+t_rfits = [table(BAratio) array2table(NaN(length(BAratio),4), ...
+    'variablenames', {'Hill' 'Einf' 'r2' 'Emax'})];
 colors = parula(length(BAratio));
+
+ratioGIs = Inf(length(BAratio),length(GIvalues));
 
 figure(999);clf;hold on;
 for i = 1:height(t_rfits)
     t_sub = sortrows(t_temp(t_temp.BAratio == t_rfits.BAratio(i),:), ...
-        'RelConcTot');
+        'ConcTot');
     t_rfits.Emax(i) = 1-min(t_sub.RelGrowth);
     
     %%%%%%%
     opt = struct('pcutoff',1,'extrapolrange',30);
-    [t_rfits.GI50(i), t_rfits.Hill(i), t_rfits.Einf(i), ~, t_rfits.r2(i), ...
+    [ratioGIs(i,1), t_rfits.Hill(i), t_rfits.Einf(i), ~, t_rfits.r2(i), ...
         ~, fitfct, ~, log] = ...
-        ICcurve_fit(t_sub.RelConcTot, t_sub.RelGrowth, 'GI50', opt);
+        ICcurve_fit(t_sub.ConcTot, t_sub.RelGrowth, 'GI50', opt);
     %%%% replace by the actual subfunction and stack it in the file
     %%%%%%%%%%
     
-    for j=extraGIs
+    for j=1:length(extraGIs)
         fitopts = optimoptions('fsolve', 'Display','none');
-        temp = fsolve(@(x) fitfct(x)-(1-j/100), ...
-            median(t_sub.RelConcTot), fitopts);
+        temp = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
+            median(t_sub.ConcTot), fitopts);
         % capping the values to avoid too much extrapolation
-        if temp<1e-2*min(t_sub.RelConcTot)
-            t_rfits.(['GI' num2str(j)])(i) = -Inf;
-        elseif temp>1e2*max(t_sub.RelConcTot)
-            t_rfits.(['GI' num2str(j)])(i) = Inf;
+        if temp<1e-2*min(t_sub.ConcTot)
+            ratioGIs(i,j+1) = -Inf;
+        elseif temp>1e2*max(t_sub.ConcTot)
+            ratioGIs(i,j+1) = Inf;
         else
-            t_rfits.(['GI' num2str(j)])(i) = temp;
+            ratioGIs(i,j+1) = temp;
         end
     end
     %%%%%% the other GI should directly be evaluated in the ICcurve_fit
     %%%%%% function and capped as the GI50 if the values are extrapolated
     
     fprintf('\t\tfit for BAratio %-5g: GI50=%.3g, r2=%.2f\n', t_rfits.BAratio(i), ...
-        t_rfits.GI50(i), t_rfits.r2(i));
+        ratioGIs(i,1), t_rfits.r2(i));
     
-    plot(t_sub.RelConcTot, t_sub.RelGrowth, 'o', 'color', colors(i,:))
+    plot(t_sub.ConcTot, t_sub.RelGrowth, 'o', 'color', colors(i,:))
     
-    if isinf(t_rfits.GI50(i))
+    if isinf(ratioGIs(i,1))
         fprintf(['\t\t --> ' log '\n'])
     else
-        x = 10.^(log10(min([t_rfits.GI50(i);t_sub.RelConcTot])):.01:...
-            log10(max([t_rfits.GI50(i);t_sub.RelConcTot])));
+        x = 10.^(log10(min([ratioGIs(i,1);t_sub.ConcTot])):.01:...
+            log10(max([ratioGIs(i,1);t_sub.ConcTot])));
         plot(x, fitfct(x), '-', 'color', colors(i,:))
         plot(x(end)*[1 1.2], [1 1]-t_rfits.Emax(i), ':', 'color', colors(i,:))
         plot(x(end)*[1 1.2], [1 1]-t_rfits.Einf(i), '--', 'color', colors(i,:))
@@ -156,32 +152,60 @@ end
 set(gca,'xscale','log')
 
 
-%%%%%  correction for GIxx as a linear interpolation; 
+%% getting the actual Concentration for the GIxx for plotting later
 w = [10.^-t_rfits.BAratio 10.^t_rfits.BAratio];
-for j=extraGIs
-    relGI = GIs(GIvalues==j,:)./GIs(1,:);    
-    t_rfits.(['GI' num2str(j)]) = t_rfits.(['GI' num2str(j)]) ./ ...
-        (w*relGI'./sum(w,2));
+w = w ./ (sum(w,2)*[1 1]);
+
+GIConc = cell(2,1);
+NullGIConc = GIConc;
+for i=1:2
+    GIConc{i} = ratioGIs.*repmat(w(:,i),1,length(GIvalues));
+    NullGIConc{i} = w(:,i)*GIs(:,i)';
+end
+GIConc{1} = [GIs(:,1)'; GIConc{1}; ...
+    repmat(min(t_data.Conc(t_data.DrugName==Drugs(2)))/100,1,length(GIvalues))];
+
+GIConc{2} = [repmat(min(t_data.Conc(t_data.DrugName==Drugs(1)))/100,1,length(GIvalues)); ...
+    GIConc{2}; GIs(:,2)'];
+
+NullGIConc{1} = [GIs(:,1)'; NullGIConc{1}; ...
+    repmat(min(t_data.Conc(t_data.DrugName==Drugs(2)))/100,1,length(GIvalues))];
+
+NullGIConc{2} = [repmat(min(t_data.Conc(t_data.DrugName==Drugs(1)))/100,1,length(GIvalues)); ...
+    NullGIConc{2}; GIs(:,2)'];
+for i=1:2
+    GIConc{i} = min(GIConc{i}, max(t_data.Conc(t_data.DrugName==Drugs(i)))*100);
 end
 
-% getting the actual Concentration for the GIxx for plotting later
-w = [10.^-t_rfits.BAratio 10.^t_rfits.BAratio];
-for j=GIvalues
-    % additive case
-    t_rfits.(['Conc' num2str(j) '_1ctrl']) = w(:,1)*GIs(GIvalues==j,1)./sum(w,2);
-    t_rfits.(['Conc' num2str(j) '_2ctrl']) = w(:,2)*GIs(GIvalues==j,2)./sum(w,2);
-    
-    % actual data
-    t_rfits.(['Conc' num2str(j) '_1']) =  t_rfits.(['GI' num2str(j)]) .* ...
-        w(:,1)*GIs(GIvalues==j,1)./sum(w,2);
-    t_rfits.(['Conc' num2str(j) '_2']) = t_rfits.(['GI' num2str(j)]) .* ...
-        w(:,2)*GIs(GIvalues==j,2)./sum(w,2);    
-end
+
+
+
+% evaluate the CI
+CI = ratioGIs ./ (w*GIs');
+
+%%%%%%%%%%%%%%
+%%%%  how to deal with normalization when there is no GI50 for normalization ????
+%%%%  use EC50??? instead (with a warning?)
+%%%%%%%%%%%%%%
+
+t_rfits.RelBAratio = t_rfits.BAratio +log10(NormFactor(1)) -log10(NormFactor(2));
+
+% w = [10.^-t_rfits.RelBAratio 10.^t_rfits.RelBAratio];
+% w = w ./ (sum(w,2)*[1 1]);
+CI = ratioGIs ./ (w*GIs');
+
+% 
+% % %%%%%  correction for GIxx as a linear interpolation;
+% for j=GIvalues
+%     relGI = GIs(GIvalues==j,:)./GIs(1,:);
+%     t_rfits.(['GI' num2str(j)]) = t_rfits.(['GI' num2str(j)]) ./ ...
+%         (w*relGI'./sum(w,2));
+% end
+
 
 %%
 
-
-get_newfigure(101,[50 50 700 550], [char(unique(t_data.CellLine)) ...
+get_newfigure(100,[50 50 700 550], [char(unique(t_data.CellLine)) ...
     '_Combo_' char(Drugs(1)) '+' char(Drugs(2)) '.pdf'])
 
 % spacing for checkboard
@@ -189,13 +213,12 @@ xwidth = .03;
 ywidth = .04;
 space = .005;
 
+% position of axes
 pos = [
     .07 .6 .5 .37; % CI plot
     .67 .6 .3 .37; % Hill plot
     .67 .12 .3 .37]; % Emax plot
-
 pos(4,:) = [pos(1,1) pos(3,2)-ywidth-space .4 pos(3,4)+ywidth]; % checkboard
-   
 
 % position for checkboard
 subpos = [
@@ -206,10 +229,17 @@ subpos = [
     pos(4,1)+pos(4,3)+2*space pos(4,2) 0 0]; % legend
 
 
-% define the ratio in the normalized space
-xticks = [2*t_rfits.BAratio(1)-t_rfits.BAratio(2)
-    t_rfits.BAratio(2:floor(height(t_rfits)/5):(end-1))
-    2*t_rfits.BAratio(end)-t_rfits.BAratio(end-1)];
+
+% define the Drug ratio in the normalized space
+if height(t_rfits)>5
+    tickidx = 2:floor(height(t_rfits)/5):(height(t_rfits)-1);
+else
+    tickidx = height(t_rfits);
+end
+
+xticks = [2*t_rfits.RelBAratio(1)-t_rfits.RelBAratio(2)
+    t_rfits.RelBAratio(tickidx)
+    2*t_rfits.RelBAratio(end)-t_rfits.RelBAratio(end-1)];
 xticklabels = cell(length(xticks),1);
 for i=2:length(xticks)-1
     if xticks(i)<0
@@ -220,8 +250,10 @@ for i=2:length(xticks)-1
 end
 xticklabels{1} = char(Drugs(1));
 xticklabels{end} = char(Drugs(2));
-xvals = [xticks(1) t_rfits.BAratio' xticks(end)];
+xvals = [xticks(1) t_rfits.RelBAratio' xticks(end)];
 
+
+% first plot for the CI
 get_newaxes(pos(1,:),1)
 plot(repmat([xvals([1 end]) NaN],1,3), reshape([1;1;NaN]*[-1 0 1],[],1)', ...
     '-', 'color', [.7 .7 .7])
@@ -231,24 +263,24 @@ GIcolors = [0 0 0; winter(length(extraGIs))];
 h = NaN(length(GIvalues)+1,1);
 allGIvals = [];
 for j=[2:length(GIvalues) 1] % plot GI50 last
-    GIvals = [1 t_rfits.(['GI' num2str(GIvalues(j))])' 1];
-    h(j) = plot(xvals,log2(GIvals), '-','color',GIcolors(j,:),'linewidth',1);
+    GIvals = [1 CI(:,j)' 1];
+    h(j) = plot(xvals,log2(GIvals), 'o-','color',GIcolors(j,:),'linewidth',1);
     h(length(GIvalues)+1) = plot(xvals(isfinite(GIvals)),log2(GIvals(isfinite(GIvals))), '--', ...
         'color',GIcolors(j,:));
-    allGIvals = [allGIvals; GIvals(isfinite(GIvals))'];
 end
 
 set(gca,'xtick',xticks,'xticklabel',xticklabels,'xticklabelrotation',90, ...
     'ytick',-5:5,'yticklabel',[strcat('1/',num2cellstr(2.^(5:-1:1))) ...
     strcat(num2cellstr(2.^(0:5)),'/1')],Plotting_parameters.axes{:})
-ylim(log2([min([.45;allGIvals]) max([2.2;allGIvals])]))
+ylim(log2([min([.45;CI(isfinite(CI))]) max([2.2;CI(isfinite(CI))])]))
 xlim(xticks([1 end]))
 ylabel('Combination index',Plotting_parameters.axislabel{:})
 xlabel('Drug ratios (IC50 normalized)',Plotting_parameters.axislabel{:})
 legend(h,[strcat('GI', num2cellstr(GIvalues)) 'Failed points'],'location','best', ...
     Plotting_parameters.axislabel{:})
 
-%
+
+% plot for the Hill coeff
 get_newaxes(pos(2,:),1)
 plot([0 0], [-32 32], '-', 'color', [.7 .7 .7])
 plot(xvals, [Hills(1) t_rfits.Hill' Hills(2)], '-k')
@@ -259,6 +291,8 @@ ylabel('Hill coefficient',Plotting_parameters.axislabel{:})
 xlabel('Drug ratios (IC50 normalized)',Plotting_parameters.axislabel{:})
 ylim([min([.4 t_rfits.Hill']) max([4 t_rfits.Hill'])])
 
+
+% plot for the Emax/inf
 get_newaxes(pos(3,:),1)
 plot([0 0], [-32 32], '-', 'color', [.7 .7 .7])
 plot(xvals([1 end]), [0 0], '-', 'color', [.7 .7 .7])
@@ -272,11 +306,11 @@ ylabel('Lowest growth (1-E_{inf}/E_{max})',Plotting_parameters.axislabel{:})
 xlabel('Drug ratios (IC50 normalized)',Plotting_parameters.axislabel{:})
 legend(h,{'1-E_{inf}' '1-E_{max}'},'location','best',Plotting_parameters.axislabel{:})
 
+
+
 % plotting the checkboard for combo
 
-
 %%%%%%% put the following in its own function
-
 
 %%%%%% assuming carthesian product on conc; need to be generalized
 % needs to be split in the columns for single dose and matrix for combos
@@ -309,13 +343,11 @@ for iC1 = 1:length(Conc1)
         
     end
 end
-
 %%%%%%
-% the combo should be an interpolation (like pcolor) in the log 10 
+% the combo should be an interpolation (like pcolor) in the log 10
 % (for cases where the doses are not equidistant in the log domain)
 %%%%%%
 
-    
 
 xlims = [1.5*logC2(1)-.5*logC2(2) 1.5*logC2(end)-.5*logC2(end-1)];
 ylims = [1.5*logC1(1)-.5*logC1(2) 1.5*logC1(end)-.5*logC1(end-1)];
@@ -361,15 +393,13 @@ set(gca,'xtick',[], 'ytick',[],'ydir','normal')
 
 % plot the isoGI cruves
 h = NaN(length(GIvalues)+1,1);
-for j=1:length(GIvalues)
+for j=[ 2:length(GIvalues) 1]
     % theoric curve (additive)
-    plot(log10(t_rfits.(['Conc' num2str(GIvalues(j)) '_2ctrl'])), ...
-        log10(t_rfits.(['Conc' num2str(GIvalues(j)) '_1ctrl'])), ...
-        '--','color', GIcolors(j,:), 'linewidth',1);    
+    h(j) = plot(log10(NullGIConc{2}(:,j)), log10(NullGIConc{1}(:,j)), ...
+        '--','color', GIcolors(j,:), 'linewidth',1);
     % real curve
-    h(j) = plot(log10(t_rfits.(['Conc' num2str(GIvalues(j)) '_2'])), ...
-        log10(t_rfits.(['Conc' num2str(GIvalues(j)) '_1'])), ...
-        '-','color', GIcolors(j,:), 'linewidth',2);
+    h(j) = plot(log10(GIConc{2}(:,j)), log10(GIConc{1}(:,j)), ...
+        'o-','color', GIcolors(j,:), 'linewidth',2);
 end
 h(end) = plot([NaN NaN], [NaN NaN], '--', 'color', [.3 .3 .3]);
 xlim(xlims)

@@ -51,13 +51,15 @@ fitting = 'average';
 pcutoff = .05;
 capped = true;
 extrapolrange = 10;
+Robust = [];
 
 if ~exist('fit_type','var') || isempty(fit_type)
     fit_type = 'IC50';
 end
 
 if exist('opt','var')
-    fields = {'plotting', 'priors', 'ranges', 'fitting', 'pcutoff' 'capped' 'extrapolrange'};
+    fields = {'plotting', 'priors', 'ranges', 'fitting', 'pcutoff' 'capped' ...
+        'extrapolrange' 'Robust'};
     for field = fields
         if isfield(opt,field{:})
             eval([field{:} ' = opt.' field{:} ';'])
@@ -105,7 +107,15 @@ if capped
 end
 
 Npara = 4; % N of parameters in the growth curve
-[fit_res, gof] = sigmoidal_fit(Conc,g);
+if isempty(Robust) || ~Robust
+    [fit_res, gof] = sigmoidal_fit(Conc,g,'off');
+else
+    [fit_res, gof] = sigmoidal_fit(Conc,g,'off');
+    if gof.rsquare<.7
+        [fit_res, gof] = sigmoidal_fit(Conc,g,'Bisquare');
+        warnprintf('Using robust fit: r=%.2f', got.rsquare)
+    end
+end
 [fit_res_flat, gof_flat] = flat_fit(Conc,g);
 
 % F-test for the models
@@ -188,13 +198,13 @@ if plotting
 end
 
 
-    function [fit_result, gof2] = sigmoidal_fit(doses, response)
+    function [fit_result, gof2] = sigmoidal_fit(doses, response, Robust)
         fitopt = fitoptions('Method','NonlinearLeastSquares',...
             'Lower',ranges(1,:),...
             'Upper',ranges(2,:),...
             'Startpoint',priors);
         f = fittype('b + (a-b) ./ ( 1 + (x/c).^d)','options',fitopt);
-        [fit_result,gof2] = fit(doses', response',f);
+        [fit_result,gof2] = fit(doses', response',f,'Robust',Robust);
     end
 
     function [fit_result, gof2] = flat_fit(doses, response)
@@ -203,7 +213,7 @@ end
             'Upper',ranges(2,1),...   % max E0
             'Startpoint',priors(1));
         f = fittype('b+0*x','options',fitopt);
-        [fit_result,gof2] = fit(doses', response',f,'Robust','on');
+        [fit_result,gof2] = fit(doses', response',f);
     end
 
 end
