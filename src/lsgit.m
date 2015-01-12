@@ -18,6 +18,10 @@ if ~exist('idx','var')
             fprintf('\t%-5.2f: %s\n',i+j/100, filenames{j});
         end
     end
+elseif idx==0
+    for i=1:length(folders)
+        fprintf('\n%2i: %s\n',i, folders{i});
+    end
 else
     filenames = dir([HomeFolder filesep folders{floor(idx)} '/*.m']);
     

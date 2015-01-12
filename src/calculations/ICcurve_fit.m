@@ -107,13 +107,15 @@ if capped
 end
 
 Npara = 4; % N of parameters in the growth curve
+log = '';
 if isempty(Robust) || ~Robust
-    [fit_res, gof] = sigmoidal_fit(Conc,g,'off');
+    [fit_res, gof] = sigmoidal_fit(Conc,g,'off');    
 else
     [fit_res, gof] = sigmoidal_fit(Conc,g,'off');
     if gof.rsquare<.7
         [fit_res, gof] = sigmoidal_fit(Conc,g,'Bisquare');
-        warnprintf('Using robust fit: r=%.2f', got.rsquare)
+        warnprintf('Using robust fit: r=%.2f', gof.rsquare)
+        log = sprintf('Robustfit (r=%.2f) -> ', gof.rsquare);
     end
 end
 [fit_res_flat, gof_flat] = flat_fit(Conc,g);
@@ -135,13 +137,13 @@ if p>=pcutoff
     EC50 = +Inf;
     Hill = 0;
     Einf = 1- mean(g(end-[2 1 0]));
-    log = ['**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
+    log = [log '**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
     fit_final = fit_res_flat;
     
     Area = length(g)*(1-fit_res_flat.b);
     
 else
-    log = ['r2 = ' num2str(gof.rsquare,'%.2f')];
+    log = [log 'r2 = ' num2str(gof.rsquare,'%.2f')];
     
     fit_growth = fit_res(xc);
     
