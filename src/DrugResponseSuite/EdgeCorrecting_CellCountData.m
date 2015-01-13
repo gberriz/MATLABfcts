@@ -67,6 +67,9 @@ if any(t_ctrl.Row==1) && any(t_ctrl.Col==1) && ...
                 strjoin(table2cellstr(t_plateinfo,0),'/'), ratio, pval )
         end
     end
+else
+    fprintf('\t . No correc. for  (controls not on all edges)\n', ...
+        strjoin(table2cellstr(t_plateinfo,0),'/'))
 end
 
 

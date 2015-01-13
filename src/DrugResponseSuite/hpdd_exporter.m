@@ -1,5 +1,5 @@
 function hpdd_exporter(hpdd_filename, Designs, t_plateinfo)
-%HPDD_IMPORTER(hpdd_filename, Designs, t_plateinfo)
+%hpdd_exporter(hpdd_filename, Designs, t_plateinfo)
 %   Write an hpdd file based on array of Designs and a plate barcode table.
 %
 %   base_pathname : path and file name to a D300 protocol file ('.hpdd'

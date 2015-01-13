@@ -1,5 +1,5 @@
 
-function AngleSynergyAnalysis(t_data, extraGIs)
+function [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs)
 % AngleSynergyAnalysis(t_data)
 
 global Plotting_parameters
@@ -8,8 +8,10 @@ global Plotting_parameters
 %%%%%%%%%%%%%%
 assert(~isempty(t_data),'Empty data')
 
-assert(length(unique(t_data.CellLine))==1, 'There are more than one cell line: %s', ...
-    strjoin(cellstr(unique(t_data.CellLine)), ', '))
+if isvariable(t_data,'CellLine')
+    assert(length(unique(t_data.CellLine))==1, 'There are more than one cell line: %s', ...
+        strjoin(cellstr(unique(t_data.CellLine)), ', '))
+end
 
 Drugs = unique(t_data.DrugName(t_data.DrugName2~='-'));
 assert(~isempty(Drugs), 'No ''Drug1'' found')
@@ -100,7 +102,7 @@ t_combodata = [t_combodata table(BAratio) ...
 BAratio = unique(t_combodata.BAratio,'sorted');
 ratiocounts = hist(t_combodata.BAratio, BAratio);
 
-BAratio = BAratio(ratiocounts>4);
+BAratio = BAratio(ratiocounts>=4);
 fprintf('\tFitting for %i ratios:\n', length(BAratio));
 
 t_rfits = [table(BAratio) array2table(NaN(length(BAratio),4), ...
@@ -180,7 +182,7 @@ for iC=1:2
     else
         n = hist(t_combodata.Conc2,Conc{iC});
     end
-    idx = find(n>4);
+    idx = find(n>=4);
     AlignConc{iC} = Conc{iC}(idx);
     alignedGIs{iC} = Inf(length(idx), length(GIvalues));
     
@@ -195,9 +197,11 @@ for iC=1:2
             t_sub.Properties.VariableNames({'Conc' 'Conc2'}) = {'Conc2' 'Conc'};
         end
         
+        RelGrowth0 = mean(t_data.RelGrowth(t_data.DrugName==Drugs(iC) & t_data.DrugName2=='-' & ...
+            t_data.Conc==Conc{iC}(idx(i))));
+        
         ranges = [
-            t_data.RelGrowth(t_data.DrugName==Drugs(iC) & t_data.DrugName2=='-' & ...
-            t_data.Conc==Conc{iC}(idx(i)))+[-.05 .05]  %E0
+            RelGrowth0-.05 max([RelGrowth0;t_sub.RelGrowth])+.05  %E0
             0 1    %Emax
             max(min(t_sub.Conc2)*1e-4,1e-7) min(max(t_sub.Conc2)*1e2, 1e3)  %E50
             .1 5    % HS
@@ -216,16 +220,26 @@ for iC=1:2
         %%%%% repeated code; could be paste in a subfunction
         for j=1:length(extraGIs)
             fitopts = optimoptions('fsolve', 'Display','none');
-            temp = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
+            [temp, fval, flag] = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
                 median(t_sub.Conc2), fitopts);
-            % capping the values to avoid too much extrapolation
-            if temp<min(t_sub.Conc2)*10^-1.5 || imag(temp)~=0
-                alignedGIs{iC}(i,j+1) = -Inf;
-            elseif temp>10^1.5*max(t_sub.Conc2)
-                alignedGIs{iC}(i,j+1) = Inf;
+            if flag>=0 % convergence
+                % capping the values to avoid too much extrapolation
+                if temp<min(t_sub.Conc2)*10^-1.5
+                    alignedGIs{iC}(i,j+1) = -Inf;
+                elseif temp>10^1.5*max(t_sub.Conc2)
+                    alignedGIs{iC}(i,j+1) = Inf;
+                else
+                    alignedGIs{iC}(i,j+1) = temp;
+                end
+            elseif min(t_sub.RelGrowth)>(1-extraGIs(j)/100)
+                    alignedGIs{iC}(i,j+1) = Inf;
+            elseif max(t_sub.RelGrowth)<(1-extraGIs(j)/100)
+                    alignedGIs{iC}(i,j+1) = -Inf;
             else
-                alignedGIs{iC}(i,j+1) = temp;
+                error('unknown case for fsolve')
             end
+                
+                
         end
         
         
@@ -291,12 +305,17 @@ for i=1:length(GIvalues)
     allGIs(i).RealConc = RealConc(idx,:);
     w2 = [ones(length(allGIs(i).BAratio),1) 10.^allGIs(i).BAratio'];
     w2 = w2 ./ (sum(w2,2)*[1 1]);    
-    allGIs(i).CI = sum(allGIs(i).RealConc,2) ./ (w2*GIs(i,:)');
+    
+    % allGIs(i).CI = sum(allGIs(i).RealConc,2) ./ (w2*GIs(i,:)');
+    allGIs(i).CI = sum((allGIs(i).RealConc ./ repmat(GIs(i,:), length(allGIs(i).RealConc),1)),2) ./ ...
+        sum((w2.*repmat(GIs(i,:),length(w2),1))./repmat(GIs(i,:), length(allGIs(i).RealConc),1),2);
     
     NullBAratio = ((infmin(BAratio)-1.5):.1:(infmax(BAratio)+1.5));
     w2 = [ones(length(NullBAratio),1) 10.^NullBAratio'];
     w2 = w2 ./ (sum(w2,2)*[1 1]);    
     allGIs(i).NullConc = w2.*repmat(GIs(i,:),length(w2),1);
+    
+    
     
     % smoothing
     Nextra = 4;
@@ -381,8 +400,14 @@ intrpEmax = smooth(interp1(RelBAratio, ...
 
 %%
 
+if isvariable(t_data,'CellLine')
 get_newfigure(100,[50 50 700 550], [char(unique(t_data.CellLine)) ...
     '_Combo_' char(Drugs(1)) '+' char(Drugs(2)) '.pdf'])
+else
+get_newfigure(100,[50 50 700 550], ...
+    [ 'Combo_' char(Drugs(1)) '+' char(Drugs(2)) '.pdf'])
+end
+    
 
 % spacing for checkboard
 xwidth = .02;
@@ -466,7 +491,7 @@ end
 set(gca,'xtick',xticks,'xticklabel',Relxticklabels,'xticklabelrotation',90, ...
     'ytick',-5:5,'yticklabel',[strcat('1/',num2cellstr(2.^(5:-1:1))) ...
     strcat(num2cellstr(2.^(0:5)),'/1')],Plotting_parameters.axes{:}, 'box','on')
-ylim(log2([min([.45;CI(isfinite(CI))]) max([2.2;CI(isfinite(CI))])]))
+ylim(log2([min([.45 cellfun(@min,{allGIs.CI})]) max([2.2 cellfun(@max,{allGIs.CI})])]))
 xlim(xlims)
 ylabel('Combination index',Plotting_parameters.axislabel{:})
 xlabel(['Drug ratios (' strjoin(NormConc, '/') ' normalized)'],...

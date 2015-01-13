@@ -12,4 +12,4 @@ fprintf('\n%%%%\nt_annotated = Annotate_CellCountData(t_data, folder); %% where 
 fprintf('t_corrected = EdgeCorrecting_CellCountData(t_annotated); %% if edge correction is needed \n');
 
 %
-fprintf('\n%%%%\n[t_mean, t_processed] = Merge_CellCountData(t_annotated); \n');
+fprintf('\n%%%%\n[t_mean, t_processed] = Merge_CellCountData(t_corrected); \n');
