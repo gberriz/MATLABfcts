@@ -1,5 +1,5 @@
 %
-% function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, xI50_interval] = ...
+% function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, flag] = ...
 %     ICcurve_fit(Conc, Growth, fit_type, opt)
 %
 %   Inputs:
@@ -31,8 +31,10 @@
 %   Area => sum of (1-cell count) devided by range --> average per order of
 %   magnitude.
 %
+%   flag = 1 if fit is successful, 2 if Robust was used, 0 if linear used
+%
 
-function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log] = ...
+function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, flag] = ...
     ICcurve_fit(Conc, Growth, fit_type, opt)
 
 
@@ -95,7 +97,7 @@ switch fit_type
     case 'IC50'
         ranges(1,2) = 0; % lowest Emax
     case 'GI50'
-        ranges(1,2) = -Inf; % lowest Emax
+        ranges(1,2) = -2; % lowest Emax; assuming that cells are at least 50% more than seeding.
 end
 
 
@@ -106,16 +108,18 @@ if capped
     g = min(g, ranges(2,1));
 end
 
-Npara = 4; % N of parameters in the growth curve
+Npara = 3.9; % N of parameters in the growth curve with some constraints
 log = '';
+flag = 1;
 if isempty(Robust) || ~Robust
     [fit_res, gof] = sigmoidal_fit(Conc,g,'off');    
 else
     [fit_res, gof] = sigmoidal_fit(Conc,g,'off');
-    if gof.rsquare<.7
+    if gof.rsquare<.7 && length(g)>ceil(Npara) % don't use it is there are 4 points.
+        warnprintf('Using robust fit (previous r=%.2f)', gof.rsquare)
         [fit_res, gof] = sigmoidal_fit(Conc,g,'Bisquare');
-        warnprintf('Using robust fit: r=%.2f', gof.rsquare)
         log = sprintf('Robustfit (r=%.2f) -> ', gof.rsquare);
+        flag = 2;
     end
 end
 [fit_res_flat, gof_flat] = flat_fit(Conc,g);
@@ -132,7 +136,7 @@ p = 1-fcdf(F, df1, df2);
 xc = 10.^(log10(min(Conc))-1:.05:log10(max(Conc))+1);
 r2 = gof.rsquare;
 
-if p>=pcutoff
+if p>=pcutoff || isnan(RSS2) % failure of robust fit
     xI50 = +Inf;
     EC50 = +Inf;
     Hill = 0;
@@ -141,6 +145,7 @@ if p>=pcutoff
     fit_final = fit_res_flat;
     
     Area = length(g)*(1-fit_res_flat.b);
+    flag = 0;
     
 else
     log = [log 'r2 = ' num2str(gof.rsquare,'%.2f')];
@@ -163,8 +168,8 @@ else
             xI50 = Inf;
             log = [log '\t' fit_type '>' num2str(extrapolrange) '*max(Conc) --> +Inf'];
         end
-    elseif all(fit_growth<.5) || imag(xI50)~=0
-        if xI50<min(Conc)/extrapolrange
+    elseif all(fit_growth<.5) 
+        if xI50<min(Conc)/extrapolrange || imag(xI50)~=0
             xI50 = -Inf;
             log = [log '\t' fit_type '<min(Conc)/' num2str(extrapolrange) ' --> -Inf'];
         end

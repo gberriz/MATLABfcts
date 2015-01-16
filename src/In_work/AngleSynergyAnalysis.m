@@ -1,6 +1,27 @@
 
 function [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs)
-% AngleSynergyAnalysis(t_data)
+% [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs)
+%
+% Inputs:
+%   t_data:     table with the columns: DrugName, Conc, DrugName2, Conc2,
+%               RelGrowth and optional column CellLine (for figure name)
+%   extraGIs:   additional GI levels. Default is [25 65 80 90].
+%
+% Outputs:
+%   allGIs:     all results for each GI levels
+%   t_rfits:    fits along the ratio of drug concentrations
+%
+%
+% Improvment to make:
+%   - support RelCount as an alternative to RelGrowth
+%   - normalization currently by GI50 (need correction for EC50)
+%   - support other input formats
+%   - currently assuming that all doses used in the combo are also in the
+%       single agent
+%
+%
+
+
 
 global Plotting_parameters
 %%%%%%%%%%%%%%
@@ -44,14 +65,18 @@ Emaxs = Hills;
 r2s = Hills;
 NormFactor = Hills;
 
+get_newfigure(999,[460 100 800 700]);
+get_subaxes(2,2,1,[],1)
+
+colors = [.7 .1 0; .2 0 1];
 for i=1:2
-    t_temp = sortrows(t_data(t_data.DrugName==Drugs(i) & t_data.DrugName2=='-',:), ...
+    t_sub = sortrows(t_data(t_data.DrugName==Drugs(i) & t_data.DrugName2=='-',:), ...
         'Conc');
-    Emaxs(i) = 1-min(t_temp.RelGrowth);
+    Emaxs(i) = 1-min(t_sub.RelGrowth);
     
     opt = struct('pcutoff',.1,'extrapolrange',10^1.5,'Robust',true);
     [GIs(1,i), Hills(i), Einfs(i), ~, r2s(i), EC50s(i), fitfct] = ...
-        ICcurve_fit(t_temp.Conc, t_temp.RelGrowth, 'GI50', opt);
+        ICcurve_fit(t_sub.Conc, t_sub.RelGrowth, 'GI50', opt);
     %%%% replace by the actual subfunction and stack it in the file
     %%%%%%%%%%
     
@@ -65,14 +90,19 @@ for i=1:2
     for j=1:length(extraGIs)
         if Einfs(i)>extraGIs(j)/100
             GIs(1+j,i) = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
-                median(t_temp.Conc), fitopts);
+                EC50s(i), fitopts);
         else
-            GIs(1+j,i) = max(t_temp.Conc)*1.5;
+            GIs(1+j,i) = Inf;
         end
     end
     %%%%%% the other GI should directly be evaluated in the ICcurve_fit
     %%%%%% function and capped as the GI50 if the values are extrapolated
     
+    if any(GIs(:,i)==Inf)
+        warnprintf('Values %s are set to maximum for drug %s', ...
+            strjoin(num2cellstr(GIvalues(GIs(:,i)==Inf)),','), char(Drugs(i)))
+    end
+    GIs(GIs(:,i)==Inf,i) = max(t_sub.Conc)*10^1.5;    
     
     %%%%%%%%%%%%%%
     %%%%  how to deal with normalization when there is no GI50 for normalization ????
@@ -88,8 +118,21 @@ for i=1:2
         warnprintf('Normalization by EC50 instead of GI50')
     end
     
+    plot(t_sub.Conc, t_sub.RelGrowth, 'o', 'color', colors(i,:))
+    x = 10.^(log10(min(t_sub.Conc)):.01:log10(max(t_sub.Conc)));
+    plot(x, fitfct(x), '-', 'color', colors(i,:))
+    plot(x(end)*[1 1.2], [1 1]-Emaxs(i), ':', 'color', colors(i,:))
+    plot(x(end)*[1 1.2], [1 1]-Einfs(i), '--', 'color', colors(i,:))
+    for j=1:length(GIvalues)
+        plot(GIs(j,i)*[1 1 1], [0 1-GIvalues(j)/100 1], '.-', 'color', colors(i,:))
+    end
 end
 
+set(gca,'xscale','log')
+
+if any(strcmp(NormConc,'EC50'))
+    NormFactor = EC50s;
+end
 
 %% caculate the ratios on which to fit the sigmoidal cruves
 
@@ -111,8 +154,7 @@ colors = parula(length(BAratio));
 
 ratioGIs = Inf(length(BAratio),length(GIvalues));
 
-get_newfigure(999,[60 400 900 400]);
-get_subaxes(1,3,1,[],1)
+get_subaxes(2,2,2,[],1)
 for i = 1:height(t_rfits)
     t_sub = sortrows(t_combodata(t_combodata.BAratio == t_rfits.BAratio(i),:), ...
         'ConcTot');
@@ -146,7 +188,6 @@ for i = 1:height(t_rfits)
     fprintf('\t\tfit for BAratio %-5g: GI50=%.3g, r2=%.2f\n', t_rfits.BAratio(i), ...
         ratioGIs(i,1), t_rfits.r2(i));
     
-    plot(t_sub.ConcTot, t_sub.RelGrowth, 'o', 'color', colors(i,:))
     
     if isinf(ratioGIs(i,1)) || imag(ratioGIs(i,1))~=0
         if imag(ratioGIs(i,1))~=0
@@ -154,6 +195,8 @@ for i = 1:height(t_rfits)
         end
         fprintf(['\t\t --> ' log '\n'])
     end
+    
+    plot(t_sub.ConcTot, t_sub.RelGrowth, 'o', 'color', colors(i,:))
     x = 10.^(log10(infmin([ratioGIs(i,1);t_sub.ConcTot])):.01:...
         log10(infmax([ratioGIs(i,1);t_sub.ConcTot])));
     plot(x, fitfct(x), '-', 'color', colors(i,:))
@@ -170,13 +213,14 @@ t_rfits.RelBAratio = t_rfits.BAratio +log10(NormFactor(1)) -log10(NormFactor(2))
 Conc = cell(2,1);
 AlignConc = cell(2,1);
 for i=1:2
+    % assuming that all doses used in the combo are also in the single
+    % agent
     Conc{i} = unique(t_data.Conc(t_data.DrugName==Drugs(i)),'sorted');
 end
 
 alignedGIs = cell(2,1);
 
 for iC=1:2
-    
     if iC==1 % not the most elegant solution
         n = hist(t_combodata.Conc,Conc{iC});
     else
@@ -186,8 +230,9 @@ for iC=1:2
     AlignConc{iC} = Conc{iC}(idx);
     alignedGIs{iC} = Inf(length(idx), length(GIvalues));
     
+    fprintf('\tFitting for Conc%i (%i):\n', iC, length(idx))
     colors = parula(length(idx));
-    get_subaxes(1,3,1+iC,[],1)
+    get_subaxes(2,2,2+iC,[],1)
     for i=1:length(idx)
         
         if iC==1 % swapping to keep code the same
@@ -206,13 +251,13 @@ for iC=1:2
             max(min(t_sub.Conc2)*1e-4,1e-7) min(max(t_sub.Conc2)*1e2, 1e3)  %E50
             .1 5    % HS
             ]';
-        opt = struct('pcutoff',1,'extrapolrange',10^1.5,'ranges',ranges, ...
+        opt = struct('pcutoff',.9,'extrapolrange',10^1.5,'ranges',ranges, ...
             'Robust', true);
-        [alignedGIs{iC}(i,1), ~, ~, ~, r2, ~, fitfct, ~, log] = ...
+        [alignedGIs{iC}(i,1), ~, ~, ~, r2, ~, fitfct, ~, log, flag] = ...
             ICcurve_fit(t_sub.Conc2, t_sub.RelGrowth, 'GI50', opt);
         
-        if r2<.75
-            fprintf(['\t\t Bad fit --> ' log '\n'])
+        if r2<.7 || flag==0
+            fprintf(['\t\t  Bad fit --> ' log '\n'])
             alignedGIs{iC}(i,:) = NaN;
             continue
         end
@@ -221,7 +266,10 @@ for iC=1:2
         for j=1:length(extraGIs)
             fitopts = optimoptions('fsolve', 'Display','none');
             [temp, fval, flag] = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
-                median(t_sub.Conc2), fitopts);
+                infmax(alignedGIs{iC}(i,j), fitfct.c), fitopts);
+            if imag(temp)~=0
+                    error('fsolve yields complex number')
+            end
             if flag>=0 % convergence
                 % capping the values to avoid too much extrapolation
                 if temp<min(t_sub.Conc2)*10^-1.5
@@ -235,6 +283,18 @@ for iC=1:2
                     alignedGIs{iC}(i,j+1) = Inf;
             elseif max(t_sub.RelGrowth)<(1-extraGIs(j)/100)
                     alignedGIs{iC}(i,j+1) = -Inf;
+            elseif flag==-2
+                if fitfct.b>(1-extraGIs(j)/100) && ...
+                        min(t_sub.RelGrowth)<(1-extraGIs(j)/100)
+                    alignedGIs{iC}(i,j+1) = ...
+                        t_sub.Conc2(argmin(abs(t_sub.RelGrowth-(1-extraGIs(j)/100))));
+                elseif fitfct.a<(1-extraGIs(j)/100) && ...
+                        max(t_sub.RelGrowth)>(1-extraGIs(j)/100)
+                    alignedGIs{iC}(i,j+1) = ...
+                        t_sub.Conc2(argmin(abs(t_sub.RelGrowth-(1-extraGIs(j)/100))));
+                else
+                    error('unknown case for fsolve')
+                end
             else
                 error('unknown case for fsolve')
             end
@@ -243,17 +303,19 @@ for iC=1:2
         end
         
         
-        fprintf('\t\tfit for Conc%i %-5g: GI50=%.3g, r2=%.2f\n', iC, Conc{iC}(idx(i)), ...
+        fprintf('\t\t%-5g: GI50=%.3g, r2=%.2f\n', Conc{iC}(idx(i)), ...
             alignedGIs{iC}(i,1), r2);
         
         plot(t_sub.Conc2, t_sub.RelGrowth, 'o', 'color', colors(i,:))
         
-        if isinf(alignedGIs{iC}(i,1)) || imag(alignedGIs{iC}(i,1))~=0
-            if imag(alignedGIs{iC}(i,1))~=0
-                alignedGIs{iC}(i,1) = -Inf;
-            end
-            fprintf(['\t\t --> ' log '\n'])
+        if isinf(alignedGIs{iC}(i,1)) && min(t_sub.RelGrowth)>.55 && ...
+                max(t_sub.RelGrowth)<.45
+            fprintf(['\t\t  --> ' log '\n'])
         end
+        if imag(alignedGIs{iC}(i,1))~=0
+            error('issue with fitting')
+        end
+            
         x = 10.^(log10(infmin([alignedGIs{iC}(i,1);t_sub.Conc2])):.01:...
             log10(infmax([alignedGIs{iC}(i,1);t_sub.Conc2])));
         
@@ -298,6 +360,49 @@ for i=1:length(GIvalues)
         BAratio<log10((max(t_combodata.Conc2)/min(t_combodata.Conc))) & ...
         BAratio>log10((min(t_combodata.Conc2)/max(t_combodata.Conc))) & ...
         all(isfinite(RealConc),2));
+      
+    NullBAratio = -6:.1:6;
+    w2 = [ones(length(NullBAratio),1) 10.^NullBAratio'];
+    w2 = w2 ./ (sum(w2,2)*[1 1]);    
+    allGIs(i).NullConc = w2.*repmat(GIs(i,:),size(w2,1),1);
+    
+    
+    if isempty(idx)
+        
+        if any(isfinite(GIs(i,:))) 
+            temp = [alignedGIs{1}(:,i); alignedGIs{2}(:,i)];
+            if all(isnan(temp))
+                DefaultSynergyVal = NaN;
+                warnprintf('All fits failed for GI%i -> discarded',GIvalues(i))
+            end
+            if all(temp(~isnan(temp))==-Inf)
+                % cases of synergy: the GIxx is lower than the combo tested
+                DefaultSynergyVal = 1/7;
+                warnprintf('No GI%i lower than doses in the combo -> synergy',GIvalues(i))
+            else
+                DefaultSynergyVal = 7;
+                warnprintf('GI%i higher than doses in the combo -> antagonist',GIvalues(i))
+            end
+            
+            allGIs(i).BAratio = [-1:.1:1];
+            allGIs(i).RealConc = NaN(length(allGIs(i).BAratio),2);
+            
+            allGIs(i).intrpBAratio = allGIs(i).BAratio;
+            allGIs(i).intrpConc = allGIs(i).RealConc;
+            
+            allGIs(i).CI = DefaultSynergyVal*ones(length(allGIs(i).BAratio),1);
+            % that will plot a dash line
+            allGIs(i).intrpCI = DefaultSynergyVal*...
+                [1;repmat([1;NaN;1],ceil(length(allGIs(i).BAratio)/3),1);1];
+            allGIs(i).intrpCI = allGIs(i).intrpCI(1:length(allGIs(i).BAratio));
+            
+            allGIs(i).RelBAratio = allGIs(i).BAratio ...
+                +log10(NormFactor(1)) -log10(NormFactor(2));
+            allGIs(i).intrpRelBAratio = allGIs(i).RelBAratio;
+        end
+        continue
+    end
+        
         
     idx = idx(sortidx(BAratio(idx)));
     allGIs(i).BAratio = BAratio(idx)';
@@ -307,13 +412,9 @@ for i=1:length(GIvalues)
     w2 = w2 ./ (sum(w2,2)*[1 1]);    
     
     % allGIs(i).CI = sum(allGIs(i).RealConc,2) ./ (w2*GIs(i,:)');
-    allGIs(i).CI = sum((allGIs(i).RealConc ./ repmat(GIs(i,:), length(allGIs(i).RealConc),1)),2) ./ ...
-        sum((w2.*repmat(GIs(i,:),length(w2),1))./repmat(GIs(i,:), length(allGIs(i).RealConc),1),2);
+    allGIs(i).CI = sum((allGIs(i).RealConc ./ repmat(GIs(i,:), size(allGIs(i).RealConc,1),1)),2) ./ ...
+        sum((w2.*repmat(GIs(i,:),size(w2,1),1))./repmat(GIs(i,:), size(allGIs(i).RealConc,1),1),2);
     
-    NullBAratio = ((infmin(BAratio)-1.5):.1:(infmax(BAratio)+1.5));
-    w2 = [ones(length(NullBAratio),1) 10.^NullBAratio'];
-    w2 = w2 ./ (sum(w2,2)*[1 1]);    
-    allGIs(i).NullConc = w2.*repmat(GIs(i,:),length(w2),1);
     
     
     
@@ -322,6 +423,8 @@ for i=1:length(GIvalues)
     BAratio = [.1*floor(min(allGIs(i).BAratio)*10)-((Nextra-1):-1:0)*.1-.5 ...
         allGIs(i).BAratio ...
         .1*ceil(max(allGIs(i).BAratio)*10)+(0:(Nextra-1))*.1+.5 ];
+    % add a bit of noise to avoid equal ratios (issue for interpolation)
+    BAratio = BAratio+1e-5+(rand(size(BAratio))-.5); 
     allGIs(i).intrpBAratio = ...
         ((infmin(allGIs(i).BAratio)-.25):.2:(infmax(allGIs(i).BAratio)+.25))';
     
@@ -330,14 +433,16 @@ for i=1:length(GIvalues)
         allGIs(i).RealConc(:,1); ...
         -Inf(Nextra ,1)];
     c1(c1==-Inf) = infmin([t_combodata.Conc;allGIs(i).RealConc(:,1)])*10^-1.5;
-%     c1(c1==Inf) = infmax([t_combodata.Conc;allGIs(i).RealConc(:,1)])*10^1.5;
+    
+    
     c2 = [-Inf(Nextra ,1); ...
         allGIs(i).RealConc(:,2); ...
         repmat(GIs(i,2),Nextra ,1)];
     c2(c2==-Inf) = infmin([t_combodata.Conc2;allGIs(i).RealConc(:,2)])*10^-1.5;
-%     c2(c2==Inf) = infmax([t_combodata.Conc2;allGIs(i).RealConc(:,2)])*10^1.5;
     
-    allGIs(i).intrpConc = 10.^[smooth(interp1(BAratio, log10(c1), ...
+%     [tempc1,idx1] = unique(c1,'sorted');
+%     [tempc2,idx2] = unique(c2,'sorted');
+    allGIs(i).intrpConc = 10.^[smooth(interp1(BAratio', log10(c1), ...
         allGIs(i).intrpBAratio, 'PCHIP'),Nsmooth) ...
         smooth(interp1(BAratio, log10(c2), ...
         allGIs(i).intrpBAratio, 'PCHIP'),Nsmooth)];
@@ -480,7 +585,7 @@ plot(repmat([xvals([1 end]) NaN],1,3), reshape([1;1;NaN]*[-1 0 1],[],1)', ...
 plot([0 0], [-32 32], '-k')
 plot(log10(NormFactor(1))-log10(NormFactor(2))*[1 1], [-32 32], '-', 'color', [.5 .5 .5])
 
-h = NaN(length(GIvalues),1);
+h = zeros(length(GIvalues),1);
 for j=[2:length(GIvalues) 1] % plot GI50 last
     h(j) = plot(allGIs(j).RelBAratio, log2(allGIs(j).CI), ...
         '.','color',GIcolors(j,:), 'markersize', 12);
@@ -491,7 +596,8 @@ end
 set(gca,'xtick',xticks,'xticklabel',Relxticklabels,'xticklabelrotation',90, ...
     'ytick',-5:5,'yticklabel',[strcat('1/',num2cellstr(2.^(5:-1:1))) ...
     strcat(num2cellstr(2.^(0:5)),'/1')],Plotting_parameters.axes{:}, 'box','on')
-ylim(log2([min([.45 cellfun(@min,{allGIs.CI})]) max([2.2 cellfun(@max,{allGIs.CI})])]))
+ylim(log2([min([.45 cellfun(@min,{allGIs(~cellfun(@isempty, {allGIs.BAratio})).CI})])/1.1 ...
+    max([2.2 cellfun(@max,{allGIs(~cellfun(@isempty, {allGIs.BAratio})).CI})])*1.1]))
 xlim(xlims)
 ylabel('Combination index',Plotting_parameters.axislabel{:})
 xlabel(['Drug ratios (' strjoin(NormConc, '/') ' normalized)'],...
@@ -556,16 +662,17 @@ legend(h,{'1-E_{inf}' '1-E_{max}'},'location','best',...
 %%%
 logC1 = log10(Conc{1});
 logC2 = log10(Conc{2});
-GrowthMx = NaN(length(logC1)+1, length(logC2)+1);
-GrowthMx(1,1) = 1;
+GrowthMx = NaN(length(logC1), length(logC2));
+GrowthMx1 = NaN(length(logC1), 1);
+GrowthMx2 = NaN(1, length(logC2));
 
 for iC1 = 1:length(logC1)
-    GrowthMx(iC1+1,1) = t_data.RelGrowth(t_data.DrugName==Drugs(1) & ...
+    GrowthMx1(iC1) = t_data.RelGrowth(t_data.DrugName==Drugs(1) & ...
         t_data.Conc==Conc{1}(iC1) & t_data.DrugName2=='-');
     
     for iC2 = 1:length(logC2)
         if iC1==1
-            GrowthMx(1,iC2+1) = t_data.RelGrowth(t_data.DrugName==Drugs(2) & ...
+            GrowthMx2(iC2) = t_data.RelGrowth(t_data.DrugName==Drugs(2) & ...
                 t_data.Conc==Conc{2}(iC2) & t_data.DrugName2=='-');
         end
         
@@ -573,7 +680,7 @@ for iC1 = 1:length(logC1)
             t_data.Conc==Conc{1}(iC1) & t_data.DrugName2==Drugs(2) & ...
             t_data.Conc2==Conc{2}(iC2) );
         if ~isempty(val)
-            GrowthMx(iC1+1,iC2+1) = val;
+            GrowthMx(iC1,iC2) = val;
         end
         
         
@@ -585,8 +692,8 @@ end
 %%%%%%
 
 
-xlims = [1.5*logC2(1)-.5*logC2(2) 1.5*logC2(end)-.5*logC2(end-1)];
-ylims = [1.5*logC1(1)-.5*logC1(2) 1.5*logC1(end)-.5*logC1(end-1)];
+xlims = [1.5*logC2(1)-.6*logC2(2) 1.5*logC2(end)-.4*logC2(end-1)];
+ylims = [1.5*logC1(1)-.6*logC1(2) 1.5*logC1(end)-.4*logC1(end-1)];
 
 
 % small corner (control)
@@ -594,10 +701,13 @@ get_newaxes([pos(4,1) pos(4,2) xwidth ywidth])
 imagesc(1,1,1,[-1 1])
 set(gca,'xtick',1,'xticklabel',0, 'ytick',1,'yticklabel',0 , ...
     Plotting_parameters.axes{:},'ydir','normal')
+xlim([.9 1.1])
+ylim([.9 1.1])
 
 % plot for Drug 1
 get_newaxes(subpos(1,:),1)
-imagesc(ones(1,length(logC1)), logC1, GrowthMx(2:end,1),[-1 1]);
+imagesc(ones(1,sum((~isnan(GrowthMx1)))), logC1(~isnan(GrowthMx1)), ...
+    GrowthMx1(~isnan(GrowthMx1)),[-1 1]);
 ylabel([char(Drugs(1))  '[uM]'], Plotting_parameters.axislabel{:})
 set(gca,'xtick',[], 'ytick', logC1(2:2:end), ...
     'yticklabel', num2cellstr(Conc{1}(2:2:end),'%.2g'), ...
@@ -608,10 +718,12 @@ for i=1:length(GIvalues)
         'linewidth',2);
 end
 ylim(ylims)
+xlim([.9 1.1])
 
 % plot for Drug 2
 get_newaxes(subpos(2,:),1)
-imagesc(logC2, ones(1,length(logC2)), GrowthMx(1,2:end),[-1 1]);
+imagesc(logC2(~isnan(GrowthMx2)), ones(1,sum(~isnan(GrowthMx2))), ...
+    GrowthMx2(~isnan(GrowthMx2)),[-1 1]);
 xlabel([char(Drugs(2)) '[uM]'], Plotting_parameters.axislabel{:})
 set(gca,'ytick',[], 'xtick', logC2(2:2:end), ...
     'xticklabel', num2cellstr(Conc{2}(2:2:end),'%.2g'),...
@@ -622,29 +734,50 @@ for i=1:length(GIvalues)
         'linewidth',2);
 end
 xlim(xlims)
+ylim([.9 1.1])
 
 % plot for combination
 get_newaxes(subpos(3,:),1)
-imagesc(logC2, logC1, GrowthMx(2:end,2:end),[-1 1]);
-set(gca,'xtick',[], 'ytick',[],'ydir','normal')
-% set(gca, 'ytick', logC1(2:2:end), ...
-%     'yticklabel', num2cellstr(Conc{1}(2:2:end),'%.2g'), ...
-%      'xtick', logC2(2:2:end),'xticklabel', num2cellstr(Conc{2}(2:2:end),'%.2g'),...
-%     Plotting_parameters.axes{:},'ydir','normal')
 
-% plot the ratio directions used for fit
-for i=1:height(t_rfits)
-    plot([-5 5], [-5 5]-t_rfits.BAratio(i), '-', 'color', [.8 .8 .8]);
+% imagesc(logC2, logC1, GrowthMx,[-1 1]);
+% interpolation
+[idx1, idx2] = find(~isnan(GrowthMx));
+intrplogC1 = (min(logC1(idx1))-.15):.15:(max(logC1(idx1))+.15);
+intrplogC2 = (min(logC2(idx2))-.15):.15:(max(logC2(idx2))+.15);
+% intrplogC1 = logC1(min(idx1):max(idx1));
+% intrplogC2 = logC2(min(idx2):max(idx2));
+
+
+intrpGrowth = scatteredInterpolant(logC1(idx1), logC2(idx2), ...
+    GrowthMx(sub2ind(size(GrowthMx), idx1, idx2)));
+[logC1pts, logC2pts] = meshgrid(intrplogC1, intrplogC2);
+
+intrpGrowthMx = intrpGrowth(logC1pts(:), logC2pts(:));
+intrpGrowthMx = reshape(intrpGrowthMx', length(intrplogC2), length(intrplogC1))';
+imagesc(intrplogC2, intrplogC1, intrpGrowthMx, [-1 1]);
+
+set(gca,'xtick',[], 'ytick',[],'ydir','normal')
+
+% plot the ratio directions used for fit and the Aligned diretions for the fit
+if ~isempty(t_rfits)
+    plot([-5 5], ones(size(t_rfits.BAratio))*[-5 5]-t_rfits.BAratio*[1 1], ...
+        '-', 'color', [.8 .8 .8]);
+end
+if isempty(AlignConc{1})
+    plot([-5 5], log10(AlignConc{1})*[1 1], '--', 'color', [.8 .8 .8]);
+end
+if isempty(AlignConc{2})
+    plot(log10(AlignConc{2})*[1 1], [-5 5], '--', 'color', [.8 .8 .8]);
 end
 
 % plot the isoGI cruves
-h = NaN(length(GIvalues)+1,1);
-for j=[ 2:length(GIvalues) 1]    
+h = zeros(length(GIvalues)+1,1);
+for j=[ 2:length(GIvalues) 1]  
     % theoric curve (additive)
-    h(j) = plot(log10(allGIs(j).NullConc(:,2)), log10(allGIs(j).NullConc(:,1)), ...
+    plot(log10(allGIs(j).NullConc(:,2)), log10(allGIs(j).NullConc(:,1)), ...
         '--','color', GIcolors(j,:), 'linewidth',1);
     % real curve
-    h(j) = plot(log10(allGIs(j).RealConc(:,2)), log10(allGIs(j).RealConc(:,1)), ...
+    plot(log10(allGIs(j).RealConc(:,2)), log10(allGIs(j).RealConc(:,1)), ...
         '.','color', GIcolors(j,:), 'markersize', 12);
     h(j) = plot(log10(allGIs(j).intrpConc(:,2)), log10(allGIs(j).intrpConc(:,1)), ...
         '-','color', GIcolors(j,:), 'linewidth',1);
