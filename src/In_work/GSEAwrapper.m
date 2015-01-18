@@ -10,7 +10,8 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %   - Geneset:
 %       - tag (GObp, GOcc, GOmf, KEGG, Reactome)
 %       - filename
-%       - cell array or table with genes
+%       - cell array formated as gmt: each rows has the format:
+%           { 'Set name' 'source' 'geneA\tgeneB\t...'}
 %   - options:
 %       - Outputfolder (folder in which the GSEA output folder will be
 %           saved default is none, results are not save) 
@@ -60,7 +61,8 @@ tempfolder = ['.' filesep ...
 if ~exist(tempfolder,'dir')
     mkdir(tempfolder)
 else
-    delete([tempfolder filesep '*'])
+    rmdir(tempfolder,'s')
+    mkdir(tempfolder)
 end
 if isempty(Outputfolder)
     Outputfolder = tempfolder;
@@ -83,30 +85,29 @@ end
 
 
 Setfile = [tempfolder 'tempset.gmt'];
-switch Geneset
-    case 'GOmf'
-        Setfile = [GSEAfolder 'c5.mf.v4.0.symbols.gmt'];
-    case 'GObp'
-        Setfile = [GSEAfolder 'c5.bp.v4.0.symbols.gmt'];
-    case 'GOcc'
-        Setfile = [GSEAfolder 'c5.cc.v4.0.symbols.gmt'];
-    case 'KEGG'
-        Setfile = [GSEAfolder 'c2.cp.kegg.v4.0.symbols.gmt'];
-    case 'Reactome'
-        Setfile = [GSEAfolder 'c2.cp.reactome.v4.0.symbols.gmt'];
-    otherwise
-        if ischar(Geneset)
+if ischar(Geneset)
+    switch Geneset
+        case 'GOmf'
+            Setfile = [GSEAfolder 'c5.mf.v4.0.symbols.gmt'];
+        case 'GObp'
+            Setfile = [GSEAfolder 'c5.bp.v4.0.symbols.gmt'];
+        case 'GOcc'
+            Setfile = [GSEAfolder 'c5.cc.v4.0.symbols.gmt'];
+        case 'KEGG'
+            Setfile = [GSEAfolder 'c2.cp.kegg.v4.0.symbols.gmt'];
+        case 'Reactome'
+            Setfile = [GSEAfolder 'c2.cp.reactome.v4.0.symbols.gmt'];
+        otherwise
             assert(exist(Geneset,'file'), 'Geneset file not found')
             [~,~,ext] = filepart(Geneset);
             assert(strcmp(ext,'gmt'),'Geneset file must be a .gmt format')
             Setfile = Geneset;
-        elseif istable(Geneset)
-            table2tsv(Geneset, Setfile);
-        elseif iscellstr(Geneset)
-            cell2tsv(Setfile, Geneset);
-        else
-            error('unknown format for Geneset')
-        end
+    end
+elseif iscellstr(Geneset)
+    assert(size(Geneset,2)==3, 'Geneset as a cellstr should be a nx3 array')
+    cell2tsv(Setfile, Geneset);
+else
+    error('unknown format for Geneset')
 end
 % check if the file exist locally, otherwise use the
 % Broad http address for the file: ftp.broadinstitute.org://pub/gsea/gene_sets/
@@ -145,7 +146,8 @@ else
 end
 %% get the right folder
 
-f = dir([Outputfolder filesep label '*']);
+f = dir([Outputfolder filesep label '*GseaPre*']);
+f = f([f.isdir]);
 Lastrun = f(argmax(cellfun(@datenum,{f.date}))).name;
 if isempty(Outputfolder)
     disp(['Results stored in ' Outputfolder])
@@ -193,13 +195,15 @@ values(:,idx) = cellfun2(@(x) 1+cellfun(@str2num,regexp(x,' ','split')), ...
 t_results = cell2table(values, 'variablenames', fieldnames);
 
 for i=1:height(t_results)
-    t_results.GeneNames{i} = Genelist(t_results.GeneIdx{i},1)'; 
+    t_results.GeneNames{i} = Genelist(t_results(i,'GeneIdx').GeneIdx,1)'; 
     if t_results.Escore(i)>0
-        t_results.LeadEdge{i} = t_results.GeneNames{i}(1:find(...
-            t_results.GeneEscore{i}==max(t_results.GeneEscore{i})));
+        t_results.LeadEdge{i} = t_results(i,'GeneNames').GeneNames(...
+            1:find(t_results(i,'GeneEscore').GeneEscore==...
+            max(t_results(i,'GeneEscore').GeneEscore)));
     else
-        t_results.LeadEdge{i} = t_results.GeneNames{i}(find(...
-            t_results.GeneEscore{i}==min(t_results.GeneEscore{i})):end);
+        t_results.LeadEdge{i} = t_results(i,'GeneNames').GeneNames(...
+            find(t_results(i,'GeneEscore').GeneEscore==...
+            min(t_results(i,'GeneEscore').GeneEscore)):end);
     end
 end
 % clean up
