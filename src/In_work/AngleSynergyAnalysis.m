@@ -58,14 +58,14 @@ Drugs(2) = temp;
 if ~exist('extraGIs','var') || isempty(extraGIs)
     extraGIs = [20 35 65 80 95];
 else
-    extraGIs = unique(ToRow(extraGIs),'sorted');
+    extraGIs = unique(ToRow(extraGIs),'stable');
 end
 if ~ismember(50, extraGIs) % put the GI50 in front
     GIvalues = [50 extraGIs];
     GI50idx = 1;
 else
     GIvalues = extraGIs; % keep the order
-    extraGIs = setdiff(extraGIs,50);
+    extraGIs = setdiff(extraGIs,50,'stable');
     GI50idx = find(GIvalues==50);
 end
 GIs = Inf(length(GIvalues),2); % already set to max concentration
@@ -91,12 +91,13 @@ for i=1:2
     Emaxs(i) = 1-min(t_sub.RelGrowth);
     
     opt = struct('pcutoff',.1,'extrapolrange',10^1.5,'Robust',true);
-    [GIs(1,i), Hills(i), Einfs(i), ~, r2s(i), EC50s(i), fitfct] = ...
+    [GIs(GI50idx,i), Hills(i), Einfs(i), ~, r2s(i), EC50s(i), fitfct] = ...
         ICcurve_fit(t_sub.Conc, t_sub.RelGrowth, 'GI50', opt);
     %%%% replace by the actual subfunction and stack it in the file
     %%%%%%%%%%
     
-    fprintf('\tfit for %-12s: EC50=%.3g, GI50=%.3g, r2=%.2f\n', char(Drugs(i)), EC50s(i), GIs(1,i), r2s(i));
+    fprintf('\tfit for %-12s: EC50=%.3g, GI50=%.3g, r2=%.2f\n', char(Drugs(i)), ...
+        EC50s(i), GIs(GI50idx,i), r2s(i));
     warnassert(r2s(i)>.7, 'Bad fit !')
     %%%%% should that stop the algorithm ??
     
@@ -105,10 +106,10 @@ for i=1:2
     fitopts = optimoptions('fsolve', 'Display','none');
     for j=1:length(extraGIs)
         if Einfs(i)>extraGIs(j)/100
-            GIs(1+j,i) = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
+            GIs(extraGIs(j)==GIvalues,i) = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
                 EC50s(i), fitopts);
         else
-            GIs(1+j,i) = Inf;
+            GIs(extraGIs(j)==GIvalues,i) = Inf;
         end
     end
     %%%%%% the other GI should directly be evaluated in the ICcurve_fit
@@ -131,7 +132,7 @@ for i=1:2
     
     if isfinite(GIs(1,1))
         NormConc{i} = 'GI50';
-        NormFactor(i) = GIs(1,i);
+        NormFactor(i) = GIs(GI50idx,i);
     else
         NormConc{i} = 'EC50';
         NormFactor(i) = EC50s(i);
@@ -185,7 +186,7 @@ for i = 1:height(t_rfits)
     
     %%%%%%%
     opt = struct('pcutoff',1,'extrapolrange',10^1.5);
-    [ratioGIs(i,1), t_rfits.Hill(i), t_rfits.Einf(i), ~, t_rfits.r2(i), ...
+    [ratioGIs(i,GI50idx), t_rfits.Hill(i), t_rfits.Einf(i), ~, t_rfits.r2(i), ...
         ~, fitfct, ~, log] = ...
         ICcurve_fit(t_sub.ConcTot, t_sub.RelGrowth, 'GI50', opt);
     %%%% replace by the actual subfunction and stack it in the file
@@ -193,36 +194,37 @@ for i = 1:height(t_rfits)
     
     %%%%% repeated code; could be paste in a subfunction
     for j=1:length(extraGIs)
+        jidx = extraGIs(j)==GIvalues;
         fitopts = optimoptions('fsolve', 'Display','none');
         temp = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
             median(t_sub.ConcTot), fitopts);
         % capping the values to avoid too much extrapolation
         if temp<min(t_sub.ConcTot)*10^-1.5 || imag(temp)~=0
-            ratioGIs(i,j+1) = -Inf;
+            ratioGIs(i,jidx) = -Inf;
         elseif temp>10^1.5*max(t_sub.ConcTot)
-            ratioGIs(i,j+1) = Inf;
+            ratioGIs(i,jidx) = Inf;
         else
-            ratioGIs(i,j+1) = temp;
+            ratioGIs(i,jidx) = temp;
         end
     end
     %%%%%% the other GI should directly be evaluated in the ICcurve_fit
     %%%%%% function and capped as the GI50 if the values are extrapolated
     
     fprintf('\t\tfit for BAratio %-5g: GI50=%.3g, r2=%.2f\n', t_rfits.BAratio(i), ...
-        ratioGIs(i,1), t_rfits.r2(i));
+        ratioGIs(i,GI50idx), t_rfits.r2(i));
     
     
-    if isinf(ratioGIs(i,1)) || imag(ratioGIs(i,1))~=0
-        if imag(ratioGIs(i,1))~=0
-            ratioGIs(i,1) = -Inf;
+    if isinf(ratioGIs(i,GI50idx)) || imag(ratioGIs(i,GI50idx))~=0
+        if imag(ratioGIs(i,GI50idx))~=0
+            ratioGIs(i,GI50idx) = -Inf;
         end
         fprintf(['\t\t --> ' log '\n'])
     end
     
     if plotting
         plot(t_sub.ConcTot, t_sub.RelGrowth, 'o', 'color', colors(i,:))
-        x = 10.^(log10(infmin([ratioGIs(i,1);t_sub.ConcTot])):.01:...
-            log10(infmax([ratioGIs(i,1);t_sub.ConcTot])));
+        x = 10.^(log10(infmin([ratioGIs(i,GI50idx);t_sub.ConcTot])):.01:...
+            log10(infmax([ratioGIs(i,GI50idx);t_sub.ConcTot])));
         plot(x, fitfct(x), '-', 'color', colors(i,:))
         plot(x(end)*[1 1.2], [1 1]-t_rfits.Emax(i), ':', 'color', colors(i,:))
         plot(x(end)*[1 1.2], [1 1]-t_rfits.Einf(i), '--', 'color', colors(i,:))
@@ -281,7 +283,7 @@ for iC=1:2
             ]';
         opt = struct('pcutoff',.9,'extrapolrange',10^1.5,'ranges',ranges, ...
             'Robust', true);
-        [alignedGIs{iC}(i,1), ~, ~, ~, r2, ~, fitfct, ~, log, flag] = ...
+        [alignedGIs{iC}(i,GI50idx), ~, ~, ~, r2, ~, fitfct, ~, log, flag] = ...
             ICcurve_fit(t_sub.Conc2, t_sub.RelGrowth, 'GI50', opt);
         
         if r2<.7 || flag==0
@@ -292,33 +294,34 @@ for iC=1:2
         
         %%%%% repeated code; could be paste in a subfunction
         for j=1:length(extraGIs)
+            jidx = extraGIs(j)==GIvalues;
             fitopts = optimoptions('fsolve', 'Display','none');
             [temp, fval, flag] = fsolve(@(x) fitfct(x)-(1-extraGIs(j)/100), ...
-                infmax(alignedGIs{iC}(i,j), fitfct.c), fitopts);
+                infmax(alignedGIs{iC}(i,GI50idx), fitfct.c), fitopts);
             if imag(temp)~=0
                     error('fsolve yields complex number')
             end
             if flag>=0 % convergence
                 % capping the values to avoid too much extrapolation
                 if temp<min(t_sub.Conc2)*10^-1.5
-                    alignedGIs{iC}(i,j+1) = -Inf;
+                    alignedGIs{iC}(i,jidx) = -Inf;
                 elseif temp>10^1.5*max(t_sub.Conc2)
-                    alignedGIs{iC}(i,j+1) = Inf;
+                    alignedGIs{iC}(i,jidx) = Inf;
                 else
-                    alignedGIs{iC}(i,j+1) = temp;
+                    alignedGIs{iC}(i,jidx) = temp;
                 end
             elseif min(t_sub.RelGrowth)>(1-extraGIs(j)/100)
-                    alignedGIs{iC}(i,j+1) = Inf;
+                    alignedGIs{iC}(i,jidx) = Inf;
             elseif max(t_sub.RelGrowth)<(1-extraGIs(j)/100)
-                    alignedGIs{iC}(i,j+1) = -Inf;
+                    alignedGIs{iC}(i,jidx) = -Inf;
             elseif flag==-2
                 if fitfct.b>(1-extraGIs(j)/100) && ...
                         min(t_sub.RelGrowth)<(1-extraGIs(j)/100)
-                    alignedGIs{iC}(i,j+1) = ...
+                    alignedGIs{iC}(i,jidx) = ...
                         t_sub.Conc2(argmin(abs(t_sub.RelGrowth-(1-extraGIs(j)/100))));
                 elseif fitfct.a<(1-extraGIs(j)/100) && ...
                         max(t_sub.RelGrowth)>(1-extraGIs(j)/100)
-                    alignedGIs{iC}(i,j+1) = ...
+                    alignedGIs{iC}(i,jidx) = ...
                         t_sub.Conc2(argmin(abs(t_sub.RelGrowth-(1-extraGIs(j)/100))));
                 else
                     error('unknown case for fsolve')
@@ -332,12 +335,12 @@ for iC=1:2
         
         
         fprintf('\t\t%-5g: GI50=%.3g, r2=%.2f\n', Conc{iC}(idx(i)), ...
-            alignedGIs{iC}(i,1), r2);
-        if isinf(alignedGIs{iC}(i,1)) && min(t_sub.RelGrowth)>.55 && ...
+            alignedGIs{iC}(i,GI50idx), r2);
+        if isinf(alignedGIs{iC}(i,GI50idx)) && min(t_sub.RelGrowth)>.55 && ...
                 max(t_sub.RelGrowth)<.45
             fprintf(['\t\t  --> ' log '\n'])
         end
-        if imag(alignedGIs{iC}(i,1))~=0
+        if imag(alignedGIs{iC}(i,GI50idx))~=0
             error('issue with fitting')
         end
             
@@ -345,8 +348,8 @@ for iC=1:2
         if plotting
             plot(t_sub.Conc2, t_sub.RelGrowth, 'o', 'color', colors(i,:))
             
-            x = 10.^(log10(infmin([alignedGIs{iC}(i,1);t_sub.Conc2])):.01:...
-                log10(infmax([alignedGIs{iC}(i,1);t_sub.Conc2])));
+            x = 10.^(log10(infmin([alignedGIs{iC}(i,GI50idx);t_sub.Conc2])):.01:...
+                log10(infmax([alignedGIs{iC}(i,GI50idx);t_sub.Conc2])));
             
             plot(x, fitfct(x), '-', 'color', colors(i,:))
             plot(x(1)*[1 1.2], [1 1]*mean(ranges(:,1)), '--', 'color', colors(i,:))
@@ -603,9 +606,10 @@ Relxticklabels{1} = char(Drugs(1));
 Relxticklabels{end} = char(Drugs(2));
 xvals = [xticks(1) t_rfits.RelBAratio' xticks(end)];
 
-GIcolors = min([0 0 0; .2+(sum(extraGIs<50):-1:1)'*[0 .2 .8]/sum(extraGIs<50);
+GIcolors = min([.2+(sum(extraGIs<50):-1:1)'*[0 .2 .8]/sum(extraGIs<50);
+    0 0 0;
     .2+(1:sum(extraGIs>50))'*[.4 .8 0]/sum(extraGIs>50)],1);
-
+GIcolors(sortidx(GIvalues,'ascend'),:) = GIcolors;
 
 
 %%%%%%%%%%%%%%%
@@ -625,7 +629,7 @@ plot([0 0], [-32 32], '-k')
 plot(log10(NormFactor(1))-log10(NormFactor(2))*[1 1], [-32 32], '-', 'color', [.5 .5 .5])
 
 h = zeros(length(GIvalues),1);
-for j=[ToRow(find(GIvalues~=50)) find(GIvalues==50)] % plot GI50 last
+for j=[ToRow(find(GIvalues~=50)) GI50idx] % plot GI50 last
     h(j) = plot(allGIs(j).RelBAratio, log2(allGIs(j).CI), ...
         '.','color',GIcolors(j,:), 'markersize', 12);
     h(j) = plot(allGIs(j).intrpRelBAratio, log2(allGIs(j).intrpCI), ...
@@ -811,7 +815,7 @@ end
 
 % plot the isoGI cruves
 h = zeros(length(GIvalues)+1,1);
-for j=[ 2:length(GIvalues) 1]  
+for j=[ToRow(find(GIvalues~=50)) GI50idx]
     % theoric curve (additive)
     plot(log10(allGIs(j).NullConc(:,2)), log10(allGIs(j).NullConc(:,1)), ...
         '--','color', GIcolors(j,:), 'linewidth',1);
