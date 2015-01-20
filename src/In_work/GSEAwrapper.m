@@ -194,16 +194,27 @@ values(:,idx) = cellfun2(@(x) 1+cellfun(@str2num,regexp(x,' ','split')), ...
 
 t_results = cell2table(values, 'variablenames', fieldnames);
 
-for i=1:height(t_results)
-    t_results.GeneNames{i} = Genelist(t_results(i,'GeneIdx').GeneIdx,1)'; 
-    if t_results.Escore(i)>0
-        t_results.LeadEdge{i} = t_results(i,'GeneNames').GeneNames(...
-            1:find(t_results(i,'GeneEscore').GeneEscore==...
-            max(t_results(i,'GeneEscore').GeneEscore)));
+if height(t_results)>1 %%%% see below, buggish if one row only
+    for i=1:height(t_results)
+        t_results.GeneNames{i} = Genelist(t_results.GeneIdx{i},1)';
+        if t_results.Escore(i)>0
+            t_results.LeadEdge{i} = t_results.GeneNames{i}(1:find(...
+                t_results.GeneEscore{i}==max(t_results.GeneEscore{i})));
+        else
+            t_results.LeadEdge{i} = t_results.GeneNames{i}(find(...
+                t_results.GeneEscore{i}==min(t_results.GeneEscore{i})):end);
+        end
+    end
+else
+    %%%% weird bug that I cannot resolve in the loop if t_results has one row
+    t_results.GeneNames = Genelist(t_results.GeneIdx,1)';
+    if t_results.Escore>0
+        t_results.LeadEdge = t_results.GeneNames(...
+            1:find(t_results.GeneEscore==max(t_results.GeneEscore)));
     else
-        t_results.LeadEdge{i} = t_results(i,'GeneNames').GeneNames(...
-            find(t_results(i,'GeneEscore').GeneEscore==...
-            min(t_results(i,'GeneEscore').GeneEscore)):end);
+        t_results.LeadEdge{i} = t_results.GeneNames(...
+            find(t_results.GeneEscore==...
+            min(t_results.GeneEscore)):end);
     end
 end
 % clean up
