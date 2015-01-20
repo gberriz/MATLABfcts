@@ -115,11 +115,19 @@ if isempty(Robust) || ~Robust
     [fit_res, gof] = sigmoidal_fit(Conc,g,'off');    
 else
     [fit_res, gof] = sigmoidal_fit(Conc,g,'off');
-    if gof.rsquare<.7 && length(g)>ceil(Npara) % don't use it is there are 4 points.
+    r2 = gof.rsquare;
+    if r2<.7 && length(g)>ceil(Npara) % don't use it is there are 4 points.
         warnprintf('Using robust fit (previous r=%.2f)', gof.rsquare)
         [fit_res, gof] = sigmoidal_fit(Conc,g,'Bisquare');
         log = sprintf('Robustfit (r=%.2f) -> ', gof.rsquare);
+        fprintf('Robustfit (r=%.2f) -> ', gof.rsquare);
         flag = 2;
+        if r2>gof.rsquare
+            [fit_res, gof] = sigmoidal_fit(Conc,g,'off');
+            fprintf('discared for normal fit\n');
+        else
+            fprintf('accepted \n');
+        end
     end
 end
 [fit_res_flat, gof_flat] = flat_fit(Conc,g);

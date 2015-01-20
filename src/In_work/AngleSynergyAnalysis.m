@@ -90,7 +90,7 @@ for i=1:2
         'Conc');
     Emaxs(i) = 1-min(t_sub.RelGrowth);
     
-    opt = struct('pcutoff',.1,'extrapolrange',10^1.5,'Robust',true);
+    opt = struct('pcutoff',.5,'extrapolrange',10^1.5,'Robust',true);
     [GIs(GI50idx,i), Hills(i), Einfs(i), ~, r2s(i), EC50s(i), fitfct] = ...
         ICcurve_fit(t_sub.Conc, t_sub.RelGrowth, 'GI50', opt);
     %%%% replace by the actual subfunction and stack it in the file
@@ -98,8 +98,15 @@ for i=1:2
     
     fprintf('\tfit for %-12s: EC50=%.3g, GI50=%.3g, r2=%.2f\n', char(Drugs(i)), ...
         EC50s(i), GIs(GI50idx,i), r2s(i));
-    warnassert(r2s(i)>.7, 'Bad fit !')
+    warnassert(r2s(i)>.7, 'Bad fit for %s !', char(Drugs(i)))
     %%%%% should that stop the algorithm ??
+    if ~isfinite(EC50s(i))
+        warnprintf('data for drug %s cannot be fitted --> all GIsets to min/max dose', ...
+            char(Drugs(i)))
+        cappedGI(:,i) = true;
+        GIs((1-(GIvalues/100))<fitfct.b,i) = max(t_sub.Conc)*10^1.5;
+        GIs((1-(GIvalues/100))>fitfct.b,i) = min(t_sub.Conc)/10^1.5;
+    end
     
     % evaluation of the other GIs
     %%%%% repeated code; could be paste in a subfunction
@@ -122,22 +129,6 @@ for i=1:2
     end
     GIs(cappedGI(:,i),i) = max(t_sub.Conc)*10^1.5;    
     
-    %%%%%%%%%%%%%%
-    %%%%  how to deal with normalization when there is no GI50 for normalization ????
-    %%%%  use EC50??? instead (with a warning?)
-    %%%%
-    %%%%  currently forcing a GI50 1.5-fold higher than the highest dose
-    %%%%  tested !!
-    %%%%%%%%%%%%%%
-    
-    if isfinite(GIs(1,1))
-        NormConc{i} = 'GI50';
-        NormFactor(i) = GIs(GI50idx,i);
-    else
-        NormConc{i} = 'EC50';
-        NormFactor(i) = EC50s(i);
-        warnprintf('Normalization by EC50 instead of GI50')
-    end
     if plotting
         plot(t_sub.Conc, t_sub.RelGrowth, 'o', 'color', colors(i,:))
         x = 10.^(log10(min(t_sub.Conc)):.01:log10(max(t_sub.Conc)));
@@ -151,9 +142,29 @@ for i=1:2
 end
 
 
-if any(strcmp(NormConc,'EC50'))
-    NormFactor = EC50s;
-end
+    %%%%%%%%%%%%%%
+    %%%%  how to deal with normalization when there is no GI50 for normalization ????
+    %%%%  use EC50??? instead (with a warning?)
+    %%%%
+    %%%%  currently forcing a GI50 1.5-fold higher than the highest dose
+    %%%%  tested !!
+    %%%%%%%%%%%%%%
+    
+    if all(~cappedGI(GI50idx,:))
+        NormConc = 'GI50';
+        NormFactor = GIs(GI50idx,:);
+    else
+        NormGI = max(GIvalues(all(~cappedGI,2)));
+        
+        if isempty(NormGI)
+            NormConc = 'capGI50';
+            NormFactor = GIs(GI50idx,:);
+        else
+            NormConc = ['GI' num2str(NormGI)];
+            NormFactor = GIs(NormGI==GIvalues,:);
+            warnprintf('Normalization by GI%i instead of GI50', NormGI)
+        end
+    end
 
 %% caculate the ratios on which to fit the sigmoidal cruves
 
@@ -643,7 +654,7 @@ ylim(log2([min([.45 cellfun(@min,{allGIs(~cellfun(@isempty, {allGIs.BAratio})).C
     max([2.2 cellfun(@max,{allGIs(~cellfun(@isempty, {allGIs.BAratio})).CI})])*1.1]))
 xlim(xlims)
 ylabel('Combination index',Plotting_parameters.axislabel{:})
-xlabel(['Drug ratios (' strjoin(NormConc, '/') ' normalized)'],...
+xlabel(['Drug ratios (' NormConc '/' NormConc ' normalized)'],...
     Plotting_parameters.axislabel{:})
 % legend(h,[strcat('GI', num2cellstr(GIvalues)) 'Failed points'],'location','best', ...
 %     Plotting_parameters.axislabel{:})
@@ -664,7 +675,7 @@ set(gca,'xtick',xticks,'xticklabel',Relxticklabels,'xticklabelrotation',90,...
     Plotting_parameters.axes{:}, 'box','on')
 xlim(xlims)
 ylabel('Hill coefficient',Plotting_parameters.axislabel{:})
-xlabel(['Drug ratios (' strjoin(NormConc, '/') ' normalized)'],...
+xlabel(['Drug ratios (' NormConc '/' NormConc ' normalized)'],...
     Plotting_parameters.axislabel{:})
 ylim([min([.4 t_rfits.Hill']) max([4 t_rfits.Hill'])])
 
@@ -688,7 +699,7 @@ set(gca,'xtick',xticks,'xticklabel',Relxticklabels,'xticklabelrotation',90,...
 xlim(xlims)
 ylim([min([-.3 1-t_rfits.Emax' 1-Emaxs]) max([.3 1-t_rfits.Emax' 1-Emaxs])])
 ylabel('Lowest growth (1-E_{inf}/E_{max})',Plotting_parameters.axislabel{:})
-xlabel(['Drug ratios (' strjoin(NormConc, '/') ' normalized)'],...
+xlabel(['Drug ratios (' NormConc '/' NormConc ' normalized)'],...
     Plotting_parameters.axislabel{:})
 legend(h,{'1-E_{inf}' '1-E_{max}'},'location','best',...
     Plotting_parameters.axislabel{:})
