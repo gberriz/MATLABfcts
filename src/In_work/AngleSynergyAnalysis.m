@@ -6,7 +6,8 @@ function [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs, plotting)
 %   t_data:     table with the columns: DrugName, Conc, DrugName2, Conc2,
 %               RelGrowth and optional column CellLine (for figure name)
 %   extraGIs:   additional GI levels. Default is [25 65 80 90].
-%   plotting:   plot the fits and the final result (default = true)
+%   plotting:   plot nothing (0), only the final results (1, default) or 
+%                   the fits and the final result (2)
 %
 % Outputs:
 %   allGIs:     all results for each GI levels
@@ -26,7 +27,9 @@ function [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs, plotting)
 
 if ~exist('plotting','var') || plotting    
     global Plotting_parameters
-    plotting = true;
+    plotting = 1;
+else
+    plotting = 0;
 end
 %%%%%%%%%%%%%%
 %%%% assume outputs from the D300 DrugResponse Suite (like t_mean)
@@ -88,7 +91,7 @@ Emaxs = Hills;
 r2s = Hills;
 NormFactor = Hills;
 
-if plotting
+if plotting==2
     get_newfigure(999,[460 100 800 700]);
     get_subaxes(2,2,1,[],1)
     set(gca,'xscale','log')
@@ -117,6 +120,7 @@ for i=1:2
         cappedGI(:,i) = true;
         GIs((1-(GIvalues/100))<fitfct.b,i) = max(t_sub.Conc)*10^1.5;
         GIs((1-(GIvalues/100))>fitfct.b,i) = min(t_sub.Conc)/10^1.5;
+        continue
     end
     
     % evaluation of the other GIs
@@ -140,7 +144,7 @@ for i=1:2
     end
     GIs(cappedGI(:,i),i) = max(t_sub.Conc)*10^1.5;    
     
-    if plotting
+    if plotting==2
         plot(t_sub.Conc, t_sub.RelGrowth, 'o', 'color', colors(i,:))
         x = 10.^(log10(min(t_sub.Conc)):.01:log10(max(t_sub.Conc)));
         plot(x, fitfct(x), '-', 'color', colors(i,:))
@@ -197,7 +201,7 @@ colors = parula(length(BAratio));
 
 ratioGIs = Inf(length(BAratio),length(GIvalues));
 
-if plotting
+if plotting==2
     get_subaxes(2,2,2,[],1)
     set(gca,'xscale','log')
 end
@@ -243,7 +247,7 @@ for i = 1:height(t_rfits)
         fprintf(['\t\t --> ' log '\n'])
     end
     
-    if plotting
+    if plotting==2
         plot(t_sub.ConcTot, t_sub.RelGrowth, 'o', 'color', colors(i,:))
         x = 10.^(log10(infmin([ratioGIs(i,GI50idx);t_sub.ConcTot])):.01:...
             log10(infmax([ratioGIs(i,GI50idx);t_sub.ConcTot])));
@@ -271,16 +275,16 @@ alignedGIs = cell(2,1);
 
 for iC=1:2
     if iC==1 % not the most elegant solution
-        n = hist(t_combodata.Conc,Conc{iC});
+        n = hist_cat(t_combodata.Conc,Conc{iC});
     else
-        n = hist(t_combodata.Conc2,Conc{iC});
+        n = hist_cat(t_combodata.Conc2,Conc{iC});
     end
     idx = find(n>=4);
     AlignConc{iC} = Conc{iC}(idx);
     alignedGIs{iC} = Inf(length(idx), length(GIvalues));
     
     fprintf('\tFitting for Conc%i (%i):\n', iC, length(idx))
-    if plotting
+    if plotting==2
         colors = parula(length(idx));
         get_subaxes(2,2,2+iC,[],1)
         set(gca,'xscale','log')
@@ -367,7 +371,7 @@ for iC=1:2
         end
             
         
-        if plotting
+        if plotting==2
             plot(t_sub.Conc2, t_sub.RelGrowth, 'o', 'color', colors(i,:))
             
             x = 10.^(log10(infmin([alignedGIs{iC}(i,GI50idx);t_sub.Conc2])):.01:...
@@ -386,7 +390,7 @@ end
 
 
 
-%% getting the actual Concentration for the ratioGIxx for plotting later
+%% getting the actual Concentration for the ratioGIxx 
 % and stacking with the alignedGIs
 
 
@@ -398,7 +402,7 @@ w = w ./ (sum(w,2)*[1 1]);
 Nextra = 4;
 Nsmooth = 5;
 
-if plotting
+if plotting==2
     get_newfigure(998,[750 50 900 700])
 end
 for i=1:length(GIvalues)
@@ -414,8 +418,8 @@ for i=1:length(GIvalues)
         [alignedGIs{2}(:,i) AlignConc{2}]];
     
     idx = find(isfinite(BAratio) & ...
-        BAratio<log10((max(t_combodata.Conc2)/min(t_combodata.Conc))) & ...
-        BAratio>log10((min(t_combodata.Conc2)/max(t_combodata.Conc))) & ...
+        BAratio<log10(2*(max(t_combodata.Conc2)/min(t_combodata.Conc))) & ...
+        BAratio>log10(2*(min(t_combodata.Conc2)/max(t_combodata.Conc))) & ...
         all(isfinite(RealConc),2));
       
     NullBAratio = -6:.1:6;
@@ -425,7 +429,7 @@ for i=1:length(GIvalues)
     
     
     if isempty(idx)
-        
+        % case where the GIx is not defined.
         if any(isfinite(GIs(i,:))) 
             temp = [alignedGIs{1}(:,i); alignedGIs{2}(:,i)];
             if all(isnan(temp))
@@ -436,9 +440,12 @@ for i=1:length(GIvalues)
                 % cases of synergy: the GIxx is lower than the combo tested
                 DefaultSynergyVal = 1/7;
                 warnprintf('No GI%i lower than doses in the combo -> synergy',GIvalues(i))
-            else
+            elseif all(temp(~isnan(temp))==Inf)
                 DefaultSynergyVal = 7;
                 warnprintf('GI%i higher than doses in the combo -> antagonist',GIvalues(i))
+            else
+                DefaultSynergyVal = NaN;
+                warnprintf('No fit within boundaries for GI%i -> discarded',GIvalues(i))
             end
             
             allGIs(i).BAratio = [-1:.1:1];
@@ -456,6 +463,7 @@ for i=1:length(GIvalues)
             allGIs(i).RelBAratio = allGIs(i).BAratio ...
                 +log10(NormFactor(1)) -log10(NormFactor(2));
             allGIs(i).intrpRelBAratio = allGIs(i).RelBAratio;
+            allGIs(i).meanCI = DefaultSynergyVal;
         end
         continue
     end
@@ -508,7 +516,7 @@ for i=1:length(GIvalues)
     allGIs(i).intrpCI = 2.^smooth(interp1(BAratio, log2(CI), ...
         allGIs(i).intrpBAratio, 'PCHIP'),Nsmooth);
     
-    if plotting
+    if plotting==2
         % plot QC
         get_subaxes(length(GIvalues),3,i,1,1)
         plot(allGIs(i).BAratio, log10(allGIs(i).RealConc(:,1)), 'x')
@@ -575,7 +583,7 @@ intrpEmax = smooth(interp1(RelBAratio, ...
 
 
 %% plotting the final figure
-if ~plotting
+if plotting==0
     return
 end
 
@@ -857,10 +865,10 @@ if ~isempty(t_rfits)
     plot([-5 5], ones(size(t_rfits.BAratio))*[-5 5]-t_rfits.BAratio*[1 1], ...
         '-', 'color', [.8 .8 .8]);
 end
-if isempty(AlignConc{1})
+if ~isempty(AlignConc{1})
     plot([-5 5], log10(AlignConc{1})*[1 1], '--', 'color', [.8 .8 .8]);
 end
-if isempty(AlignConc{2})
+if ~isempty(AlignConc{2})
     plot(log10(AlignConc{2})*[1 1], [-5 5], '--', 'color', [.8 .8 .8]);
 end
 
