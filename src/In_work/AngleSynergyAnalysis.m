@@ -31,7 +31,31 @@ end
 %%%%%%%%%%%%%%
 %%%% assume outputs from the D300 DrugResponse Suite (like t_mean)
 %%%%%%%%%%%%%%
-assert(~isempty(t_data),'Empty data')
+if ~exist('extraGIs','var') || isempty(extraGIs)
+    extraGIs = [20 35 65 80 95];
+else
+    extraGIs = unique(ToRow(extraGIs),'stable');
+end
+if ~ismember(50, extraGIs) % put the GI50 in front
+    GIvalues = [50 extraGIs];
+    GI50idx = 1;
+else
+    GIvalues = extraGIs; % keep the order
+    extraGIs = setdiff(extraGIs,50,'stable');
+    GI50idx = find(GIvalues==50);
+end
+
+
+allGIs = struct('GIval', num2cell(GIvalues), 'BAratio', [], 'RealConc', [], ...
+    'NullConc', [], 'CI', [], 'RelBAratio', [], 'CappedGI', [], ...
+    'GIconc', [], 'meanCI', [], 'intrpBAratio', [], 'intrpConc', [], ...
+    'intrpCI', [], 'intrpRelBAratio', []);
+
+if ~exist('t_data','var') || isempty(t_data)
+    warnprintf('Empty data; returning empty structure')
+    return
+end
+
 
 if isvariable(t_data,'CellLine')
     assert(length(unique(t_data.CellLine))==1, 'There are more than one cell line: %s', ...
@@ -54,20 +78,7 @@ Drugs(2) = temp;
 %%%%%%%%%%%%%%
 
 %% evaluate the GI50 for each drug independently
-%%%%%%  values for GIxx should be specified as an input %%%
-if ~exist('extraGIs','var') || isempty(extraGIs)
-    extraGIs = [20 35 65 80 95];
-else
-    extraGIs = unique(ToRow(extraGIs),'stable');
-end
-if ~ismember(50, extraGIs) % put the GI50 in front
-    GIvalues = [50 extraGIs];
-    GI50idx = 1;
-else
-    GIvalues = extraGIs; % keep the order
-    extraGIs = setdiff(extraGIs,50,'stable');
-    GI50idx = find(GIvalues==50);
-end
+
 GIs = Inf(length(GIvalues),2); % already set to max concentration
 cappedGI = false(length(GIvalues),2); 
 Hills = NaN(1,2);
@@ -378,9 +389,6 @@ end
 %% getting the actual Concentration for the ratioGIxx for plotting later
 % and stacking with the alignedGIs
 
-allGIs = struct('GIval', num2cell(GIvalues), 'BAratio', [], 'RealConc', [], ...
-    'NullConc', [], 'CI', [], 'RelBAratio', [], 'CappedGI', [], ...
-    'GIconc', []);
 
 w = [ones(height(t_rfits),1) 10.^t_rfits.BAratio];
 w = w ./ (sum(w,2)*[1 1]);
@@ -532,6 +540,19 @@ for i=1:length(GIvalues)
     
     allGIs(i).RelBAratio = allGIs(i).BAratio +log10(NormFactor(1)) -log10(NormFactor(2));
     allGIs(i).intrpRelBAratio = allGIs(i).intrpBAratio +log10(NormFactor(1)) -log10(NormFactor(2));
+    
+    % geometric mean of the CI values
+    if sum(abs(allGIs(i).intrpRelBAratio)<1)>3
+        allGIs(i).meanCI = 2^mean(log2(allGIs(i).intrpCI(abs(allGIs(i).intrpRelBAratio)<1)));
+    else
+        idx = abs(allGIs(i).intrpRelBAratio - median(allGIs(i).intrpRelBAratio))<1;
+        allGIs(i).meanCI = 2^mean(log2(allGIs(i).intrpCI(idx)));
+        warnprintf('mean CI evaluated on RelBA = [%.1f %.1f] for GI%i', ...
+            min(allGIs(i).intrpRelBAratio(idx)), max(allGIs(i).intrpRelBAratio(idx)), ...
+            GIvalues(i))
+    end
+        
+    
 end
 
 %% smoothing of Hill coeff and Emax/inf
@@ -573,11 +594,11 @@ ywidth = .03;
 space = .005;
 
 % position of axes
-pos = [
-    .07 .59 .5 .34; % CI plot
-    .67 .59 .3 .34; % Hill plot
-    .67 .12 .3 .34]; % Emax plot
-pos(4,:) = [pos(1,1) pos(3,2)-ywidth-space .4 pos(3,4)+ywidth]; % checkboard
+pos = [.06 .57 .5 .33; % CI plot
+    .67 .67 .3 .23]; % Hill plot
+pos(3,:) = [pos(2,1) pos(2,2)-pos(2,4)-2*space pos(2,3:4)]; % Emax plot
+pos(5,:) = [pos(2,1) .06 pos(2,3:4)]; % mean CI
+pos(4,:) = [pos(1,1) pos(5,2) pos(1,3)-.1 .34+ywidth]; % checkboard
 
 % position for checkboard
 subpos = [
@@ -634,7 +655,8 @@ xlabel('Drug ratios (Conc)',Plotting_parameters.axislabel{:})
 
 
 get_newaxes(pos(1,:),1)
-plot(repmat([xvals([1 end]) NaN],1,3), reshape([1;1;NaN]*[-1 0 1],[],1)', ...
+plot(xvals([1 end]), [0 0], '-k')
+plot(repmat([xvals([1 end]) NaN],1,2), reshape([1;1;NaN]*[-1 1],[],1)', ...
     '-', 'color', [.7 .7 .7])
 plot([0 0], [-32 32], '-k')
 plot(log10(NormFactor(1))-log10(NormFactor(2))*[1 1], [-32 32], '-', 'color', [.5 .5 .5])
@@ -660,6 +682,25 @@ xlabel(['Drug ratios (' NormConc '/' NormConc ' normalized)'],...
 %     Plotting_parameters.axislabel{:})
 
 
+%%%%%%%%%%%%%%%%%%
+% plot the average CI as a function of GIx
+get_newaxes(pos(5,:),1)
+plot([0 200], [0 0], '-k')
+plot(repmat([0 200 NaN],1,2), reshape([1;1;NaN]*[-1 1],[],1)', ...
+    '-', 'color', [.7 .7 .7])
+
+idx = sortidx(GIvalues);
+plot(GIvalues(idx), log2([allGIs(idx).meanCI]), '.-k')
+
+set(gca,'ytick',-5:5,'yticklabel',[strcat('1/',num2cellstr(2.^(5:-1:1))) ...
+    strcat(num2cellstr(2.^(0:5)),'/1')],Plotting_parameters.axes{:}, 'box','on')
+ylim(log2([min([.45 cellfun(@min,{allGIs(~cellfun(@isempty, {allGIs.BAratio})).CI})])/1.1 ...
+    max([2.2 cellfun(@max,{allGIs(~cellfun(@isempty, {allGIs.BAratio})).CI})])*1.1]))
+xlim([20 max(GIvalues)+10])
+ylabel('Combination index',Plotting_parameters.axislabel{:})
+xlabel('GI value',Plotting_parameters.axislabel{:})
+
+
 %%%%%%%%%%%%%%%%%%%
 % plot for the Hill coeff
 % get_newaxes(pos(2,:),1)
@@ -671,14 +712,13 @@ plot([0 0], [-32 32], '-k')
 plot(log10(NormFactor(1))-log10(NormFactor(2))*[1 1], [-32 32], '-', 'color', [.5 .5 .5])
 plot(t_rfits.RelBAratio, t_rfits.Hill, '.k')
 plot(intrpRelrat, intrpHill , '-k')
-set(gca,'xtick',xticks,'xticklabel',Relxticklabels,'xticklabelrotation',90,...
-    Plotting_parameters.axes{:}, 'box','on')
-xlim(xlims)
-ylabel('Hill coefficient',Plotting_parameters.axislabel{:})
-xlabel(['Drug ratios (' NormConc '/' NormConc ' normalized)'],...
-    Plotting_parameters.axislabel{:})
-ylim([min([.4 t_rfits.Hill']) max([4 t_rfits.Hill'])])
 
+xlim(xlims)
+ylim([min([.4 t_rfits.Hill']) max([4 t_rfits.Hill'])])
+set(gca,'xtick',xticks,'xticklabel',Concxticklabels,'xticklabelrotation',90, ...
+    'ytick',0:5,'xaxislocation','top',Plotting_parameters.axes{:}, 'box','on')
+xlabel('Drug ratios (Conc)',Plotting_parameters.axislabel{:})
+ylabel('Hill coefficient',Plotting_parameters.axislabel{:})
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % plot for the Emax/inf
@@ -698,7 +738,7 @@ set(gca,'xtick',xticks,'xticklabel',Relxticklabels,'xticklabelrotation',90,...
     Plotting_parameters.axes{:}, 'box','on')
 xlim(xlims)
 ylim([min([-.3 1-t_rfits.Emax' 1-Emaxs]) max([.3 1-t_rfits.Emax' 1-Emaxs])])
-ylabel('Lowest growth (1-E_{inf}/E_{max})',Plotting_parameters.axislabel{:})
+ylabel('Lowest growth',Plotting_parameters.axislabel{:})
 xlabel(['Drug ratios (' NormConc '/' NormConc ' normalized)'],...
     Plotting_parameters.axislabel{:})
 legend(h,{'1-E_{inf}' '1-E_{max}'},'location','best',...
