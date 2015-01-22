@@ -1,6 +1,6 @@
 
-function [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs, plotting)
-% [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs)
+function [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs, plotting, verbatim)
+% [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs, plotting, verbatim)
 %
 % Inputs:
 %   t_data:     table with the columns: DrugName, Conc, DrugName2, Conc2,
@@ -8,6 +8,7 @@ function [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs, plotting)
 %   extraGIs:   additional GI levels. Default is [25 65 80 90].
 %   plotting:   plot nothing (0), only the final results (1, default) or 
 %                   the fits and the final result (2)
+%   verbatim:   disply fit informations (default: true)
 %
 % Outputs:
 %   allGIs:     all results for each GI levels
@@ -27,9 +28,15 @@ function [allGIs, t_rfits] = AngleSynergyAnalysis(t_data, extraGIs, plotting)
 
 if ~exist('plotting','var') || plotting    
     global Plotting_parameters
-    plotting = 1;
+    if ~exist('plotting','var') || islogical(plotting) || plotting<2 
+        plotting = 1;
+    end
 else
     plotting = 0;
+end
+
+if ~exist('verbatim','var') 
+    verbatim = true;
 end
 %%%%%%%%%%%%%%
 %%%% assume outputs from the D300 DrugResponse Suite (like t_mean)
@@ -55,7 +62,8 @@ allGIs = struct('GIval', num2cell(GIvalues), 'BAratio', [], 'RealConc', [], ...
     'intrpCI', [], 'intrpRelBAratio', []);
 
 if ~exist('t_data','var') || isempty(t_data)
-    warnprintf('Empty data; returning empty structure')
+    if verbatim
+        warnprintf('Empty data; returning empty structure'), end
     return
 end
 
@@ -109,14 +117,16 @@ for i=1:2
         ICcurve_fit(t_sub.Conc, t_sub.RelGrowth, 'GI50', opt);
     %%%% replace by the actual subfunction and stack it in the file
     %%%%%%%%%%
-    
-    fprintf('\tfit for %-12s: EC50=%.3g, GI50=%.3g, r2=%.2f\n', char(Drugs(i)), ...
-        EC50s(i), GIs(GI50idx,i), r2s(i));
-    warnassert(r2s(i)>.7, 'Bad fit for %s !', char(Drugs(i)))
+    if verbatim
+        fprintf('\tfit for %-12s: EC50=%.3g, GI50=%.3g, r2=%.2f\n', char(Drugs(i)), ...
+            EC50s(i), GIs(GI50idx,i), r2s(i)); end
+    if verbatim
+        warnassert(r2s(i)>.7, 'Bad fit for %s !', char(Drugs(i))), end
     %%%%% should that stop the algorithm ??
     if ~isfinite(EC50s(i))
-        warnprintf('data for drug %s cannot be fitted --> all GIsets to min/max dose', ...
-            char(Drugs(i)))
+        if verbatim
+            warnprintf('data for drug %s cannot be fitted --> all GIsets to min/max dose', ...
+                char(Drugs(i))), end
         cappedGI(:,i) = true;
         GIs((1-(GIvalues/100))<fitfct.b,i) = max(t_sub.Conc)*10^1.5;
         GIs((1-(GIvalues/100))>fitfct.b,i) = min(t_sub.Conc)/10^1.5;
@@ -138,7 +148,7 @@ for i=1:2
     %%%%%% function and capped as the GI50 if the values are extrapolated
     
     cappedGI(:,i) = GIs(:,i)==Inf;
-    if any(cappedGI(:,i))
+    if any(cappedGI(:,i)) && verbatim
         warnprintf('Values %s are set to maximum for drug %s', ...
             strjoin(num2cellstr(GIvalues(cappedGI(:,i))),','), char(Drugs(i)))
     end
@@ -177,7 +187,8 @@ end
         else
             NormConc = ['GI' num2str(NormGI)];
             NormFactor = GIs(NormGI==GIvalues,:);
-            warnprintf('Normalization by GI%i instead of GI50', NormGI)
+            if verbatim
+                warnprintf('Normalization by GI%i instead of GI50', NormGI), end
         end
     end
 
@@ -193,7 +204,8 @@ BAratio = unique(t_combodata.BAratio,'sorted');
 ratiocounts = hist(t_combodata.BAratio, BAratio);
 
 BAratio = BAratio(ratiocounts>=4);
-fprintf('\tFitting for %i ratios:\n', length(BAratio));
+if verbatim
+    fprintf('\tFitting for %i ratios:\n', length(BAratio));end
 
 t_rfits = [table(BAratio) array2table(NaN(length(BAratio),4), ...
     'variablenames', {'Hill' 'Einf' 'r2' 'Emax'})];
@@ -235,16 +247,16 @@ for i = 1:height(t_rfits)
     end
     %%%%%% the other GI should directly be evaluated in the ICcurve_fit
     %%%%%% function and capped as the GI50 if the values are extrapolated
-    
-    fprintf('\t\tfit for BAratio %-5g: GI50=%.3g, r2=%.2f\n', t_rfits.BAratio(i), ...
-        ratioGIs(i,GI50idx), t_rfits.r2(i));
+    if verbatim
+        fprintf('\t\tfit for BAratio %-5g: GI50=%.3g, r2=%.2f\n', t_rfits.BAratio(i), ...
+            ratioGIs(i,GI50idx), t_rfits.r2(i)); end
     
     
     if isinf(ratioGIs(i,GI50idx)) || imag(ratioGIs(i,GI50idx))~=0
         if imag(ratioGIs(i,GI50idx))~=0
             ratioGIs(i,GI50idx) = -Inf;
         end
-        fprintf(['\t\t --> ' log '\n'])
+        if verbatim, fprintf(['\t\t --> ' log '\n']), end
     end
     
     if plotting==2
@@ -283,7 +295,7 @@ for iC=1:2
     AlignConc{iC} = Conc{iC}(idx);
     alignedGIs{iC} = Inf(length(idx), length(GIvalues));
     
-    fprintf('\tFitting for Conc%i (%i):\n', iC, length(idx))
+    if verbatim, fprintf('\tFitting for Conc%i (%i):\n', iC, length(idx)), end
     if plotting==2
         colors = parula(length(idx));
         get_subaxes(2,2,2+iC,[],1)
@@ -313,7 +325,7 @@ for iC=1:2
             ICcurve_fit(t_sub.Conc2, t_sub.RelGrowth, 'GI50', opt);
         
         if r2<.7 || flag==0
-            fprintf(['\t\t  Bad fit --> ' log '\n'])
+            if verbatim, fprintf(['\t\t  Bad fit --> ' log '\n']), end
             alignedGIs{iC}(i,:) = NaN;
             continue
         end
@@ -359,12 +371,12 @@ for iC=1:2
                 
         end
         
-        
-        fprintf('\t\t%-5g: GI50=%.3g, r2=%.2f\n', Conc{iC}(idx(i)), ...
-            alignedGIs{iC}(i,GI50idx), r2);
+        if verbatim
+            fprintf('\t\t%-5g: GI50=%.3g, r2=%.2f\n', Conc{iC}(idx(i)), ...
+                alignedGIs{iC}(i,GI50idx), r2); end
         if isinf(alignedGIs{iC}(i,GI50idx)) && min(t_sub.RelGrowth)>.55 && ...
                 max(t_sub.RelGrowth)<.45
-            fprintf(['\t\t  --> ' log '\n'])
+            if verbatim, fprintf(['\t\t  --> ' log '\n']), end
         end
         if imag(alignedGIs{iC}(i,GI50idx))~=0
             error('issue with fitting')
@@ -434,18 +446,22 @@ for i=1:length(GIvalues)
             temp = [alignedGIs{1}(:,i); alignedGIs{2}(:,i)];
             if all(isnan(temp))
                 DefaultSynergyVal = NaN;
-                warnprintf('All fits failed for GI%i -> discarded',GIvalues(i))
+                if verbatim
+                    warnprintf('All fits failed for GI%i -> discarded',GIvalues(i)), end
             end
             if all(temp(~isnan(temp))==-Inf)
                 % cases of synergy: the GIxx is lower than the combo tested
                 DefaultSynergyVal = 1/7;
-                warnprintf('No GI%i lower than doses in the combo -> synergy',GIvalues(i))
+                if verbatim
+                    warnprintf('No GI%i lower than doses in the combo -> synergy',GIvalues(i)), end
             elseif all(temp(~isnan(temp))==Inf)
                 DefaultSynergyVal = 7;
-                warnprintf('GI%i higher than doses in the combo -> antagonist',GIvalues(i))
+                if verbatim
+                    warnprintf('GI%i higher than doses in the combo -> antagonist',GIvalues(i)), end
             else
                 DefaultSynergyVal = NaN;
-                warnprintf('No fit within boundaries for GI%i -> discarded',GIvalues(i))
+                if verbatim
+                    warnprintf('No fit within boundaries for GI%i -> discarded',GIvalues(i)), end
             end
             
             allGIs(i).BAratio = [-1:.1:1];
@@ -555,9 +571,10 @@ for i=1:length(GIvalues)
     else
         idx = abs(allGIs(i).intrpRelBAratio - median(allGIs(i).intrpRelBAratio))<1;
         allGIs(i).meanCI = 2^mean(log2(allGIs(i).intrpCI(idx)));
-        warnprintf('mean CI evaluated on RelBA = [%.1f %.1f] for GI%i', ...
-            min(allGIs(i).intrpRelBAratio(idx)), max(allGIs(i).intrpRelBAratio(idx)), ...
-            GIvalues(i))
+        if verbatim
+            warnprintf('mean CI evaluated on RelBA = [%.1f %.1f] for GI%i', ...
+                min(allGIs(i).intrpRelBAratio(idx)), max(allGIs(i).intrpRelBAratio(idx)), ...
+                GIvalues(i)), end
     end
         
     
