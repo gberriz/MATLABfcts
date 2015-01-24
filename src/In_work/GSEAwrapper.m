@@ -2,7 +2,7 @@
 function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 % [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %
-%   Inputs: 
+%   Inputs:
 %   - Genelist:
 %       - filename
 %       - cell array or table (first column is gene symbol,
@@ -14,10 +14,16 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %           { 'Set name' 'source' 'geneA\tgeneB\t...'}
 %   - options:
 %       - Outputfolder (folder in which the GSEA output folder will be
-%           saved default is none, results are not save) 
-%       - Nplot (number of sets to display for html output) 
+%           saved; default is none, results are not saved)
+%       - Nplot (number of sets to display for html output; needs an
+%               Outputfolder)
 %       - label (for the GSEA output, default is geneset label)
 %       - Randseed (value for randomization)
+%       - set_min (minimal number of genes in a set; default=15)
+%       - set_max (maximal number of genes in a set; default=500)
+%       - GSEAfolder (where the GSEA.jar file is stored;
+%               default is WorkFolder/GSEA_java)
+%
 %
 %   Output:
 %   - t_results: table with results for the selected sets
@@ -32,8 +38,10 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %       - c2.cp.kegg.v4.0.symbols.gmt [KEGG]
 %       - c2.cp.reactome.v4.0.symbols.gmt [Reactome]
 %
-% For more options, see: 
+% For more options, see:
 % http://www.broadinstitute.org/gsea/doc/GSEAUserGuideTEXT.htm#_Running_GSEA_from
+%
+%
 
 global WorkFolder
 
@@ -66,7 +74,10 @@ else
 end
 if isempty(Outputfolder)
     Outputfolder = tempfolder;
-    Nplot = 0;
+    if p.Nplot>0
+        warnprintf('To plot results, sepcify an ''Outpufolder'' -> Nplot=0')
+    end
+    p.Nplot = 0;
 elseif ~exist(Outputfolder,'dir')
     mkdir(Outputfolder)
 end
@@ -77,7 +88,7 @@ if ischar(Genelist)
     Inputfile = Genelist;
 elseif istable(Genelist)
     table2tsv(Genelist, Inputfile, 0);
-elseif iscellstr(Input)
+elseif iscell(Genelist) && size(Genelist,2)<=2
     cell2tsv(Inputfile, Genelist);
 else
     error('unknown format for Input')
@@ -122,22 +133,22 @@ if ismember(Geneset, {'GOmf' 'GObp'})
         Setfile = ['ftp.broadinstitute.org://pub/gsea/gene_sets/' Setfile '.gmt'];
     end
 end
-    
+
 %% construct the command
 cmd = [ ...
-'java -Xmx512m -cp ' GSEAfolder 'gsea2-2.1.0.jar' ...
-' xtools.gsea.GseaPreranked' ...
-' -gmx ' Setfile ...
-' -collapse false -mode Max_probe -norm meandiv -nperm ' num2str(p.nperm) ...
-' -rnk ' Inputfile  ' -scoring_scheme weighted -rpt_label ' label ...
-' -include_only_symbols true -make_sets true -plot_top_x ' num2str(p.Nplot) ...
-' -rnd_seed ' num2str(p.Randseed) ' -set_max ' num2str(p.set_max) ...
-' -set_min ' num2str(p.set_min) ' -zip_report false' ...
-' -out ' Outputfolder ' -gui false'];
+    'java -Xmx512m -cp ' GSEAfolder 'gsea2-2.1.0.jar' ...
+    ' xtools.gsea.GseaPreranked' ...
+    ' -gmx ' Setfile ...
+    ' -collapse false -mode Max_probe -norm meandiv -nperm ' num2str(p.nperm) ...
+    ' -rnk ' Inputfile  ' -scoring_scheme weighted -rpt_label ' label ...
+    ' -include_only_symbols true -make_sets true -plot_top_x ' num2str(p.Nplot) ...
+    ' -rnd_seed ' num2str(p.Randseed) ' -set_max ' num2str(p.set_max) ...
+    ' -set_min ' num2str(p.set_min) ' -zip_report false' ...
+    ' -out ' Outputfolder ' -gui false'];
 
 % and run it
 if p.verbatim
-    status = system(cmd);    
+    status = system(cmd);
     disp('----------------------------------------------')
     assert(status==0, 'GSEA failed: %s')
 else
@@ -149,11 +160,11 @@ end
 f = dir([Outputfolder filesep label '*GseaPre*']);
 f = f([f.isdir]);
 Lastrun = f(argmax(cellfun(@datenum,{f.date}))).name;
-if isempty(Outputfolder)
-    disp(['Results stored in ' Outputfolder])
+if p.Nplot>0
+    disp(['---> GSEA done Results stored in ' Outputfolder])
     disp([' --->  ' filesep Lastrun])
 else
-    disp(' ---> GSEA done; cleaning stuff')
+    disp(' ---> GSEA done')
 end
 
 %% and get the genes of each set and their scores
@@ -176,7 +187,7 @@ for i=1:length(res.children)
     end
     
     values{i,strcmp(fieldnames, 'GeneNames')} =  ...
-        Genelist(values{i,strcmp(fields, {'HIT_INDICES'})},1)';
+        Genelist(1+str2num(values{i,strcmp(fields, {'HIT_INDICES'})}),1)';
 end
 
 idx = ismember(fields, {'ES' 'NES' 'NP' 'FDR' 'FWER'});
@@ -184,41 +195,41 @@ values(:,idx) = cellfun2(@str2num,values(:,idx));
 
 idx = strcmp(fields, 'GENESET');
 values(:,idx) = regexpcellsplit(values(:,idx), '#', 2);
-    
+
 idx = strcmp(fields, 'ES_PROFILE');
-values(:,idx) = cellfun2(@(x) cellfun(@str2num,regexp(x,' ','split')), ...
-    values(:,idx));
+values(:,idx) = cellfun2(@str2num,values(:,idx));
 idx = strcmp(fields, 'HIT_INDICES');
-values(:,idx) = cellfun2(@(x) 1+cellfun(@str2num,regexp(x,' ','split')), ...
-    values(:,idx));
+values(:,idx) = cellfun2(@(x) 1+str2num(x), values(:,idx));
 
 t_results = cell2table(values, 'variablenames', fieldnames);
 
-if height(t_results)>1 %%%% see below, buggish if one row only
-    for i=1:height(t_results)
-        t_results.GeneNames{i} = Genelist(t_results.GeneIdx{i},1)';
-        if t_results.Escore(i)>0
-            t_results.LeadEdge{i} = t_results.GeneNames{i}(1:find(...
-                t_results.GeneEscore{i}==max(t_results.GeneEscore{i})));
-        else
-            t_results.LeadEdge{i} = t_results.GeneNames{i}(find(...
-                t_results.GeneEscore{i}==min(t_results.GeneEscore{i})):end);
-        end
-    end
-else
-    %%%% weird bug that I cannot resolve in the loop if t_results has one row
-    t_results.GeneNames = Genelist(t_results.GeneIdx,1)';
-    if t_results.Escore>0
-        t_results.LeadEdge = t_results.GeneNames(...
-            1:find(t_results.GeneEscore==max(t_results.GeneEscore)));
+if isnumeric(t_results.GeneEscore)
+    % convert to the cell array of vectors instead of a matrix; this can
+    % happen when creating the table if if one row only or all rows have
+    % the same number of genes
+    t_results.GeneEscore = rowfun_cells(@(x) horzcat(x{:}), ...
+        num2cell(t_results.GeneEscore));
+    t_results.GeneIdx = rowfun_cells(@(x) horzcat(x{:}), ...
+        num2cell(t_results.GeneIdx));
+    t_results.GeneNames = rowfun_cells(@(x) horzcat(x{:}), ...
+        num2cell(t_results.GeneNames));
+end
+for i=1:height(t_results)
+    if t_results.Escore(i)>0
+        t_results.LeadEdge{i} = t_results.GeneNames{i}(1:find(...
+            t_results.GeneEscore{i}==max(t_results.GeneEscore{i})));
     else
-        t_results.LeadEdge{i} = t_results.GeneNames(...
-            find(t_results.GeneEscore==...
-            min(t_results.GeneEscore)):end);
+        t_results.LeadEdge{i} = t_results.GeneNames{i}(find(...
+            t_results.GeneEscore{i}==min(t_results.GeneEscore{i})):end);
     end
 end
-% clean up
+
+%% cleaning up
 if exist(tempfolder,'dir')
+    disp('cleaning stuff')
     rmdir(tempfolder,'s')
 end
-        
+if p.Nplot>0
+    disp('Opening report')
+    web([Outputfolder filesep Lastrun filesep 'index.html'])
+end
