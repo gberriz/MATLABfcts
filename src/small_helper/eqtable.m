@@ -7,9 +7,10 @@ hB = height(B);
 assert( any([hA hB]==1) || hA==hB, ...
     'A and B should have the same size or one should be of height 1')
 
-vNames = varnames(A);
-assert(all(strcmp(vNames, B.Properties.VariableNames)), ...
-    'Tables A and B should have the same column names')
+vNames = intersect(varnames(A), varnames(B));
+if isempty(vNames)
+    error('Tables A and B should have overlapping column names')
+end
 
 if hB==1 % if necessary, swap the variables such that A is the variable with one row
     hB = hA; hA = 1; 
