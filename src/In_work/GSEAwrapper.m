@@ -8,7 +8,8 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %       - cell array or table (first column is gene symbol,
 %               2nd column is weight)
 %   - Geneset:
-%       - tag (GObp, GOcc, GOmf, KEGG, Reactome, Biocarta, CGN)
+%       - tag (GObp, GOcc, GOmf, allGO, KEGG, Reactome, Biocarta, 
+%               CGN, CGP, OncoSig)
 %       - filename
 %       - cell array formated as gmt: each rows has the format:
 %           { 'Set name' 'source' 'geneA\tgeneB\t...'}
@@ -104,6 +105,8 @@ if ischar(Geneset)
             Setfile = [GSEAfolder 'c5.bp.v4.0.symbols.gmt'];
         case 'GOcc'
             Setfile = [GSEAfolder 'c5.cc.v4.0.symbols.gmt'];
+        case 'allGO'
+            Setfile = [GSEAfolder 'c5.all.v4.0.symbols.gmt'];
         case 'KEGG'
             Setfile = [GSEAfolder 'c2.cp.kegg.v4.0.symbols.gmt'];
         case 'Reactome'
@@ -112,6 +115,10 @@ if ischar(Geneset)
             Setfile = [GSEAfolder 'c2.cp.biocarta.v4.0.symbols.gmt'];
         case 'CGN'  % cancer gene neighborhoods
             Setfile = [GSEAfolder 'c4.cgn.v4.0.symbols.gmt'];
+        case 'CGP'  % chemical and genetic perturbations
+            Setfile = [GSEAfolder 'c2.cgp.v4.0.symbols.gmt'];
+        case 'OncoSig'  % oncogenic signatures gene sets
+            Setfile = [GSEAfolder 'c6.all.v4.0.symbols.gmt'];
         otherwise
             assert(exist(Geneset,'file'), 'Geneset file not found')
             [~,~,ext] = filepart(Geneset);
