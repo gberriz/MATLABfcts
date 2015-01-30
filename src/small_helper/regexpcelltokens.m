@@ -10,8 +10,8 @@ function toks = regexpcelltokens(strcell, express, selected)
 %
 
 toks = cell(size(strcell));
-temp = regexp(strcell(:,1),express,'tokens');
-for i=1:length(temp)
+temp = regexp(strcell,express,'tokens');
+for i=1:numel(temp)
     if isempty(temp{i}) || all(cellfun(@isempty,temp{i}))
         toks{i} = '';
     elseif length(temp{i})==1

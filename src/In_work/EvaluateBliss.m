@@ -1,5 +1,5 @@
-function [BlissScore, Bliss, Results] = EvaluateBliss(t_data, varname, BlissType)
-% [BlissScore, Bliss] = EvaluateBliss(t_data, varname, BlissType)
+function [BlissScore, Bliss, Results] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit)
+% [BlissScore, Bliss] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit)
 %
 % Inputs:
 %   t_data:     table with the columns: DrugName, Conc, DrugName2, Conc2,
@@ -12,6 +12,12 @@ function [BlissScore, Bliss, Results] = EvaluateBliss(t_data, varname, BlissType
 %
 %   BlissType:  1 if normalized to one --> Bliss as (1-x)+(1-y) (default)
 %               0 if not normalized --> Bliss as x+y
+%
+%   SingleCutoff: Cutoff of concentration for each single agent based on
+%                   varname (default = -Inf)
+%
+%   usefit:     use fit for the single agent response and Bliss evaluation
+%                   (default = false)
 %
 % Outputs:
 %   BlissScore: average Bliss excess across all doses
@@ -52,21 +58,32 @@ Conc1 = unique([t_data.Conc(t_data.DrugName==Drugs(1))
     t_data.Conc2(t_data.DrugName2==Drugs(1))]);
 Conc2 = unique([t_data.Conc(t_data.DrugName==Drugs(2))
     t_data.Conc2(t_data.DrugName2==Drugs(2))]);
-Concs = [{Conc1} {Conc2}];
-
 
 Results = NaN(length(Conc1)+1, length(Conc2)+1);
 
 temp = t_data(t_data.DrugName==Drugs(1) & t_data.DrugName2=='-',:);
 temp = sortrows(temp , 'Conc');
 [~,Cidx] = ismember(temp.Conc, Conc1);
-Results(1+Cidx,1) = temp.(varname);
-
+if exist('usefit','var') && usefit
+    [~, ~,~,~,~,~,fit1,~,~,flag] = ICcurve_fit(temp.Conc, temp.(varname), 'GI50');
+else flag=0; end
+if flag==0 % bad fit --> use the real data
+    Results(1+Cidx,1) = temp.(varname);
+else
+    Results(2:end,1) = fit1(Conc1);
+end
 
 temp = t_data(t_data.DrugName==Drugs(2) & t_data.DrugName2=='-',:);
 temp = sortrows(temp , 'Conc');
 [~,Cidx] = ismember(temp.Conc, Conc2);
-Results(1,1+Cidx) = temp.(varname);
+if exist('usefit','var') && usefit
+    [~, ~,~,~,~,~,fit2,~,~,flag] = ICcurve_fit(temp.Conc, temp.(varname), 'GI50');
+else flag=0; end
+if flag==0 % bad fit --> use the real data
+    Results(1,1+Cidx) = temp.(varname);
+else
+    Results(1,2:end) = fit2(Conc2);
+end
 
 
 t_sub = t_data(t_data.DrugName==Drugs(1) & t_data.DrugName2==Drugs(2),:);
@@ -86,6 +103,13 @@ if (mean(diff(Results(:,1))>0)>.5 && mean(diff(Results(:,1))>0)>.5 && ...
         repmat(Results(:,1),1,size(Results,2)) + ...
         repmat(Results(1,:),size(Results,1),1).*repmat(Results(:,1),1,size(Results,2));
     Results(1,1) = 0;
+    
+    if ~exist('SingleCutoff','var') || isempty(SingleCutoff)
+        SingleCutoff = Inf;
+    end
+    
+    SelectIdx1 = find(Results(:,1)<=SingleCutoff);
+    SelectIdx2 = find(Results(1,:)<=SingleCutoff);
 elseif mean(Results(:)<1)>.5 || any(ismember(varname,{'RelGrowth' 'RelCellCnt'})) || ...
         (exist('BlissType','var') && BlissType==1)
     % mainly decreasing with dose, normalized at 1 --> calculate Bliss as (1-x)*(1-y)
@@ -94,10 +118,17 @@ elseif mean(Results(:)<1)>.5 || any(ismember(varname,{'RelGrowth' 'RelCellCnt'})
         (1-repmat(Results(:,1),1,size(Results,2))) + ...
         (1-repmat(Results(1,:),size(Results,1),1)).*(1-repmat(Results(:,1),1,size(Results,2)));
     Results(1,1) = 1;
+    
+    if ~exist('SingleCutoff','var') || isempty(SingleCutoff)
+        SingleCutoff = -Inf;
+    end
+    
+    SelectIdx1 = find(Results(:,1)>=SingleCutoff);
+    SelectIdx2 = find(Results(1,:)>=SingleCutoff);
 else
     error('(varname) is either not increasing or not normalized')
 end
 
-temp = Bliss(2:end,2:end);
+temp = Bliss(SelectIdx1, SelectIdx2);
 BlissScore = nanmean(temp(:));
 
