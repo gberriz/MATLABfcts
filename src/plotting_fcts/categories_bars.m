@@ -45,17 +45,28 @@ for iF = 1:length(fields)
     end
     
     if Fiscat(iF)
-        Ffraction{iF} = zeros(Nbars, Fsize(iF));
-        for i=1:Nbars
-            Ffraction{iF}(i,:) = hist(t_group_data.(fields{iF})(Gidx==i),...
-                Fcats{iF});
-        end
-        Ffraction{iF} = NormSumUnit(Ffraction{iF},2);
-        if isnumeric(Fcats{iF})
+        isnum = isnumeric(Fcats{iF});
+        if isnum
             Fcats{iF} = num2cellstr(Fcats{iF});
         else
             Fcats{iF} = cellstr(Fcats{iF});
         end
+        if isfield(plotopt, [fields{iF} 'Colors']) && isfield(plotopt, fields{iF})
+            Fcats{iF} = union(intersect(plotopt.(fields{iF}), Fcats{iF}, 'stable'), ...
+                setdiff(Fcats{iF}, plotopt.(fields{iF}), 'stable'), 'stable');
+        end
+        
+        Ffraction{iF} = zeros(Nbars, Fsize(iF));
+        for i=1:Nbars
+            if isnum
+                Ffraction{iF}(i,:) = hist(t_group_data.(fields{iF})(Gidx==i),...
+                    cellfun(@str2num,Fcats{iF}));
+            else
+                Ffraction{iF}(i,:) = hist_str(t_group_data.(fields{iF})(Gidx==i),...
+                    Fcats{iF});
+            end
+        end
+        Ffraction{iF} = NormSumUnit(Ffraction{iF},2);
     end
 end
 Fsize(isnan(Fsize)) = nanmean(Fsize); % for assigning the size of the plots
@@ -64,9 +75,9 @@ Fsize(isnan(Fsize)) = nanmean(Fsize); % for assigning the size of the plots
 
 %%
 
-xpos = .09;
+xpos = .08;
 xwidth = .71;
-xlpos = .81;
+xlpos = .8;
 barw = .7;
 yspace = .03;
 

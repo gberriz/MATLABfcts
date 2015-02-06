@@ -52,7 +52,7 @@ for iF = 1:length(fields)
     for i=1:length(PlotOptions.(fields{iF}))
         temp = t_SampleLabels.(fields{iF});
         temp = temp(outperm);
-        idx = find(temp==PlotOptions.(fields{iF})(i));
+        idx = find(strcmp(temp,PlotOptions.(fields{iF})(i)));
         bar_handles{iF}(i) = barh([-2;-1;idx], ones(size(idx,1)+2,1), 1, 'facecolor', ...
             PlotOptions.([fields{iF} 'Colors'])(i,:), 'linestyle','none');
     end
