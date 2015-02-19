@@ -1,5 +1,5 @@
-function [BlissScore, Bliss, Results] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit)
-% [BlissScore, Bliss] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit)
+function [BlissScore, Bliss, Results, Concs] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit)
+% [BlissScore, Bliss, Results, Concs] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit)
 %
 % Inputs:
 %   t_data:     table with the columns: DrugName, Conc, DrugName2, Conc2,
@@ -23,6 +23,7 @@ function [BlissScore, Bliss, Results] = EvaluateBliss(t_data, varname, BlissType
 %   BlissScore: average Bliss excess across all doses
 %   Bliss:      matrix of Bliss excess
 %   Results:    matrix for the values of RelGrowth/(varname)
+%   Concs:      doses for each drugs matching Results matrix
 %
 % Improvment to make:
 %   - support other input formats
@@ -94,6 +95,7 @@ for iDo = 1:length(Concs)
     Results(1+Cidx, 1+find(Conc2==Concs(iDo))) = temp.(varname);
 end
 
+Concs = {Conc1 Conc2};
 %%
 if (mean(diff(Results(:,1))>0)>.5 && mean(diff(Results(:,1))>0)>.5 && ...
         mean(Results(:)>0)>.5 && ~strcmp(varname,'RelGrowth')) || ...

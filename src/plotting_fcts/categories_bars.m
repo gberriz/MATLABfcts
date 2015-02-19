@@ -1,5 +1,5 @@
 
-function a = categories_bars(t_group_data, fields, plotopt, ClusterStats)
+function a = categories_bars(t_group_data, fields, plotopt, ClusterStats, maxNumcat)
 % a = categories_bars(t_group_data, fields, plotopt, ClusterStats)
 %
 %
@@ -8,7 +8,7 @@ Groupfiels = fields{1};
 Gidx = t_group_data.(Groupfiels);
 fields = fields(2:end);
 
-if exist('ClusterStats','var')
+if exist('ClusterStats','var') && isempty(ClusterStats)
     Nclust = ClusterStats.Nclust;    
     Cluster = 1;
     Nbars = length(ClusterStats.cnt);
@@ -16,6 +16,10 @@ else
     Nclust = max(Gidx);
     Cluster = 0;   
     Nbars = max(Gidx);
+end
+
+if ~exist('maxNumcat','var')
+    maxNumcat = 10;
 end
 
 %% distributions
@@ -35,8 +39,8 @@ for iF = 1:length(fields)
         Fcats{iF} = unique(t_group_data.(fields{iF}));
         Fsize(iF) = length(Fcats{iF});
     elseif isnumeric(t_group_data.(fields{iF})) && ...
-            length(unique(t_group_data.(fields{iF})))<=10
-        % 10 or less values is considered category
+            length(unique(t_group_data.(fields{iF})))<=maxNumcat
+        % maxNumcat or less values is considered category
         Fiscat(iF) = true;
         Fcats{iF} = unique(t_group_data.(fields{iF}));
         Fsize(iF) = length(Fcats{iF});
@@ -165,6 +169,7 @@ for iF=1:length(fields)
         ylims = [min(t_group_data.(fields{iF})) max(t_group_data.(fields{iF}))];
         ylim([ylims(1)-.05*diff(ylims) ylims(2)+.05*diff(ylims)])
         
+        ylabel(fields{iF})
         % text output
         
     end
