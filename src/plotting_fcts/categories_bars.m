@@ -8,7 +8,14 @@ Groupfiels = fields{1};
 Gidx = t_group_data.(Groupfiels);
 fields = fields(2:end);
 
-if exist('ClusterStats','var') && isempty(ClusterStats)
+if ~isfield(plotopt, 'labels')
+    plotopt.labels = {'fontsize', 8, 'fontweight', 'bold'};
+end
+if ~isfield(plotopt, 'axis')
+    plotopt.axis = {'fontsize', 6};
+end
+
+if exist('ClusterStats','var') && ~isempty(ClusterStats)
     Nclust = ClusterStats.Nclust;    
     Cluster = 1;
     Nbars = length(ClusterStats.cnt);
@@ -79,11 +86,11 @@ Fsize(isnan(Fsize)) = nanmean(Fsize); % for assigning the size of the plots
 
 %%
 
-xpos = .08;
-xwidth = .71;
+xpos = .07;
+xwidth = .72;
 xlpos = .8;
 barw = .7;
-yspace = .03;
+yspace = .02;
 
 ypos = NaN(Cluster+length(fields)+1,2);
 if Cluster
@@ -99,7 +106,7 @@ for iF=length(fields):-1:1
 end
 
 
-get_newfigure(plotopt.fignumber, [50 50 750 950], [plotopt.figurename '.pdf']);
+get_newfigure(plotopt.fignumber, [50 50 650 750], [plotopt.figurename '.pdf']);
 
 txtoutput = cell(2,1+Nbars);
 txtoutput(1,2:(Nclust+1)) = num2cellstr(1:Nclust);
@@ -131,7 +138,7 @@ for iF=1:length(fields)
     if Fiscat(iF)
         h = bar(GroupPos, Ffraction{iF}, barw, 'stack');
         hl = legend(h(end:-1:1), Fcats{iF}(end:-1:1), ...
-            'location','eastoutside','interpreter','none');
+            'location','eastoutside','interpreter','none', plotopt.labels{:});
         posl = get(hl,'position');
         set(hl,'position',[xlpos posl(2:4)])
         
@@ -146,6 +153,7 @@ for iF=1:length(fields)
             end
         end
         ylim([0 1.01])
+        ylabel(['Dist. ' fields{iF}], 'interpreter','none', plotopt.labels{:})
         
         % text output
         txtoutput(end+(1:length(Fcats{iF})),:) = [Fcats{iF} num2cellstr(Ffraction{iF}')];
@@ -169,10 +177,9 @@ for iF=1:length(fields)
         ylims = [min(t_group_data.(fields{iF})) max(t_group_data.(fields{iF}))];
         ylim([ylims(1)-.05*diff(ylims) ylims(2)+.05*diff(ylims)])
         
-        ylabel(fields{iF})
-        % text output
-        
+        ylabel(fields{iF}, 'interpreter','none', plotopt.labels{:})
     end
+    set(gca, plotopt.axis{:})
 
 end
 
@@ -186,7 +193,7 @@ for i=1:length(a)
     xlim(a(i), [.5 Nbars+.5])
     set(a(i),'xtick',[])
 end
-set(a(end),'xtick',GroupPos,'xticklabel',1:Nbars)
+set(a(end),'xtick',GroupPos,'xticklabel',1:Nbars, plotopt.axis{:})
 
 
 %%
