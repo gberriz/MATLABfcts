@@ -1,7 +1,9 @@
-function [axis_handles, bar_handles, outperm, groups] = DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
+function [axis_handles, bar_handles, outperm, groups, dendo_handles] = ...
+    DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
   PlotOptions, colorthreshold)
-% function [axis_handles, bar_handles, outperm, groups] = DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
-%   PlotOptions, colorthreshold)
+% function [axis_handles, bar_handles, outperm, groups, dendo_handles] = 
+%       DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
+%           PlotOptions, colorthreshold)
 %
 %   if colorthreshold is negative, set as quantile of the distances.
 
@@ -14,22 +16,22 @@ end
 axis_handles = get_newaxes(AxisPos);
 tree = linkage(SampleDist,'average');
 if ~exist('colorthreshold','var') || isempty(colorthreshold)
-    [h,~,outperm] = dendrogram(tree,0,'labels',labels,'orientation','left');
-    for i=1:length(h), set(h(i),'color','k'),end
+    [dendo_handles,~,outperm] = dendrogram(tree,0,'labels',labels,'orientation','left');
+    for i=1:length(dendo_handles), set(dendo_handles(i),'color','k'),end
 else
     if colorthreshold<0
         colorthreshold = quantile(tree(:,3), -colorthreshold);
     end
-    [h,~,outperm] = dendrogram(tree,0,'labels',labels,'orientation','left',...
+    [dendo_handles,~,outperm] = dendrogram(tree,0,'labels',labels,'orientation','left',...
         'colorthreshold',colorthreshold);
     SampleColor = NaN(length(labels),3);
-    for i=1:length(h)
-        idx = find(get(h(i),'xdata')==0);
+    for i=1:length(dendo_handles)
+        idx = find(get(dendo_handles(i),'xdata')==0);
         if ~isempty(idx)
-            ypos = get(h(i),'ydata');
+            ypos = get(dendo_handles(i),'ydata');
             for j=1:length(idx)
                 if mod(ypos(idx(j)),1)==0
-                    SampleColor(ypos(idx(j)),:) = get(h(i),'color');
+                    SampleColor(ypos(idx(j)),:) = get(dendo_handles(i),'color');
                 end
             end
         end
@@ -49,10 +51,11 @@ cnt = 1;
 for iF = 1:length(fields)
     axis_handles(iF+1) = get_newaxes([AxisPos(1)+AxisPos(3)+(iF-1)*xwidth AxisPos(2) xwidth AxisPos(4)],1);
     
+    temp = t_SampleLabels.(fields{iF});
+    temp = temp(outperm);
+    
     for i=1:length(PlotOptions.(fields{iF}))
-        temp = t_SampleLabels.(fields{iF});
-        temp = temp(outperm);
-        idx = find(strcmp(temp,PlotOptions.(fields{iF})(i)));
+        idx = find(strcmp(cellstr(temp),PlotOptions.(fields{iF})(i)));
         bar_handles{iF}(i) = barh([-2;-1;idx], ones(size(idx,1)+2,1), 1, 'facecolor', ...
             PlotOptions.([fields{iF} 'Colors'])(i,:), 'linestyle','none');
     end

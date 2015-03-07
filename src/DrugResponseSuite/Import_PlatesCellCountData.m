@@ -80,7 +80,7 @@ else
 end
 
 CheckPlateInfo(t_plateinfo)
-if iscell(t_plateinfo.DesignNumber)
+if isvariable(t_plateinfo, 'DesignNumber') && iscell(t_plateinfo.DesignNumber)
     t_plateinfo.DesignNumber = cellstr2mat(t_plateinfo.DesignNumber);
 end
 %% load the cell count data
