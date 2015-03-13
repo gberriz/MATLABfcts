@@ -1,4 +1,4 @@
-function h = plot_violin(x, y, ybins, width, varargin)
+function varargout = plot_violin(x, y, ybins, width, varargin)
 % h = plot_violin(x, y, ybins, width, varargin)
 %
 
@@ -52,8 +52,11 @@ hold on
 
 h = plot([x+ydist(range) NaN x-ydist(range)], [ybins(range) NaN ybins(range)], ...
     varargin{:});
-h(2) = plot(x, median(y), '.k');
+h(2) = plot(x, nanmedian(y), '.k');
 
+if nargout>0
+    varargout = {h};
+end
 
 if ~ish
     hold off
