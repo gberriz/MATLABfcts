@@ -141,9 +141,14 @@ if ~ismember(NobjField{1}, varnames(t_raw))
     disp(varnames(t_raw)')
     error('Use optional input ''NobjField'' for specifying fields')
 end
-assert(all(ismember(NobjField, varnames(t_raw))), ...
-    'Not all fields in ''NobjField'' are present in the file')
-    
+if length(NobjField)>1 && ~strcmp(NobjField{2},'all')
+    assert(all(ismember(NobjField, varnames(t_raw))), ...
+        'Not all fields in ''NobjField'' are present in the file')
+elseif length(NobjField)==2 && strcmp(NobjField{2},'all')
+    NobjField = [NobjField(1) setdiff(varnames(t_raw), [NobjField(1) ...
+        {'Well' 'Barcode' 'Result' 'Date' 'Row' 'Column' ...
+        'NumberOfAnalyzedFields' 'URL'}])];
+end
 
 % check the number of fields
 if length(unique(t_raw.NumberOfAnalyzedFields))>1

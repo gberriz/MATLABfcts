@@ -115,6 +115,7 @@ for iyp = 1:nRows
         
         xvals = t_data.(p.xaxiskey)(eqtable(t_data(:,p.xplotkey),xplotkeys(xidx,:)) & ...
             eqtable(t_data(:,p.yplotkey),yplotkeys(yidx,:)));
+        if isempty(xvals), continue, end
         xvals = p.xtransform(xvals);
         for i=1:length(p.yval_lines)
             plot([min(xvals(:)) max(xvals(:))], p.yval_lines(i)*[1 1], ...

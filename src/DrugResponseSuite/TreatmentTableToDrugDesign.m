@@ -1,5 +1,5 @@
-function Design = TreatmentTableToDrugDesign(t_design)
-% Design = TreatmentTableToDrugDesign(t_design)
+function Design = TreatmentTableToDrugDesign(t_design, plate_dims)
+% Design = TreatmentTableToDrugDesign(t_design, plate_size)
 %   Convert a design table in an Design structure with standard fields for
 %   treatment. Assume only one plate therefore enforces a single entry per
 %   well.
@@ -15,6 +15,7 @@ function Design = TreatmentTableToDrugDesign(t_design)
 %                   - SeedingNumber
 %                   - other perturbations (e.g. EGF/...)
 %                   - DrugName2/3/... and Conc2/3/... for multiple drugs per well
+%   plate_dims : specify the plate_size if not all well are treated 
 %
 %   Design :    array of design structures with the following fields:
 %                   - plate_dims (plate dimension)
@@ -44,8 +45,11 @@ assert(length(unique(wells)) == length(wells), ...
 
 [rows, cols] = ConvertWellsToRowCol(wells);
 
-plate_dims = 2.^ceil(log2([max(rows) max(cols)/1.5])).*[1 1.5];
+if ~exist('plate_dims','var')
+    plate_dims = 2.^ceil(log2([max(rows) max(cols)/1.5])).*[1 1.5];
+end
 assert((plate_dims(2)/plate_dims(1))==1.5)
+
 
 %% Treated wells (all wells listed in the file)
 
@@ -116,7 +120,8 @@ end
 
 PertNames = ToColumn(setdiff(varnames(t_design), [{'Well' 'DrugName' 'Conc' 'Row' 'Cols' 'HMSLid'} ...
     strcat('Conc', cellfun(@(x) {num2str(x)}, num2cell(2:Ndrugs))) ...
-    strcat('DrugName', cellfun(@(x) {num2str(x)}, num2cell(2:Ndrugs)))], 'stable'));
+    strcat('DrugName', cellfun(@(x) {num2str(x)}, num2cell(2:Ndrugs))) ...
+    strcat('HMSLid', cellfun(@(x) {num2str(x)}, num2cell(2:Ndrugs)))], 'stable'));
 
 layouts = cell(length(PertNames),1);
 for iP = 1:length(PertNames)    

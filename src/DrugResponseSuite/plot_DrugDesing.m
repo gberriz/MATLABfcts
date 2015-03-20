@@ -72,16 +72,31 @@ for iD = 1:length(Design)
                 'fontsize',6);
             
             conc = Design(iD).Perturbations(iPr).layout;
+            
             if islogical(conc)
                 conc = conc+1;
+                label = 'F/T';
+            elseif iscellstr(conc(~cellfun(@isempty,conc)));
+                conc(cellfun(@isempty,conc)) = {''};
+                cats = unique(conc(:));
+                val = NaN(size(conc));
+                for i=1:length(cats)
+                    val(strcmp(cats{i},conc)) = i-1;
+                end
+                conc = val/(length(cats)-1);
+                label = ['(' strjoin(cats,',') ')'];
             elseif (max(conc(:))/min(conc(:)))>10 && max(conc(:))*min(conc(:))>=0
                 conc = log10(conc);
+                label = sprintf('log10  [%.2g - %.2g]', max(conc(:)), min(conc(:)));
+            else
+                label = sprintf('[%.2g - %.2g]', max(conc(:)), min(conc(:)));
             end
             [range, conc] = DataRangeCap(conc);
             
             imagesc(conc, range)
             
-            title(Design(iD).Perturbations(iPr).Name,'fontsize',8,'fontweight','bold')
+            title({Design(iD).Perturbations(iPr).Name; label}, ...
+                'fontsize',8,'fontweight','bold')
             
             xlim([.5 Design(iD).plate_dims(2)+.5])
             ylim([.5 Design(iD).plate_dims(1)+.5])
