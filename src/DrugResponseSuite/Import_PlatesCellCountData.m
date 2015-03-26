@@ -45,12 +45,24 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo, varargin)
 %   t_data is a table with each well annotated accorting to the barcode.
 %   The column 'Untrt' is evaluated and the data are corrected for the
 %   number of fields (stored in column Cellcount).
+%       the column Cellcount can be a function of the input columns (by
+%       default Cellcount is 'Nuclei_NumberOfObjects' or the first column
+%       in the field 'NobjField').
 %
+%   Example:
+%   --------
 %
+%   t_data = Import_PlatesCellCountData('Results_20150320.txt'], ...
+%     'PlateIDs_20150320.txt', 'NobjField', ...
+%     {'Nuclei-Hoechst - Number of Objects' 'Nuclei-LDRpos - Number of Objects'},...
+%     'Cellcount', @(x) x(:,1)-x(:,2));
+%
+
 fprintf('Import Cell count data from Columbus files:\n');
 
 p = inputParser;
-addParameter(p,'NobjField',{'Nuclei_NumberOfObjects'},@(x) isstr(x) || iscellstr(x));
+addParameter(p,'NobjField',{'Nuclei_NumberOfObjects'},@(x) ischar(x) || iscellstr(x));
+addParameter(p,'Cellcount', [], @(x) isa(x,'function_handle'));
 parse(p,varargin{:})
 NobjField = p.Results.NobjField;
 if ischar(NobjField), NobjField = {NobjField}; end
@@ -270,7 +282,13 @@ if ~isempty(otherVariables)
     fprintf(['\tAdded variable(s): ''' cellstr2str(otherVariables, ''', ''') '''\n'])
     eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
 end
-t_data.Properties.VariableNames{NobjField{1}} = 'Cellcount';
+if isempty(p.Results.Cellcount)
+    t_data.Properties.VariableNames{NobjField{1}} = 'Cellcount';
+else
+    temp = table2array(t_data(:,NobjField));
+    temp = p.Results.Cellcount(temp);
+    t_data.Cellcount = temp;
+end
 t_data = TableToCategorical(t_data);
 
 fprintf('\n')
