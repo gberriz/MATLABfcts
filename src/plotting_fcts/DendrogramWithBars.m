@@ -1,9 +1,9 @@
 function [axis_handles, bar_handles, outperm, groups, dendo_handles] = ...
     DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
-  PlotOptions, colorthreshold)
+  PlotOptions, colorthreshold, linkagetype)
 % function [axis_handles, bar_handles, outperm, groups, dendo_handles] = 
 %       DendrogramWithBars(SampleDist, t_SampleLabels, AxisPos, xwidth, ...
-%           PlotOptions, colorthreshold)
+%           PlotOptions, colorthreshold, linkagetype)
 %
 %   if colorthreshold is negative, set as quantile of the distances.
 
@@ -13,8 +13,12 @@ if ~isvector(SampleDist)
     SampleDist = squareform(SampleDist,'tovector');
 end
 
+if ~exist('linkagetype','var')
+linkagetype = 'average';
+end
+
 axis_handles = get_newaxes(AxisPos);
-tree = linkage(SampleDist,'average');
+tree = linkage(SampleDist,linkagetype);
 if ~exist('colorthreshold','var') || isempty(colorthreshold)
     [dendo_handles,~,outperm] = dendrogram(tree,0,'labels',labels,'orientation','left');
     for i=1:length(dendo_handles), set(dendo_handles(i),'color','k'),end
