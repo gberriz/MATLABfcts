@@ -25,6 +25,8 @@ SingleCell.Barcode = ''; SingleCell.Well = '';
 SingleCell = repmat(SingleCell, height(t_processed),1);
 %%
 
+assert(exist(folder,'dir')>0, ['Folder: ' folder ' missing'])
+
 for iPW = 1:height(t_processed)
     
     
@@ -44,7 +46,11 @@ for iPW = 1:height(t_processed)
     files = {files([files.isdir]==0).name};
     files = files(regexpcell(files, 'Whole Image')==0);
     file = files(regexpcell(files, sprintf('result.%s\\[', Well))>0);
-    assert(length(file)==1);
+    
+    if isempty(file)
+        error(['Missing file for: ' Plate ' ' Well]);
+    end
+    assert(length(file)==1, ['Too many files: ' strjoin(file,' - ')])
     
     %%
     t_ss = tsv2table([subfolder filesep file{1}]);
