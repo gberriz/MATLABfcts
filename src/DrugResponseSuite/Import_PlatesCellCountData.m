@@ -36,11 +36,18 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo, varargin)
 %               .mat or .hpdd treatment files; set to 1 for other files)
 %           - Replicate (optional - to differentiate to plates with the same
 %               treatment file, and design number if .mat/.hpdd)
-%           - Time (in hours)
+%           - Time (in hours); 
+%                   note: Time is ignored if the option 'TimeCourse' is
+%                   true; in that case, the timestamp in the Columbus file
+%                   will be used to tag the time of the sample. 
 %           - any Additional field with relevant plate properties to pass to the
 %               data (collagen, ...)
 %           note: 'ExpNumber' is ignored as it serves as an internal
 %               control for the D300
+%
+%   varargin:   - 'NobjField'   [Nuclei - Number Of Objects]
+%               - 'Cellcount'   [Nuclei - Number Of Objects]
+%               - 'TimeCourse'  [false]
 %
 %   t_data is a table with each well annotated accorting to the barcode.
 %   The column 'Untrt' is evaluated and the data are corrected for the
@@ -63,7 +70,11 @@ fprintf('Import Cell count data from Columbus files:\n');
 p = inputParser;
 addParameter(p,'NobjField',{'Nuclei_NumberOfObjects'},@(x) ischar(x) || iscellstr(x));
 addParameter(p,'Cellcount', [], @(x) isa(x,'function_handle'));
+addParameter(p,'TimeCourse', false, @islogical);
 parse(p,varargin{:})
+
+IsTimeCourse = p.Results.TimeCourse;
+
 NobjField = p.Results.NobjField;
 if ischar(NobjField), NobjField = {NobjField}; end
 try
@@ -91,7 +102,7 @@ else
     error('Wrong argument for plateinfo')
 end
 
-CheckPlateInfo(t_plateinfo)
+CheckPlateInfo(t_plateinfo, IsTimeCourse)
 if isvariable(t_plateinfo, 'DesignNumber') && iscell(t_plateinfo.DesignNumber)
     t_plateinfo.DesignNumber = cellstr2mat(t_plateinfo.DesignNumber);
 end
@@ -236,7 +247,12 @@ for iBC = 1:height(t_plateinfo)
         DesignNumber(idx) = 1;
     end
     Untrt(idx) = strcmp(t_plateinfo.TreatmentFile(iBC),'-');
-    Time(idx) = t_plateinfo.Time(iBC);
+    if IsTimeCourse
+        % rounded to the 1/100 of hour, 1st value is ~1 minute.
+        Time(idx) = .01*round(100*24*(t_raw.Date(idx)-min(t_raw.Date))+1/60);
+    else
+        Time(idx) = t_plateinfo.Time(iBC);
+    end
     
     % parse the additional plate information from the barcode file
     for i = 1:length(otherVariables)
@@ -275,7 +291,7 @@ Untrt = cellfun(@(x) strcmp(x,'-') || isempty(x), TreatmentFile) ;
 assert(~any(DesignNumber==0 & ~Untrt), 'Some wells are not ''Untrt'' and don''t have a DesignNumber')
 warnassert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
 
-% compile the finale table
+% compile the final table
 t_data = [table(Barcode, CellLine, TreatmentFile, DesignNumber, Untrt, Time) ...
     t_raw(Usedidx, intersect([{'Well'} NobjField {'Date'}], varnames(t_raw), 'stable'))];
 if ~isempty(otherVariables)
@@ -298,11 +314,14 @@ end
 function t_raw = splitBarcodeDate(t_raw)
 Code_date = regexp(t_raw.Result,' > ','split');
 Code_date = vertcat(Code_date{:});
+Code_date(:,2) = regexpcellsplit(Code_date(:,2), '(',1);
+Code_date(:,2) = cellfun2(@datenum, Code_date(:,2));
 t_raw = [cell2table(Code_date,'VariableName',{'Barcode' 'Date'}) t_raw(:,2:end)];
 end
 
-function CheckPlateInfo(t_plateinfo)
+function CheckPlateInfo(t_plateinfo, IsTimeCourse)
 Infovars = {'Barcode' 'Time' 'CellLine' 'TreatmentFile'};
+if IsTimeCourse, Infovars = setdiff(Infovars, 'Time'); end
 for i=1:length(Infovars)
     assert(isvariable(t_plateinfo, Infovars{i}), 'Missing columns %s in the plate info',...
         Infovars{i})

@@ -76,7 +76,7 @@ for iD = 1:length(Design)
             if islogical(conc)
                 conc = conc+1;
                 label = 'F/T';
-            elseif iscellstr(conc(~cellfun(@isempty,conc)));
+            elseif iscell(conc) && iscellstr(conc(~cellfun(@isempty,conc)));
                 conc(cellfun(@isempty,conc)) = {''};
                 cats = unique(conc(:));
                 val = NaN(size(conc));

@@ -70,11 +70,15 @@ if length(plate_dims)==1
     plate_dims = sqrt(plate_dims*[1/1.5 1.5]);
 end
 assert(round(log2(plate_dims(1)))==log2(plate_dims(1)) && (plate_dims(1)*1.5==plate_dims(2)),...
-    'Non standard palte size: %i x %i', plate_dims(1), plate_dims(2))
+    'Non standard plate size: %i x %i', plate_dims(1), plate_dims(2))
 
 
 assert((length(DrugNames)==length(stock_conc)) || (length(stock_conc)==1))
-assert(all(stock_conc>20 & stock_conc<5e4), 'Stock concentration should be in uM')
+if ~(all(stock_conc>=10 & stock_conc<=5e4))
+    warning('Stock concentration should be in uM!')
+    pause
+end
+    
 if length(stock_conc)==1
     stock_conc = stock_conc*ones(length(DrugNames),1);
 end

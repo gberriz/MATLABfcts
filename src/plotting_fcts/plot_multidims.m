@@ -165,7 +165,7 @@ for iyp = 1:nRows
         if ixp==1, ylabel(gca, strjoin(p.yaxiskey),'fontweight','bold'), end
 
         if (ixp==nCols && iyp==nRows) || xidx==size(xplotkeys,1)
-            hl = legend(h, strcat(p.colorkey, '=', AnyToString(colorkeys)), ...
+            hl = legend(h(ishandle(h)), strcat(p.colorkey, '=', AnyToString(colorkeys(ishandle(h)))), ...
                 'fontsize',6, 'orientation', 'horizontal');
             set(hl, 'position', [.01 .005 .98 .03])
         end
