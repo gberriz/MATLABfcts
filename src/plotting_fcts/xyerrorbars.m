@@ -1,4 +1,4 @@
-function h = xyerrorbars(x, xerr, y, yerr, varargin)
+function varargout = xyerrorbars(x, xerr, y, yerr, varargin)
 % h = xyerrorbars(x, xerr, y, yerr, varargin)
 %   xerr and yerr can be empty or a unique value
 %   varargin: same arguments as plots
@@ -38,3 +38,7 @@ h(2) = plot(errbars(:,1), errbars(:,2),varargin{:});
 set(h(2),'marker','none','linewidth',.5)
 
 if ~ish, hold off, end
+
+if nargout>0
+    varargout = {h};
+end
