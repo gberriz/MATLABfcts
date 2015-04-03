@@ -78,7 +78,7 @@ if isempty(Plotting_parameters)
     Plotting_parameters.title = {'fontsize',10,'fontweight','bold'};
     
     Plotting_parameters.logticks = @(x,s,y) 10.^(floor(x):s:ceil(y));
-    Plotting_parameters.logticklab = @(x,s,y) num2cellstr(10.^(floor(x):s:ceil(y)),'%.2g');
+    Plotting_parameters.logticklab = @(x,s,y) num2cellstr(10.^(floor(x):s:ceil(y)),'%5.3g');
     
     clear iColorsInPlotting
 end
