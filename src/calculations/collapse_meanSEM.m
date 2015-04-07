@@ -9,8 +9,11 @@ function t_out = collapse_meanSEM(t_in, keys, pre_trans, applied_fcts)
 %       the functions can be chnaged with the optional input applied_fcts
 %
 
-
-keyidx = find(ismember(t_in.Properties.VariableNames, keys));
+if iscellstr(keys) || ischar(keys)
+    keyidx = find(ismember(t_in.Properties.VariableNames, keys));
+else
+    keyidx = keys;
+end
 validx = setdiff(1:size(t_in,2), keyidx);
 
 if exist('pre_trans','var') && ~isempty(pre_trans)
