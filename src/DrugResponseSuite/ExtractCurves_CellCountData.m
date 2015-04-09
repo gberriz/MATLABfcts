@@ -51,6 +51,11 @@ for ik = 1:height(t_keys)
     %%
     subt = t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:);
     
+    if height(subt)<4
+        warnprintf(['Not enough data point for ' strjoin(table2cellstr(t_keys(ik,:),0))])
+        continue
+    end
+    
     if all(subt.Conc<1e-3) || all(subt.Conc>1e3)
         warnprintf('Concentrations are expected in uM; fitopt have constraints')
     end

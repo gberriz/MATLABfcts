@@ -144,9 +144,17 @@ h_map = imagesc(data(permRows,permCols), [-1 1]*quantile(abs(data(:)),.95));
 colormap(p.cmap)
 
 
-set(gca,PO.axes{:},'box','on','ydir','normal', 'yaxislocation','right',...
-    'xtick',1:length(permCols),'xticklabel',columnlabels(permCols), 'xticklabelrotation',90, ...
-    'ytick',1:length(permRows),'yticklabel',rowlabels(permRows))
+set(gca,PO.axes{:},'box','on','ydir','normal','yaxislocation','right')
+if ~isempty(columnlabels)
+    set(gca,'xtick',1:length(permCols),'xticklabel',columnlabels(permCols), 'xticklabelrotation',90)
+else
+    set(gca,'xtick',[])
+end
+if ~isempty(rowlabels)
+    set(gca, 'ytick',1:length(permRows),'yticklabel',rowlabels(permRows))
+else
+    set(gca, 'ytick',[])
+end
 
 
 xlim([.5 length(permCols)+.5])
