@@ -130,6 +130,8 @@ for iTf = 1:length(Trtfiles)
                 Trtfiles{iTf})
         end
         temp = AddDrugNameColumn(temp, Ndrugs);
+        temp.Untrt(temp.pert_type=='Untrt') = true;
+        
         t_annotated = [t_annotated; temp];
     end
     

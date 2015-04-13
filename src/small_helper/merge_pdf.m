@@ -26,5 +26,5 @@ outputfile = [d filesep ReplaceName(outputfile, '/\', filesep)];
 
 cmd = sprintf('pdftk %s %s output %s', inputfiles, args, outputfile);
 
-status = system(cmd);
-assert(status==0, 'pdftk was not successful')
+[status, output] = system(cmd);
+assert(status==0, 'pdftk was not successful:\n\n%s', output)

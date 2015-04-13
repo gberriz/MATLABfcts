@@ -11,7 +11,7 @@ function h = clustergram_wBars(data, rowlabels,  columnlabels, varargin)
 %       outerpos
 %       rowannotations
 %       columnannotations
-%
+%       cmap
 %
 
 
@@ -34,11 +34,15 @@ parse(p,varargin{:});
 p = p.Results;
 PO = p.PO;
 
-RowDist = pdist(data, p.RowPDist);
-TreeRows = linkage(RowDist, p.Linkage);
+if ~strcmp(p.RowPDist,'none')
+    RowDist = pdist(data, p.RowPDist);
+    TreeRows = linkage(RowDist, p.Linkage);
+end
 
-ColumnDist = pdist(data', p.ColumnPDist);
-TreeColumns = linkage(ColumnDist, p.Linkage);
+if ~strcmp(p.ColumnPDist,'none')
+    ColumnDist = pdist(data', p.ColumnPDist);
+    TreeColumns = linkage(ColumnDist, p.Linkage);
+end
 
 rowannotations = TableToCategorical(p.rowannotations);
 columnannotations = TableToCategorical(p.columnannotations);
@@ -59,10 +63,15 @@ innerpos = outerpos+[p.rowbarwidth*Nrowannot 0 ...
 
 
 %% rows Dendogram
-get_newaxes([outerpos(1)-p.rowbarwidth-.015 innerpos(2) p.rowbarwidth+.01 innerpos(4)])
-[h_RowDend,~,permRows] = dendrogram(TreeRows,0,'orientation','left');
-set(gca,'xtick',[],'ytick',[],'fontweight','bold','fontsize',8,'visible','off')
-ylim([.5 length(permRows)+.5])
+if ~strcmp(p.RowPDist,'none')
+    get_newaxes([outerpos(1)-p.rowbarwidth-.015 innerpos(2) p.rowbarwidth+.01 innerpos(4)])
+    [h_RowDend,~,permRows] = dendrogram(TreeRows,0,'orientation','left');
+    set(gca,'xtick',[],'ytick',[],'fontweight','bold','fontsize',8,'visible','off')
+    ylim([.5 length(permRows)+.5])
+else
+    h_RowDend = [];
+    permRows = 1:size(data,1);
+end
 
 % Row color bars
 h_RowBars = cell(size(rowannotations,2),1);
@@ -76,8 +85,12 @@ for iR = 1:size(rowannotations,2)
             isfield(PO, [rowannotations.Properties.VariableNames{iR} 'Colors'])
         colors = NaN(length(cases), 3);
         for i = 1:length(cases)
-            colors(i,:) = PO.([rowannotations.Properties.VariableNames{iR} 'Colors'])(...
-                PO.(rowannotations.Properties.VariableNames{iR})==cases(i),:);
+            if any(PO.(rowannotations.Properties.VariableNames{iR})==cases(i))
+                colors(i,:) = PO.([rowannotations.Properties.VariableNames{iR} 'Colors'])(...
+                    PO.(rowannotations.Properties.VariableNames{iR})==cases(i),:);
+            else
+                colors(i,:) = .95*[1 1 1];
+            end
         end
     else
         colors = gray(length(cases));
@@ -100,10 +113,15 @@ end
 %% column dendrogram
 
 
-get_newaxes([innerpos(1) outerpos(2)+outerpos(4) innerpos(3) p.colbarwidth+.01])
-[h_ColDend,~,permCols] = dendrogram(TreeColumns,0,'orientation','top');
-set(gca,'xtick',[],'ytick',[],'fontweight','bold','fontsize',8,'visible','off')
-xlim([.5 length(permCols)+.5])
+if ~strcmp(p.ColumnPDist,'none')
+    get_newaxes([innerpos(1) outerpos(2)+outerpos(4) innerpos(3) p.colbarwidth+.01])
+    [h_ColDend,~,permCols] = dendrogram(TreeColumns,0,'orientation','top');
+    set(gca,'xtick',[],'ytick',[],'fontweight','bold','fontsize',8,'visible','off')
+    xlim([.5 length(permCols)+.5])
+else
+    h_ColDend = [];
+    permCols = 1:size(data,2);
+end
 
 % Column color bars
 h_ColBars = cell(size(columnannotations,2),1);
@@ -117,8 +135,12 @@ for iR = 1:size(columnannotations,2)
             isfield(PO, [columnannotations.Properties.VariableNames{iR} 'Colors'])
         colors = NaN(length(cases), 3);
         for i = 1:length(cases)
-            colors(i,:) = PO.([columnannotations.Properties.VariableNames{iR} 'Colors'])(...
-                PO.(columnannotations.Properties.VariableNames{iR})==cases(i),:);
+            if any(PO.(columnannotations.Properties.VariableNames{iR})==cases(i))
+                colors(i,:) = PO.([columnannotations.Properties.VariableNames{iR} 'Colors'])(...
+                    PO.(columnannotations.Properties.VariableNames{iR})==cases(i),:);
+            else
+                colors(i,:) = .95*[1 1 1];
+            end
         end
     else
         colors = gray(length(cases));

@@ -165,8 +165,12 @@ if ~ismember(NobjField{1}, varnames(t_raw))
     error('Use optional input ''NobjField'' for specifying fields')
 end
 if length(NobjField)>1 && ~strcmp(NobjField{2},'all')
-    assert(all(ismember(NobjField, varnames(t_raw))), ...
-        'Not all fields in ''NobjField'' are present in the file')
+    if ~all(ismember(NobjField, varnames(t_raw)))
+        warnprintf('Not all fields in ''NobjField'' are present in the file')
+        disp('Available fields:')
+        disp(varnames(t_raw)')
+        error('Missing fields: %s', strjoin(NobjField(~ismember(NobjField, varnames(t_raw)))))
+    end
 elseif length(NobjField)==2 && strcmp(NobjField{2},'all')
     NobjField = [NobjField(1) setdiff(varnames(t_raw), [NobjField(1) ...
         {'Well' 'Barcode' 'Result' 'Date' 'Row' 'Column' ...
@@ -289,7 +293,7 @@ end
 % Evaluate the untreated plates
 Untrt = cellfun(@(x) strcmp(x,'-') || isempty(x), TreatmentFile) ;
 assert(~any(DesignNumber==0 & ~Untrt), 'Some wells are not ''Untrt'' and don''t have a DesignNumber')
-warnassert(all(Time(~Untrt)>0), 'Some treated wells don''t have a Time')
+warnassert(all(Time(~Untrt)>0), 'Some treated/perturbed wells have Time=0')
 
 % compile the final table
 t_data = [table(Barcode, CellLine, TreatmentFile, DesignNumber, Untrt, Time) ...

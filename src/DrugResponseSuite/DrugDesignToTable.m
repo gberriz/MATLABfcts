@@ -36,7 +36,16 @@ function t_design = DrugDesignToTable(Design1, Perturbations, DrugOrder)
 
 
 %%
-[rows, cols] = find(Design1.treated_wells);
+if isfield(Design1, 'Perturbations')
+    [rows, cols] = find(Design1.treated_wells | ...
+        any(reshape([Design1.Perturbations.layout],Design1.plate_dims(1),Design1.plate_dims(2),[])>0,3));
+    [Untrtrows, Untrtcols] = find(~Design1.treated_wells & ...
+        any(reshape([Design1.Perturbations.layout],Design1.plate_dims(1),Design1.plate_dims(2),[])>0,3));
+    UntrtWell = ConvertRowColToWells(Untrtrows, Untrtcols);
+else
+    [rows, cols] = find(Design1.treated_wells);
+    UntrtWell = {};
+end
 Well = ConvertRowColToWells(rows, cols);
 
 % get all drugs and match the order
@@ -142,7 +151,8 @@ end
 
 if ~isvariable(t_design, 'pert_type')
     pert_type = repmat({'trt_cp'}, height(t_design),1);
-    pert_type(t_design.Conc==0) = {'ctl_vehicle'};
+    pert_type(t_design.Conc==0 & ~ismember(t_design.Well,UntrtWell)) = {'ctl_vehicle'};
+    pert_type(t_design.Conc==0 & ismember(t_design.Well,UntrtWell)) = {'Untrt'};
     t_design = [t_design table(pert_type)];
 end
 

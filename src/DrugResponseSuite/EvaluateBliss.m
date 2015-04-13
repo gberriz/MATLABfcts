@@ -1,5 +1,5 @@
-function [BlissScore, Bliss, Results, Concs] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit)
-% [BlissScore, Bliss, Results, Concs] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit)
+function [BlissScore, Bliss, Results, Concs] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit, cap)
+% [BlissScore, Bliss, Results, Concs] = EvaluateBliss(t_data, varname, BlissType, SingleCutoff, usefit, cap)
 %
 % Inputs:
 %   t_data:     table with the columns: DrugName, Conc, DrugName2, Conc2,
@@ -18,6 +18,8 @@ function [BlissScore, Bliss, Results, Concs] = EvaluateBliss(t_data, varname, Bl
 %
 %   usefit:     use fit for the single agent response and Bliss evaluation
 %                   (default = false)
+%
+%   cap:        maximum cap for the input (RelGrowth/varname)
 %
 % Outputs:
 %   BlissScore: average Bliss excess across all doses
@@ -59,6 +61,10 @@ if ~exist('usefit','var'), usefit=false; end
 [Results, Fields, Concs] = DrugResponseTableToCombo(t_data, Drugs, usefit);
 
 Results = Results(:,:,strcmp(Fields,varname));
+
+if exist('cap','var'), 
+    Results(~isnan(Results)) = min(Results(~isnan(Results)), cap);
+end
 
 %%
 if (mean(diff(Results(:,1))>0)>.5 && mean(diff(Results(:,1))>0)>.5 && ...
