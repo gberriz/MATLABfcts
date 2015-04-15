@@ -22,7 +22,7 @@ if ~exist('type','var')
 end
 
 if exist('Y','var')
-    assert(size(X,1)==size(Y,1), ...
+    assert(any(size(X)==size(Y)), ...
         'X and Y should be column vectors or matrices with the same number of rows')    
     maxi = size(X,2);
     minj = size(X,2)+1;

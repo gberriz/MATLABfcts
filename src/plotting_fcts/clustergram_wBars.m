@@ -29,6 +29,7 @@ addParameter(p,'outerpos', NaN)
 addParameter(p,'rowannotations', table)
 addParameter(p,'columnannotations', table)
 addParameter(p,'cmap', [.3 .3 .2;Plotting_parameters.cmapRW])
+addParameter(p,'clim', [])
 
 parse(p,varargin{:});
 p = p.Results;
@@ -162,7 +163,18 @@ end
 %% main heatmap
 get_newaxes(innerpos)
 
-h_map = imagesc(data(permRows,permCols), [-1 1]*quantile(abs(data(:)),.95));
+if isempty(p.clim)
+    clim = [-1 1]*quantile(abs(data(~isnan(data))),.95);
+else
+    clim = p.clim;
+end
+temp = data;
+
+if any(isnan(temp(:)))
+    temp(~isnan(temp)) = max(min(clim)+diff(clim)/size(p.cmap,1), temp(~isnan(temp)));
+end
+
+h_map = imagesc(temp(permRows,permCols), clim);
 colormap(p.cmap)
 
 
