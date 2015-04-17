@@ -3,7 +3,7 @@ function [a, hl] = plot_multidims(t_data, varargin)
 %  [a, hl] = plot_multidims(t_data, varargin)
 %       inputs: xplotkey, yplotkey, xaxiskey, yaxiskey, colorkey,
 %       xtransform, ytransform, axischanges, mean_SEM, xspacing, yspacing,
-%       yval_lines
+%       yval_lines, plotcolors
 %
 
 Generate_Plotting_parameters
@@ -37,7 +37,7 @@ end
 xplotkeys = unique(t_data(:,p.xplotkey));
 if strcmp(p.yplotkey, noyplot)
     yplotkeys = table(0,'variablename',{'noyplot'});
-    t_data = [t_data table(ones(height(t_data),1), 'variablenames', {noyplot})];
+    t_data = [t_data table(zeros(height(t_data),1), 'variablenames', {noyplot})];
 elseif strcmp(p.yplotkey, 'xkeys')
     yplotkeys = table(1,'variablename',{'noyplot'});
     p.yplotkey = noyplot;
