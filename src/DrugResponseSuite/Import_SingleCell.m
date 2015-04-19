@@ -1,13 +1,17 @@
-function SingleCell = Import_SingleCell(t_processed, folder, timecourse, filefilter)
-% SingleCell = Import_SingleCell(t_processed, folder, timecourse)
+function [SingleCell, t_out] = Import_SingleCell(t_processed, folder, fields, timecourse, filefilter)
+% [SingleCell, t_out] = Import_SingleCell(t_processed, folder, fields, timecourse, filefilter)
 %   t_processed     table outputed from Merge_CellCountData; need the
 %                       columns 'Barcode' 'Well' and will condiser the data
-%                       columns that ends with '_MeanPerWell'
+%                       columns that ends with '_MeanPerWell' (otherwise,
+%                       specify 'fields' to select columns in the single
+%                       cell data).
 %                       If column 'Date' exists, it will assume a timecourse 
 %                       and look for corresponding file name (unless
 %                       variable timecourse is false)
 %
 %   folder          folder in which the single cell data are stored
+%
+%   fields          fields to kepp in the single cell data
 %
 %   timecourse      time course experiment, multiple time points for the
 %                       same well (optional, default=false)
@@ -17,22 +21,34 @@ function SingleCell = Import_SingleCell(t_processed, folder, timecourse, filefil
 %
 %   SingleCell      structure with the data fields for each plate/well
 %                   
+%   t_out           table with properties for the SingleCell (equal to
+%                       t_processed unless multiple files/times were found)
+%
 
 %%
 if ~exist('timecourse', 'var') || isempty(timecourse)
     timecourse = isvariable(t_processed,'Date');
 end
 
-meanfields = varnames(t_processed)';
-meanfields = meanfields(regexpcell(meanfields, '_MeanPerWell')>0);
-meanfields = meanfields(regexpcell(meanfields, 'Ctrl_')==0);
-meanfields = meanfields(regexpcell(meanfields, 'WholeImage')==0);
 
-meanfields = regexpcelltokens(meanfields, '(\w*)_MeanPerWell',1);
+if isempty(fields)
+    f = ls([folder '/' char(t_processed.Barcode(1)) '/*' filefilter '*txt']);
+    ftemp = fopen([folder '/' char(t_processed.Barcode(1)) '/' f(1,:)],'r');
+    fields = regexp(fgetl(ftemp),'\t','split');
+    warnprintf('Available fields are:\n\t - %s \n', strjoin(fields,'\n\t - '));
+    error('no field found')
+else
+    try
+        fields = matlab.internal.tableUtils.makeValidName(fields,'silent');
+    catch
+        fields = ReducName( ReplaceName(fields,['-/\:?!,.' 250:1e3], '_'), ' ');
+    end
+    fprintf('\nFields are:\n - %s\n', strjoin(fields,'\n - '));
+end
 
 SingleCell = struct;
-for i=1:length(meanfields)
-    SingleCell.(meanfields{i}) = [];
+for i=1:length(fields)
+    SingleCell.(fields{i}) = [];
 end
 SingleCell.Barcode = ''; SingleCell.Well = ''; SingleCell.Date = '';
 SingleCell = repmat(SingleCell, height(t_processed),1);
@@ -52,9 +68,14 @@ for iPW = 1:height(t_processed)
     
     if Well(2)=='0', Well = Well([1 3]); end
     
+    
     subfolder = [folder filesep allfolder{regexpcell(allfolder, Plate)>0}];
     
-    files = dir(subfolder);
+    if exist('filefilter','var')
+        files = dir([subfolder filesep '*' filefilter '*.t*']); % for tsv or txt files
+    else
+        files = dir([subfolder filesep '*.t*']); % for tsv or txt files
+    end
     files = {files([files.isdir]==0).name};
     files = files(regexpcell(files, 'Whole Image')==0);
     files = files(regexpcell(files, sprintf('result.%s\\[', Well))>0);
@@ -64,9 +85,6 @@ for iPW = 1:height(t_processed)
             datestr(t_processed.Date(iPW),'yyyy-mm-ddTHHMMSS'))==1);
     end
     
-    if exist('filefilter','var')
-        files = files(regexpcell(files, filefilter)>0);
-    end
     
     if isempty(files)
         error(['Missing file for: ' Plate ' ' Well]);
@@ -96,8 +114,14 @@ for iPW = 1:height(t_processed)
         SingleCell(output_cnt).Barcode = Plate;
         SingleCell(output_cnt).Well = Well;
         SingleCell(output_cnt).Date = Date;
-        for i=1:length(meanfields)
-            SingleCell(output_cnt).(meanfields{i}) = t_ss.(meanfields{i});
+        for i=1:length(fields)
+            if ~isvariable(t_ss, fields{i})
+                ftemp = fopen([subfolder filesep files{it}],'r');
+                fields = regexp(fgetl(ftemp),'\t','split');
+                warnprintf('Available fields are:\n\t - %s \n', strjoin(fields,'\n\t - '));
+                error('Field %s not found in file %s', fields{i}, files{it})
+            end
+            SingleCell(output_cnt).(fields{i}) = t_ss.(fields{i});
         end
     end
     
