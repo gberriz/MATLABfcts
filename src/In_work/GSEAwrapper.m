@@ -18,6 +18,8 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %           saved; default is none, results are not saved)
 %       - Nplot (number of sets to display for html output; needs an
 %               Outputfolder)
+%       - Outputname (renamed the GSEA default folder name; needs
+%               'Outputfolder'; WARNING: override previous results!)
 %       - label (for the GSEA output, default is geneset label)
 %       - Randseed (value for randomization)
 %       - set_min (minimal number of genes in a set; default=15)
@@ -54,6 +56,7 @@ addParameter(p,'Nplot',0, @isscalar);
 addParameter(p,'set_min',15, @isscalar);
 addParameter(p,'set_max',500, @isscalar);
 addParameter(p,'Outputfolder', '', @ischar);
+addParameter(p,'Outputname', '', @ischar);
 addParameter(p,'label', '', @ischar);
 addParameter(p,'verbatim', false, @islogical);
 addParameter(p,'GSEAfolder', [WorkFolder 'GSEA_java' filesep], @ischar);
@@ -120,9 +123,9 @@ if ischar(Geneset)
         case 'OncoSig'  % oncogenic signatures gene sets
             Setfile = [GSEAfolder 'c6.all.v4.0.symbols.gmt'];
         otherwise
-            assert(exist(Geneset,'file'), 'Geneset file not found')
-            [~,~,ext] = filepart(Geneset);
-            assert(strcmp(ext,'gmt'),'Geneset file must be a .gmt format')
+            assert(exist(Geneset,'file')==2, 'Geneset file not found')
+            [~,~,ext] = fileparts(Geneset);
+            assert(strcmp(ext,'.gmt'),'Geneset file must be a .gmt format')
             Setfile = Geneset;
     end
 elseif iscellstr(Geneset)
@@ -241,6 +244,11 @@ if exist(tempfolder,'dir')
     rmdir(tempfolder,'s')
 end
 if p.Nplot>0
+    if ~isempty(p.Outputname)
+        movefile([Outputfolder filesep Lastrun], [Outputfolder filesep p.Outputname])
+        Lastrun = p.Outputname;        
+    end
+    disp(['Results saved in ' Outputfolder filesep p.Outputname])
     disp('Opening report')
     web([Outputfolder filesep Lastrun filesep 'index.html'])
 end
