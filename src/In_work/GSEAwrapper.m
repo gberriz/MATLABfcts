@@ -22,6 +22,7 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %               'Outputfolder'; WARNING: override previous results!)
 %       - label (for the GSEA output, default is geneset label)
 %       - Randseed (value for randomization)
+%       - scoring_scheme (as defined by GSEA: weighted, classic or weighted_p2)
 %       - set_min (minimal number of genes in a set; default=15)
 %       - set_max (maximal number of genes in a set; default=500)
 %       - GSEAfolder (where the GSEA.jar file is stored;
@@ -55,6 +56,8 @@ addParameter(p,'nperm',1e3, @isscalar);
 addParameter(p,'Nplot',0, @isscalar);
 addParameter(p,'set_min',15, @isscalar);
 addParameter(p,'set_max',500, @isscalar);
+addParameter(p,'scoring_scheme','weighted', @(x) ismember(x, ...
+    {'weighted' 'classic' 'weighted_p2' 'weighted_p1.5'}));
 addParameter(p,'Outputfolder', '', @ischar);
 addParameter(p,'Outputname', '', @ischar);
 addParameter(p,'label', '', @ischar);
@@ -154,7 +157,7 @@ cmd = [ ...
     ' xtools.gsea.GseaPreranked' ...
     ' -gmx ' Setfile ...
     ' -collapse false -mode Max_probe -norm meandiv -nperm ' num2str(p.nperm) ...
-    ' -rnk ' Inputfile  ' -scoring_scheme weighted -rpt_label ' label ...
+    ' -rnk ' Inputfile  ' -scoring_scheme ' p.scoring_scheme ' -rpt_label ' label ...
     ' -include_only_symbols true -make_sets true -plot_top_x ' num2str(p.Nplot) ...
     ' -rnd_seed ' num2str(p.Randseed) ' -set_max ' num2str(p.set_max) ...
     ' -set_min ' num2str(p.set_min) ' -zip_report false' ...
@@ -245,10 +248,20 @@ if exist(tempfolder,'dir')
 end
 if p.Nplot>0
     if ~isempty(p.Outputname)
+        if exist([Outputfolder filesep p.Outputname],'dir')
+            if ~rmdir([Outputfolder filesep p.Outputname])
+                cnt = 1;
+                while exist([Outputfolder filesep p.Outputname '_' num2str(cnt)],'dir') && ...
+                        ~rmdir([Outputfolder filesep p.Outputname '_' num2str(cnt)])
+                    cnt = cnt+1;
+                end
+                p.Outputname = [p.Outputname '_' num2str(cnt)];
+            end
+        end
         movefile([Outputfolder filesep Lastrun], [Outputfolder filesep p.Outputname])
         Lastrun = p.Outputname;        
     end
     disp(['Results saved in ' Outputfolder filesep p.Outputname])
     disp('Opening report')
-    web([Outputfolder filesep Lastrun filesep 'index.html'])
+    web([Outputfolder filesep Lastrun filesep 'index.html'],'-browser')
 end
