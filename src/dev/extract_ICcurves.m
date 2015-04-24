@@ -175,7 +175,7 @@ for iD=1:length(Drugs)
     end
     
     
-    [IC50, Hill, Emax, Area, r2, EC50, fit, ~, log] = ...
+    [IC50, Hill, ~, Emax, Area, r2, EC50, fit, ~, log] = ...
         ICcurve_fit(Doses, mean(Relcnt(GoodReplicates,:)), 'IC50', fitopt);
     
     t_IC = [t_IC;
@@ -185,7 +185,7 @@ for iD=1:length(Drugs)
     
     
     if DoGI50
-        [GI50, Hill, GI_Emax, Area, r2, ~, GI_fit, ~, log] = ...
+        [GI50, Hill, ~, GI_Emax, Area, r2, ~, GI_fit, ~, log] = ...
             ICcurve_fit(Doses, mean(Relgrowth(GoodReplicates,:)), 'GI50', fitopt);        
         
         t_GI = [t_GI;

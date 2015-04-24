@@ -40,6 +40,7 @@ if ~exist('pcutoff','var')
 end
 fitopt.pcutoff = pcutoff;
 
+fitopt2 = fitopt;
 
 t_keys = unique(t_data(:,keys));
 
@@ -60,18 +61,24 @@ for ik = 1:height(t_keys)
         warnprintf('Concentrations are expected in uM; fitopt have constraints')
     end
     
-    [IC50, Hill, Einf, Area, r2, EC50, fit] = ...
+    [IC50, Hill, Einf, Emax, Area, r2, EC50, fit] = ...
         ICcurve_fit(subt.Conc, subt.RelCellCnt, 'IC50', fitopt);
     
-    t_temp = [t_keys(ik,:) table(IC50, Hill, Einf, Area, r2, EC50) ...
+    t_temp = [t_keys(ik,:) table(IC50, Hill, Einf, Emax, Area, r2, EC50) ...
         table({fit}, {subt.Conc'}, {subt.RelCellCnt'}, 'VariableNames', ...
         {'fit' 'Conc' 'RelCellCnt'})];
     
     if DoGI50
-        [GI50, ~, GIinf, GIArea, GI_r2, ~, GI_fit] = ...
-            ICcurve_fit(subt.Conc, subt.RelGrowth, 'GI50', fitopt); 
+        fitopt2.ranges = [
+            .975 1.025  %E0
+            min(-subt.Day0Cnt./(subt.Ctrlcount-subt.Day0Cnt))*1.1 1    %Emax
+            max(min(subt.Conc)*1e-4,1e-7) min(max(subt.Conc)*1e2, 1e3)  %E50
+            .1 5    % HS
+            ]';
+        [GI50, ~, GIinf, GImax, GIArea, GI_r2, ~, GI_fit] = ...
+            ICcurve_fit(subt.Conc, subt.RelGrowth, 'GI50', fitopt2); 
         
-        t_temp = [t_temp table(GI50, GIinf, GIArea, GI_r2) ...
+        t_temp = [t_temp table(GI50, GIinf, GImax, GIArea, GI_r2) ...
         table({GI_fit}, {subt.RelGrowth'}, 'VariableNames', {'GI_fit' 'RelGrowth'})];
     
     end

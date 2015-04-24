@@ -1,5 +1,13 @@
 function BiasValue = TestBias_multiplates(t_data, BiasCutoff, plotting, valvars)
-
+% t_data:     need variables 'Well' or 'Row'/'Column'; all other
+%                         columns will be checked against.
+%  
+% BiasCutoff: [minimal drop cutoff      p-value cutoff];
+%                         default = [.1 .01]
+%                     can be a 3x2 matrix for each condition: 
+%                             edge, column, row
+                            
+                            
 if ~exist('BiasCutoff','var') || isempty(BiasCutoff)
     BiasCutoff = [1;1;1]*[.1 .01];
 elseif all(size(BiasCutoff)==[1 2])

@@ -76,8 +76,10 @@ for iP = 1:height(t_plate)
     if EvaluateGI
         temp = t_plate(iP,setdiff(plate_keys, {'TreatmentFile'}, 'stable'));
         temp.Time = 0;
-        Day0Cnt = trimmean( t_annotated.Cellcount(eqtable(temp, ...
-            t_annotated(:,setdiff(plate_keys, {'TreatmentFile'}, 'stable')))), 50);
+        idx = eqtable(temp, ...
+            t_annotated(:,setdiff(plate_keys, {'TreatmentFile'}, 'stable')));
+        assert(any(idx), 'No values for Day0 found although some are expected')
+        Day0Cnt = trimmean( t_annotated.Cellcount(idx), 50);
         Relvars = {'RelCellCnt' 'RelGrowth'};
     else
         Day0Cnt = NaN;

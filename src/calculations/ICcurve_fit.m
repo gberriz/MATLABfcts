@@ -1,5 +1,5 @@
 %
-% function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, flag] = ...
+% function [xI50, Hill, Einf, xMax, Area, r2, EC50, fit_final, p, log, flag] = ...
 %     ICcurve_fit(Conc, Growth, fit_type, opt)
 %
 %   Inputs:
@@ -34,7 +34,7 @@
 %   flag = 1 if fit is successful, 2 if Robust was used, 0 if linear used
 %
 
-function [xI50, Hill, Einf, Area, r2, EC50, fit_final, p, log, flag] = ...
+function [xI50, Hill, Einf, xMax, Area, r2, EC50, fit_final, p, log, flag] = ...
     ICcurve_fit(Conc, Growth, fit_type, opt)
 
 
@@ -56,7 +56,19 @@ extrapolrange = 10;
 Robust = [];
 
 if ~exist('fit_type','var') || isempty(fit_type)
-    fit_type = 'IC50';
+    if any(Growth<0)
+        fit_type = 'GI50';
+    else
+        fit_type = 'IC50';
+    end
+end
+
+% 'IC50'
+switch fit_type
+    case 'IC50'
+        ranges(1,2) = 0; % lowest Emax
+    case 'GI50'
+        ranges(1,2) = -2; % lowest Emax; assuming that cells are at least 50% more than seeding.     
 end
 
 if exist('opt','var')
@@ -92,13 +104,6 @@ switch fitting
         
 end
 
-% 'IC50'
-switch fit_type
-    case 'IC50'
-        ranges(1,2) = 0; % lowest Emax
-    case 'GI50'
-        ranges(1,2) = -2; % lowest Emax; assuming that cells are at least 50% more than seeding.
-end
 
 
 % remove the case of enhanced proliferation to avoid failure of F-test
@@ -144,15 +149,19 @@ p = 1-fcdf(F, df1, df2);
 xc = 10.^(log10(min(Conc))-1:.05:log10(max(Conc))+1);
 r2 = gof.rsquare;
 
+% results
+Area = sum( (1-(g(2:end)+g(1:(end-1)))/2) .* diff(log10(Conc))) / ...
+    diff(log10(Conc([1 end])));
+xMax = 1- min(g(end-[1 0]));
+
 if p>=pcutoff || isnan(RSS2) % failure of robust fit
     xI50 = +Inf;
     EC50 = +Inf;
     Hill = 0;
-    Einf = 1- mean(g(end-[2 1 0]));
+    Einf = 1- min(g(end-[1 0]));
     log = [log '**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
     fit_final = fit_res_flat;
     
-    Area = length(g)*(1-fit_res_flat.b);
     flag = 0;
     
 else
@@ -166,7 +175,6 @@ else
     
     
     EC50 = fit_res.c;
-    Area = sum(1-g);
     
     xI50 = fit_res.c*((((fit_res.a-fit_res.b)/(.5-fit_res.b))-1)^(1/fit_res.d));
     if any(fit_growth<.5) && any(fit_growth>.5) % inter/extrapolation is fine
