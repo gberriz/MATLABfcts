@@ -83,7 +83,7 @@ for iD = 1:length(Design)
                 for i=1:length(cats)
                     val(strcmp(cats{i},conc)) = i-1;
                 end
-                conc = val/(length(cats)-1);
+                conc = val/(length(cats)-.5);
                 label = ['(' strjoin(cats,',') ')'];
             elseif (max(conc(:))/min(conc(:)))>10 && max(conc(:))*min(conc(:))>=0
                 conc = log10(conc);
@@ -92,6 +92,7 @@ for iD = 1:length(Design)
                 label = sprintf('[%.2g - %.2g]', max(conc(:)), min(conc(:)));
             end
             [range, conc] = DataRangeCap(conc);
+            
             
             imagesc(conc, range)
             

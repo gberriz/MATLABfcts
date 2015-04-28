@@ -108,7 +108,7 @@ for iv = 1:length(VarToTest)
     
     %
     if plotting==1 || (plotting==.5 && any(biased))
-        get_newfigure(999, [40 100 600 400])
+        get_newfigure(999, [40 100 600 400], ['Test_bias' barcode '_' VarToTest{iv} '.pdf'])
         get_newaxes([.05 .1 .55 .85])
         imagesc(labels{2}.Column, labels{1}.Row, plate(:,:,iv), ...
             [0 max(max(plate(:,:,1)))])
