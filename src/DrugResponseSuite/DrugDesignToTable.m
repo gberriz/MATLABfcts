@@ -37,10 +37,19 @@ function t_design = DrugDesignToTable(Design1, Perturbations, DrugOrder)
 
 %%
 if isfield(Design1, 'Perturbations')
-    [rows, cols] = find(Design1.treated_wells | ...
-        any(reshape([Design1.Perturbations.layout],Design1.plate_dims(1),Design1.plate_dims(2),[])>0,3));
-    [Untrtrows, Untrtcols] = find(~Design1.treated_wells & ...
-        any(reshape([Design1.Perturbations.layout],Design1.plate_dims(1),Design1.plate_dims(2),[])>0,3));
+    trtwells = Design1.treated_wells ;
+    untrtwells = ~Design1.treated_wells;
+    for i=1:length(Design1.Perturbations)
+        if iscell(Design1.Perturbations(i).layout)
+            trtwells = trtwells | ~cellfun(@isempty,Design1.Perturbations(i).layout);
+            untrtwells = untrtwells & ~cellfun(@isempty,Design1.Perturbations(i).layout);
+        else
+            trtwells = trtwells | Design1.Perturbations(i).layout>0;
+            untrtwells = untrtwells & Design1.Perturbations(i).layout>0;
+        end
+    end
+    [rows, cols] = find(trtwells);
+    [Untrtrows, Untrtcols] = find(untrtwells);
     UntrtWell = ConvertRowColToWells(Untrtrows, Untrtcols);
 else
     [rows, cols] = find(Design1.treated_wells);
