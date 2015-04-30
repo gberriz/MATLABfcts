@@ -2,6 +2,10 @@
 function matrix2tsv(matrix, filename, labels, format)
 % MatrixTotsv(matrix, filename, labels, format)
 %
+%       matrix:     2D matrix of numeric values
+%       filename:   name of the export file
+%       labels:     cellstr, or 2x1 cell of cellstr for dimensions 1 and 2
+%       format:     format for writing numeric values (default: %.4g)
 %
 
 if ~exist('format','var')
