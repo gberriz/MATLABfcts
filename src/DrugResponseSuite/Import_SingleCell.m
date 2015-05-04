@@ -56,12 +56,19 @@ SingleCell = repmat(SingleCell, height(t_processed),1);
 
 assert(exist(folder,'dir')>0, ['Folder: ' folder ' missing'])
 
-t_out = t_processed;
+if isvariable(t_processed,'Date')
+    t_out = t_processed;
+else
+    t_out = [t_processed table(repmat(0, height(t_processed), 1), ...
+        'variablenames', {'Date'})];
+end
 output_cnt = 0;
+
+fprintf('\nReading all conditions (%i total):\n', height(t_processed));
 for iPW = 1:height(t_processed)    
     
     folderlist = dir(folder);
-    allfolder = {folderlist([folderlist.isdir]==1).name};
+    allfolder = setdiff({folderlist([folderlist.isdir]==1).name}, {'.' '..'});
     
     Plate = char(t_processed.Barcode(iPW));
     Well = char(t_processed.Well(iPW));
@@ -93,16 +100,16 @@ for iPW = 1:height(t_processed)
     if ~timecourse || isvariable(t_processed,'Date')
        assert(length(files)==1, ['Too many files: ' strjoin(files,' - ')])
     end
-    
+    fprintf('%-4i/%i Reading Plate %s, well %3s: ', iPW, height(t_processed), Plate, Well)
+        
     for it = 1:length(files)
         date = regexp(files{it},'^([0-9\-]*)T','tokens');
         time = regexp(files{it}, '^[0-9\-]*T([0-9]*)\-', 'tokens');
         Date = datenum([date{1}{1} '-' time{1}{1}], 'yyyy-mm-dd-HHMMSS');
         
-        fprintf('\nReading Plate %s, well %s, date %s', ...
-            Plate, Well, [date{1}{1} '-' time{1}{1}])
-        
         t_ss = tsv2table([subfolder filesep files{it}]);
+        
+        fprintf(' %2i (date %s)', it, [date{1}{1} '-' time{1}{1}]);
         
         output_cnt = output_cnt+1;
         
@@ -124,6 +131,7 @@ for iPW = 1:height(t_processed)
             SingleCell(output_cnt).(fields{i}) = t_ss.(fields{i});
         end
     end
+    fprintf(' ; Done with plate\n')
     
 end
 

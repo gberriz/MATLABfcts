@@ -161,7 +161,7 @@ end
 
 
 %% main heatmap
-get_newaxes(innerpos)
+h_hmapax = get_newaxes(innerpos);
 
 if isempty(p.clim)
     clim = [-1 1]*quantile(abs(data(~isnan(data))),.95);
@@ -201,4 +201,5 @@ if nargout>0
     h.ColDend = h_ColDend;
     h.ColBars = h_ColBars;
     h.heatmap = h_map;
+    h.hmapax  = h_hmapax ;
 end
