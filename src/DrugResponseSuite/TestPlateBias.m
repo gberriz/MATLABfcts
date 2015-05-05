@@ -8,7 +8,11 @@ function [biased, edge_res, col_res, row_res] = TestPlateBias(t_data, BiasCutoff
 %                   can be a 3x2 matrix for each condition: 
 %                           edge, column, row
 %
-
+%       biased:     [edge_res, col_res, row_res] < cutoff & significant
+%
+%       xxx_res:    [mean(vals) std(vals) p];
+%
+%
 
 if ~exist('plotting','var')
     plotting = .5;

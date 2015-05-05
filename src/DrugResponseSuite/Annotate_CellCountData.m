@@ -143,9 +143,13 @@ if any(Untrtidx)
     NDrugs = sum(strfindcell(varnames(t_annotated),'DrugName')==1);
     pert_type = repmat({'Untrt'}, sum(Untrtidx),1);
     
-    newvars = setdiff(varnames(t_annotated), [varnames(t_data) {'pert_type'}], 'stable');
-    othervars = intersect(varnames(t_annotated), varnames(t_data), 'stable');
-    
+    if isempty(t_annotated)
+        othervars = varnames(t_data);
+        newvars = {};
+    else
+        newvars = setdiff(varnames(t_annotated), [varnames(t_data) {'pert_type'}], 'stable');
+        othervars = intersect(varnames(t_annotated), varnames(t_data), 'stable');
+    end
     temp = table;
     for iD=1:NDrugs
         % add the HMSLid by default; it will be filtered afterwards
@@ -168,10 +172,13 @@ if any(Untrtidx)
         end
     end
     
-    
-    t_annotated = [
-        [t_data(Untrtidx,othervars) temp(:,newvars) table( pert_type)]
-        t_annotated(:,othervars) t_annotated(:,newvars)  t_annotated(:,'pert_type')];
+    if isempty(t_annotated)
+        t_annotated = [t_data(Untrtidx,othervars) temp(:,newvars) table(pert_type)];
+    else
+        t_annotated = [
+            [t_data(Untrtidx,othervars) temp(:,newvars) table(pert_type)]
+            t_annotated(:,othervars) t_annotated(:,newvars)  t_annotated(:,'pert_type')];
+    end
 end
 
 warnassert(height(t_annotated)==height(t_data), 'table went from %i to %i rows; check labels', ...

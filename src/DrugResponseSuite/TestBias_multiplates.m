@@ -1,4 +1,4 @@
-function BiasValue = TestBias_multiplates(t_data, BiasCutoff, plotting, valvars)
+function [BiasValue, BiasResults] = TestBias_multiplates(t_data, BiasCutoff, plotting, valvars)
 % t_data:     need variables 'Well' or 'Row'/'Column'; all other
 %                         columns will be checked against.
 %  
@@ -28,6 +28,7 @@ end
 plates = unique(t_data.Barcode);
 
 BiasValue = zeros(length(plates), 3);
+clear BiasResults;
 
 for ip = 1:length(plates)
     t_plate = t_data(t_data.Barcode==plates(ip),intersect(varnames(t_data), ...
@@ -35,6 +36,9 @@ for ip = 1:length(plates)
     
     bias_res = cell(1,3);
     [biased, bias_res{:}] = TestPlateBias(t_plate, BiasCutoff, plotting);
+    
+    BiasResults(ip) = struct('Barcode', plates(ip), 'edge_res', bias_res{1},...
+        'col_res', bias_res{2}, 'row_res', bias_res{3});    
     
     for i=find(biased)
         BiasValue(ip,i) = min(BiasValue(ip,i), min(bias_res{i}(...
