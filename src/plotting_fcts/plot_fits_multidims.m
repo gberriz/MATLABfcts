@@ -54,8 +54,10 @@ else
 end
 if strcmpi(p.ydata,'IC') || ~isvariable(t_fits, 'GI_fit')
     ydata = 'Relative count';
-else
+elseif strcmpi(p.ydata,'GI')
     ydata = 'Relative growth';
+else
+    ydata = 'Normalized relative growth';
 end
 
 %
@@ -106,11 +108,18 @@ for ixp=1:nCols
                 end
                 
                 Conc = p.xtransform(subt.Conc{i});
-                if strcmp(ydata, 'Relative count');
+                if strcmp(ydata, 'Relative count')
                     h(iC) = plot(p.xtransform(xvals), p.ytransform(subt.fit{i}(xvals)), '-', ...
                         'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
                     if p.raw_data
                         plot(Conc, subt.RelCellCnt{i}, '.', ...
+                            'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
+                    end
+                elseif strcmp(ydata, 'Normalized relative growth')
+                    h(iC) = plot(p.xtransform(xvals), p.ytransform(subt.nGI_fit{i}(xvals)), '-', ...
+                        'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
+                    if p.raw_data
+                        plot(Conc, p.ytransform(subt.nRelGrowth{i}), '.', ...
                             'color', p.plotcolors(mod(iC-1,size(p.plotcolors,1))+1,:));
                     end
                 else

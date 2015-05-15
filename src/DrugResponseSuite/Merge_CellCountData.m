@@ -47,7 +47,7 @@ assert(all(ismember([plate_keys cond_keys 'pert_type'], t_annotated.Properties.V
 EvaluateGI = any(t_annotated.Untrt & t_annotated.Time==0);
 
 
-labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'DesignNumber' 'Barcode' ...
+labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'nRelGrowth' 'DesignNumber' 'Barcode' ...
     'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
 if ~exist('numericfields','var')
     numericfields = setdiff(t_annotated.Properties.VariableNames( ...
@@ -80,12 +80,11 @@ for iP = 1:height(t_plate)
             t_annotated(:,setdiff(plate_keys, {'TreatmentFile'}, 'stable')));
         assert(any(idx), 'No values for Day0 found although some are expected')
         Day0Cnt = trimmean( t_annotated.Cellcount(idx), 50);
-        Relvars = {'RelCellCnt' 'RelGrowth'};
     else
         Day0Cnt = NaN;
-        Relvars = {'RelCellCnt'};
     end
     
+        Relvars = {'RelCellCnt' 'RelGrowth' 'nRelGrowth'};
     t_conditions = t_annotated(eqtable(t_plate(iP,:), t_annotated(:,plate_keys)) , :);
     
     % found the control for treated plates (ctl_vehicle)
@@ -105,13 +104,16 @@ for iP = 1:height(t_plate)
     t_conditions = innerjoin(t_conditions, t_ctrl);
     % evaluate the relative cell count/growth
     t_conditions = [t_conditions array2table([t_conditions.Cellcount./t_conditions.Ctrlcount ...
-        (t_conditions.Cellcount-t_conditions.Day0Cnt)./(t_conditions.Ctrlcount-t_conditions.Day0Cnt)], ...
-        'variablenames', {'RelCellCnt' 'RelGrowth'})];
+        (t_conditions.Cellcount-t_conditions.Day0Cnt)./(t_conditions.Ctrlcount-t_conditions.Day0Cnt) ...
+        2.^(log2(t_conditions.Cellcount./t_conditions.Day0Cnt)./log2(t_conditions.Ctrlcount./t_conditions.Day0Cnt))-1], ...
+        'variablenames', Relvars)];
     
     
     if ~EvaluateGI
         t_conditions.RelGrowth = [];
+        t_conditions.nRelGrowth = [];
         t_conditions.Day0Cnt = [];
+        Relvars = {'RelCellCnt'};
     end
     
     t_processed = [t_processed; t_conditions];

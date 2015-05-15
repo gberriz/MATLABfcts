@@ -25,6 +25,7 @@
 %   IC50 => Growth is relative to control (end/ctrl)
 %   GI50 => Growth is relative to growth of the control:
 %               (end-day0)/(ctrl-day0)
+%   nGI50 => normalized growth is relative to growth of the control
 %           Growth should not comprise the control value; each replicate is
 %           a column
 %
@@ -38,12 +39,12 @@ function [xI50, Hill, Einf, xMax, Area, r2, EC50, fit_final, p, log, flag] = ...
     ICcurve_fit(Conc, Growth, fit_type, opt)
 
 
-% parameters : E0 Emax EC50 HS (all in uM)
+% parameters : E0 Einf EC50 HS (all in uM)
 priors = [1 .1 median(Conc) 2];
 
 ranges = [
     .975 1.025  %E0
-    0 1    %Emax
+    0 1    %Einf
     max(min(Conc)*1e-4,1e-7) min(max(Conc)*1e2, 1e3)  %E50
     .1 5    % HS
     ]';
@@ -57,7 +58,7 @@ Robust = [];
 
 if ~exist('fit_type','var') || isempty(fit_type)
     if any(Growth<0)
-        fit_type = 'GI50';
+        fit_type = 'nGI50';
     else
         fit_type = 'IC50';
     end
@@ -66,11 +67,15 @@ end
 % 'IC50'
 switch fit_type
     case 'IC50'
-        ranges(1,2) = 0; % lowest Emax
+        ranges(1,2) = 0; % lowest Einf
     case 'GI50'
-        ranges(1,2) = -2; % lowest Emax; assuming that cells are at least 50% more than seeding.     
+        ranges(1,2) = -2; % lowest GIinf; assuming that cells are at least 50% more than seeding.     
+    case 'nGI50'
+        ranges(1,2) = -1; % lowest nGIinf;
+
 end
 
+% override default options
 if exist('opt','var')
     fields = {'plotting', 'priors', 'ranges', 'fitting', 'pcutoff' 'capped' ...
         'extrapolrange' 'Robust'};

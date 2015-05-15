@@ -32,7 +32,13 @@ end
 if ~isempty(setdiff(intersect(varnames(t_data), ...
         strcat('DrugName', cellfun(@(x) {num2str(x)}, num2cell(2:9)))), ...
         keys))
-    warnprintf('Mutiple drugs found in the data, but only the first one is a key')
+    warnprintf('Mutiple drugs found in the data, but only the first one is a key; removing any double agent')
+    MultiDrugs = setdiff(intersect(varnames(t_data), ...
+        strcat('DrugName', cellfun(@(x) {num2str(x)}, num2cell(2:9)))), ...
+        keys);
+    for i=1:length(MultiDrugs)
+        t_data(t_data.(MultiDrugs{i})~='-',:) = [];
+    end
 end
 
 if ~exist('pcutoff','var')
@@ -72,14 +78,19 @@ for ik = 1:height(t_keys)
         fitopt2.ranges = [
             .975 1.025  %E0
             min(-subt.Day0Cnt./(subt.Ctrlcount-subt.Day0Cnt))*1.1 1    %Emax
-            max(min(subt.Conc)*1e-4,1e-7) min(max(subt.Conc)*1e2, 1e3)  %E50
+            max(min(subt.Conc)*1e-3,1e-7) min(max(subt.Conc)*1e2, 1e3)  %E50
             .1 5    % HS
             ]';
         [GI50, ~, GIinf, GImax, GIArea, GI_r2, ~, GI_fit] = ...
-            ICcurve_fit(subt.Conc, subt.RelGrowth, 'GI50', fitopt2); 
-        
+            ICcurve_fit(subt.Conc, subt.RelGrowth, 'GI50', fitopt2);         
         t_temp = [t_temp table(GI50, GIinf, GImax, GIArea, GI_r2) ...
         table({GI_fit}, {subt.RelGrowth'}, 'VariableNames', {'GI_fit' 'RelGrowth'})];
+    
+    
+        [nGI50, ~, nGIinf, nGImax, nGIArea, nGI_r2, ~, nGI_fit] = ...
+            ICcurve_fit(subt.Conc, subt.nRelGrowth, 'nGI50', fitopt);         
+        t_temp = [t_temp table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
+        table({nGI_fit}, {subt.nRelGrowth'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})];
     
     end
     
