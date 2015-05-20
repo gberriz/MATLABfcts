@@ -14,9 +14,6 @@ assert(length(x)==length(yerr)  || length(yerr)<=1)
 
 ish = ishold;
 
-h = plot(x,y,varargin{:});
-% set(h,'marker','none')
-hold on
 
 errbars = NaN(0,2);
 for i=1:length(x)
@@ -33,9 +30,12 @@ for i=1:length(x)
             ];
     end
 end
-
+h = [];
 h(2) = plot(errbars(:,1), errbars(:,2),varargin{:});
-set(h(2),'marker','none','linewidth',.5)
+set(h(2),'marker','none','linewidth',.5,'linestyle','-')
+hold on
+
+h(1) = plot(x,y,varargin{:});
 
 if ~ish, hold off, end
 
