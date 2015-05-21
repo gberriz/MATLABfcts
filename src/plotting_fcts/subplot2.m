@@ -1,4 +1,5 @@
 function theAxis = subplot2(nRows, nCols, RowId, ColId, varargin)
+% theAxis = subplot2(nRows, nCols, RowId, ColId, varargin)
 
 plotId = ColId + nCols*(RowId-1);
 if nargout>0
