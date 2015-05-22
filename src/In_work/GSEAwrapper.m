@@ -9,7 +9,7 @@ function [t_results, Genelist] = GSEAwrapper(Genelist, Geneset, varargin)
 %               2nd column is weight)
 %   - Geneset:
 %       - tag (GObp, GOcc, GOmf, allGO, KEGG, Reactome, Biocarta, 
-%               CGN, CGP, OncoSig)
+%               CGN, CGP, OncoSig, BreastCGP)
 %       - filename
 %       - cell array formated as gmt: each rows has the format:
 %           { 'Set name' 'source' 'geneA\tgeneB\t...'}
@@ -123,6 +123,8 @@ if ischar(Geneset)
             Setfile = [GSEAfolder 'c4.cgn.v4.0.symbols.gmt'];
         case 'CGP'  % chemical and genetic perturbations
             Setfile = [GSEAfolder 'c2.cgp.v4.0.symbols.gmt'];
+        case 'BreastCGP'  % chemical and genetic perturbations
+            Setfile = [GSEAfolder 'cgp_breast_cancer.gmt'];
         case 'OncoSig'  % oncogenic signatures gene sets
             Setfile = [GSEAfolder 'c6.all.v4.0.symbols.gmt'];
         otherwise
