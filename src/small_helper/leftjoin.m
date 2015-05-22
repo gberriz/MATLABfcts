@@ -1,5 +1,5 @@
-function [t_out, Ridx] = leftjoin(t_left, t_right, varargin)
-% [t_out, Ridx] = leftjoin(t_left, t_right, varargin)
+function [t_out, Ridx, idx] = leftjoin(t_left, t_right, varargin)
+% [t_out, Ridx, idx] = leftjoin(t_left, t_right, varargin)
 %   outerjoin for talbe to the left, maintain order of t_left
 %
 %   Ridx are the indexes in t_right corresponding to the rows of t_left
