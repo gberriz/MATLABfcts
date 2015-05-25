@@ -50,8 +50,13 @@ ydist = ToRow(ydist)*width/2/max(ydist);
 ish = ishold;
 hold on
 
-h = plot([x+ydist(range) NaN x-ydist(range)], [ybins(range) NaN ybins(range)], ...
+% h = plot([x+ydist(range) NaN x-ydist(range)], [ybins(range) NaN ybins(range)], ...
+%     varargin{:});
+
+h = patch([x+ydist(range) x x-ydist(range(end:-1:1)) x], ...
+    ybins(range([1:end end end:-1:1 1])), 'k', ...
     varargin{:});
+
 h(2) = plot(x, nanmedian(y), '.k');
 
 if nargout>0
