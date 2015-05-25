@@ -52,12 +52,12 @@ if strcmp(p.colorkey, nocplot)
 else
     colorkeys = unique(t_fits.(p.colorkey));
 end
-if strcmpi(p.ydata,'IC') || ~isvariable(t_fits, 'GI_fit')
+if strcmpi(p.ydata,'IC') || ~isvariable(t_fits, 'nGI_fit')
     ydata = 'Relative count';
 elseif strcmpi(p.ydata,'GI')
-    ydata = 'Relative growth';
-else
     ydata = 'Normalized relative growth';
+else
+    ydata = 'Normalized growth inhibition';
 end
 
 %
@@ -84,8 +84,10 @@ for ixp=1:nCols
             p.yplotkey '=' AnyToString(yplotkeys(iyp))])
         
         if isempty(p.xaxisval)
-            xvals = t_fits.Conc{t_fits.(p.xplotkey)==xplotkeys(ixp) & ...
-                t_fits.(p.yplotkey)==yplotkeys(iyp)};
+            idx = t_fits.(p.xplotkey)==xplotkeys(ixp) & ...
+                t_fits.(p.yplotkey)==yplotkeys(iyp);
+            if ~any(idx), continue, end
+            xvals = t_fits.Conc{idx};
         else
             xvals = p.xaxisval;
         end
