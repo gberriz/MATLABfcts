@@ -62,6 +62,7 @@ if iscell(DrugLayout)
     assert(size(plate_dims,1)==1)
 else
     plate_dims = size(DrugLayout);
+    if numel(plate_dims)==2, plate_dims = [plate_dims 1]; end
     assert(length(DrugNames)==plate_dims(3));
     plate_dims = plate_dims(1:2);
     DrugLayout = squeeze(num2cell(DrugLayout,[1 2]));

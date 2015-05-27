@@ -75,7 +75,7 @@ if isempty(p.xwidth)
 end
 
 if isempty(p.ycenters)
-    p.ycenters = [quantile([yvals{:}],.02) quantile([yvals{:}],.99)] ;
+    p.ycenters = [quantile([yvals{:}],.01) quantile([yvals{:}],.99)] ;
     p.ycenters = p.ycenters(1):(diff(p.ycenters)/200):p.ycenters(2);    
 end
 if isempty(p.ywidth)

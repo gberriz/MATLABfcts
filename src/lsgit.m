@@ -23,15 +23,17 @@ elseif idx==0
         fprintf('\n%2i: %s\n',i, folders{i});
     end
 else
-    filenames = dir([HomeFolder filesep folders{floor(idx)} '/*.m']);
+    filenames = dir([HomeFolder filesep folders{floor(abs(idx))} '/*.m']);
     
-    fprintf('\nFolder %s (%i)\n', folders{floor(idx)}, floor(idx));
+    fprintf('\nFolder %s (%i)\n', folders{floor(abs(idx))}, floor(abs(idx)));
     filenames = {filenames.name}';
-    if floor(idx)==idx
+    if floor(abs(idx))==abs(idx)
         for j=1:length(filenames)
-            fprintf('* %s (%.2f)\n', filenames{j}, idx+j/100);
-            a = help(filenames{j});
-            fprintf(['\t' a(1:find(a==sprintf('\n'),1,'first')-1) '\n\n']);
+            fprintf('* %s (%.2f)\n', filenames{j}, abs(idx)+j/100);
+            if idx>0
+                a = help(filenames{j});
+                fprintf(['\t' a(1:find(a==sprintf('\n'),1,'first')-1) '\n\n']);
+            end
         end
     else
         j = round(100*mod(idx,1));
