@@ -65,7 +65,7 @@ t_data = TableToCategorical(t_data, [p.xplotkey, p.yplotkey, {p.colorkey}]);
 
 %%
 
-if ~isvariable(yplotkeys,'noyplot') || yplotkeys.noyplot~=1
+if ~isvariable(yplotkeys,noyplot) || yplotkeys.noyplot~=1
     nCols = size(xplotkeys,1);
     nRows = size(yplotkeys,1);
 else
