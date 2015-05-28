@@ -97,6 +97,8 @@ assert(all([1 size(Growth,1)]==size(Conc)))
 switch fitting
     case 'average'
         g = mean(Growth,2)';
+        g = g(sortidx(Conc));
+        Conc = Conc(sortidx(Conc));
     case 'individual'
         for i=1:size(Growth,2)
             [xI50(i), Hill(i), Einf(i), Area(i), r2(i), EC50(i), fit_final{i}, p(i), log{i}] = ...
