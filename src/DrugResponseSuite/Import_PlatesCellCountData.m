@@ -48,6 +48,8 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo, varargin)
 %   varargin:   - 'NobjField'   [Nuclei - Number Of Objects]
 %               - 'Cellcount'   [Nuclei - Number Of Objects]
 %               - 'TimeCourse'  [false]
+%               - 'T0shift'     [0.25 h] Different in hours between the
+%                                   first plate imaged and the treatment
 %
 %   t_data is a table with each well annotated accorting to the barcode.
 %   The column 'Untrt' is evaluated and the data are corrected for the
@@ -71,11 +73,11 @@ p = inputParser;
 addParameter(p,'NobjField',{'Nuclei_NumberOfObjects'},@(x) ischar(x) || iscellstr(x));
 addParameter(p,'Cellcount', [], @(x) isa(x,'function_handle'));
 addParameter(p,'TimeCourse', false, @islogical);
+addParameter(p,'T0shift', 1/4, @isscalar);
 parse(p,varargin{:})
+p = p.Results;
 
-IsTimeCourse = p.Results.TimeCourse;
-
-NobjField = p.Results.NobjField;
+NobjField = p.NobjField;
 if ischar(NobjField), NobjField = {NobjField}; end
 try
     NobjField = matlab.internal.tableUtils.makeValidName(NobjField,'silent');
@@ -102,7 +104,7 @@ else
     error('Wrong argument for plateinfo')
 end
 
-CheckPlateInfo(t_plateinfo, IsTimeCourse)
+CheckPlateInfo(t_plateinfo, p.TimeCourse)
 if isvariable(t_plateinfo, 'DesignNumber') && iscell(t_plateinfo.DesignNumber)
     t_plateinfo.DesignNumber = cellstr2mat(t_plateinfo.DesignNumber);
 end
@@ -251,9 +253,9 @@ for iBC = 1:height(t_plateinfo)
         DesignNumber(idx) = 1;
     end
     Untrt(idx) = strcmp(t_plateinfo.TreatmentFile(iBC),'-');
-    if IsTimeCourse
-        % rounded to the 1/100 of hour, 1st value is ~1 minute.
-        Time(idx) = .01*round(100*24*(t_raw.Date(idx)-min(t_raw.Date))+1/60);
+    if p.TimeCourse
+        % rounded to the 1/100 of hour, 1st value is p.T0shift (default ~15 minutes).
+        Time(idx) = .01*round(100*( 24*(t_raw.Date(idx)-min(t_raw.Date)) + p.T0shift ));
     else
         Time(idx) = t_plateinfo.Time(iBC);
     end
@@ -302,11 +304,11 @@ if ~isempty(otherVariables)
     fprintf(['\tAdded variable(s): ''' cellstr2str(otherVariables, ''', ''') '''\n'])
     eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
 end
-if isempty(p.Results.Cellcount)
+if isempty(p.Cellcount)
     t_data.Properties.VariableNames{NobjField{1}} = 'Cellcount';
 else
     temp = table2array(t_data(:,NobjField));
-    temp = p.Results.Cellcount(temp);
+    temp = p.Cellcount(temp);
     t_data.Cellcount = temp;
 end
 t_data = TableToCategorical(t_data);
