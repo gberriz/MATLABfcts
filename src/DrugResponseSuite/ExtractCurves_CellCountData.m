@@ -2,19 +2,23 @@ function t_fits = ExtractCurves_CellCountData(t_data, keys, pcutoff)
 % t_fits = ExtractCurves_CellCountData(t_data, keys, pcutoff)
 %   Sigmoidal fit on the drug response data (expect concentration in uM) to
 %   extract the following parameters:
+%   If the relative cell count (column RelCellCnt) is measured:
 %       - IC50
 %       - Einf (effect -> = 0 if no drug response)
 %       - Hill
 %       - Area (not normalized)
 %       - EC50
-%   If the relative growth is measured, additional parameters are found:
+%   If the relative growth (column RelGrowth) is measured:
+%       - GI50
+%       - GIinf
+%   If the normalized relative growth (column nRelGrowth) is measured:
 %       - GI50
 %       - GIinf
 %   All the outputs are saved in a table with annotations including drug
 %   concentrations and initial values.
 %
 %   keys are used for aggregation of the data; default are : CellLine,
-%   DrugName, Time, SeedingNumber, Date. 
+%   DrugName, Time, SeedingNumber, Date.
 %
 %   pcutoff is the cutoff for the p-value of a F-test against a flat line.
 %
@@ -23,7 +27,7 @@ function t_fits = ExtractCurves_CellCountData(t_data, keys, pcutoff)
 %%
 if exist('keys','var')
     keys = intersect(t_data.Properties.VariableNames, ...
-        [{'CellLine' 'DrugName' 'Time' 'Date'} keys]);    
+        [{'CellLine' 'DrugName' 'Time' 'Date'} keys]);
 else
     keys = intersect(t_data.Properties.VariableNames, ...
         {'CellLine' 'DrugName' 'Time' 'SeedingNumber' 'Date'});
@@ -50,7 +54,6 @@ fitopt2 = fitopt;
 
 t_keys = unique(t_data(:,keys));
 
-DoGI50 = ismember('RelGrowth', t_data.Properties.VariableNames);
 
 t_fits = table;
 for ik = 1:height(t_keys)
@@ -67,33 +70,41 @@ for ik = 1:height(t_keys)
         warnprintf('Concentrations are expected in uM; fitopt have constraints')
     end
     
-    [IC50, Hill, Einf, Emax, Area, r2, EC50, fit] = ...
-        ICcurve_fit(subt.Conc, subt.RelCellCnt, 'IC50', fitopt);
+    t_temp = t_keys(ik,:);
     
-    t_temp = [t_keys(ik,:) table(IC50, Hill, Einf, Emax, Area, r2, EC50) ...
-        table({fit}, {subt.Conc'}, {subt.RelCellCnt'}, 'VariableNames', ...
-        {'fit' 'Conc' 'RelCellCnt'})];
-    
-    if DoGI50
-        fitopt2.ranges = [
-            .975 1.025  %E0
-            min(-subt.Day0Cnt./(subt.Ctrlcount-subt.Day0Cnt))*1.1 1    %Emax
-            max(min(subt.Conc)*1e-3,1e-7) min(max(subt.Conc)*1e2, 1e3)  %E50
-            .1 5    % HS
-            ]';
-        [GI50, ~, GIinf, GImax, GIArea, GI_r2, ~, GI_fit] = ...
-            ICcurve_fit(subt.Conc, subt.RelGrowth, 'GI50', fitopt2);         
-        t_temp = [t_temp table(GI50, GIinf, GImax, GIArea, GI_r2) ...
-        table({GI_fit}, {subt.RelGrowth'}, 'VariableNames', {'GI_fit' 'RelGrowth'})];
-    
-    
-        [nGI50, ~, nGIinf, nGImax, nGIArea, nGI_r2, ~, nGI_fit] = ...
-            ICcurve_fit(subt.Conc, subt.nRelGrowth, 'nGI50', fitopt);         
-        t_temp = [t_temp table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
-        table({nGI_fit}, {subt.nRelGrowth'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})];
-    
+    if ismember('RelCellCnt', subt.Properties.VariableNames);
+        [IC50, Hill, Einf, Emax, Area, r2, EC50, fit] = ...
+            ICcurve_fit(subt.Conc, subt.RelCellCnt, 'IC50', fitopt);
+        
+        t_temp = [t_temp table(IC50, Hill, Einf, Emax, Area, r2, EC50) ...
+            table({fit}, {subt.Conc'}, {subt.RelCellCnt'}, 'VariableNames', ...
+            {'fit' 'Conc' 'RelCellCnt'})];
     end
     
-    t_fits = [t_fits; t_temp];
+    if ismember('RelGrowth', subt.Properties.VariableNames);
+        if all(ismember({'Day0Cnt' 'Ctrlcount'}, subt.Properties.VariableNames));
+            fitopt2.ranges = [
+                .975 1.025  %E0
+                min(-subt.Day0Cnt./(subt.Ctrlcount-subt.Day0Cnt))*1.1 1    %Emax
+                max(min(subt.Conc)*1e-3,1e-7) min(max(subt.Conc)*1e2, 1e3)  %E50
+                .1 5    % HS
+                ]';
+        else
+            fitopt2 = fitopt;
+        end
+        [GI50, ~, GIinf, GImax, GIArea, GI_r2, ~, GI_fit] = ...
+            ICcurve_fit(subt.Conc, subt.RelGrowth, 'GI50', fitopt2);
+        t_temp = [t_temp table(GI50, GIinf, GImax, GIArea, GI_r2) ...
+            table({GI_fit}, {subt.RelGrowth'}, 'VariableNames', {'GI_fit' 'RelGrowth'})];
+    end
+    
+    if ismember('nRelGrowth', subt.Properties.VariableNames);
+        [nGI50, ~, nGIinf, nGImax, nGIArea, nGI_r2, ~, nGI_fit] = ...
+            ICcurve_fit(subt.Conc, subt.nRelGrowth, 'nGI50', fitopt);
+        t_temp = [t_temp table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
+            table({nGI_fit}, {subt.nRelGrowth'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})];
+    end
+
+t_fits = [t_fits; t_temp];
 
 end

@@ -50,6 +50,8 @@ function t_data = Import_PlatesCellCountData(filename, plateinfo, varargin)
 %               - 'TimeCourse'  [false]
 %               - 'T0shift'     [0.25 h] Different in hours between the
 %                                   first plate imaged and the treatment
+%               - 'T0date'      Input alternative to T0shift for timecourse:
+%                                   date and time of the treatment
 %
 %   t_data is a table with each well annotated accorting to the barcode.
 %   The column 'Untrt' is evaluated and the data are corrected for the
@@ -74,6 +76,7 @@ addParameter(p,'NobjField',{'Nuclei_NumberOfObjects'},@(x) ischar(x) || iscellst
 addParameter(p,'Cellcount', [], @(x) isa(x,'function_handle'));
 addParameter(p,'TimeCourse', false, @islogical);
 addParameter(p,'T0shift', 1/4, @isscalar);
+addParameter(p,'T0date', [], @isvector);
 parse(p,varargin{:})
 p = p.Results;
 
@@ -255,7 +258,11 @@ for iBC = 1:height(t_plateinfo)
     Untrt(idx) = strcmp(t_plateinfo.TreatmentFile(iBC),'-');
     if p.TimeCourse
         % rounded to the 1/100 of hour, 1st value is p.T0shift (default ~15 minutes).
-        Time(idx) = .01*round(100*( 24*(t_raw.Date(idx)-min(t_raw.Date)) + p.T0shift ));
+        if ~isempty(p.T0date)
+            Time(idx) = .01*round(100*( 24*(t_raw.Date(idx)-datenum(p.T0date) )));
+        else
+            Time(idx) = .01*round(100*( 24*(t_raw.Date(idx)-min(t_raw.Date)) + p.T0shift ));
+        end
     else
         Time(idx) = t_plateinfo.Time(iBC);
     end
