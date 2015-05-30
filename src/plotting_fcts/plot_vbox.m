@@ -75,12 +75,12 @@ if Gq(4)~=Gq(2)
     h(2) = rectangle('position',[x-xwidth/2 Gq(2) xwidth Gq(4)-Gq(2)],'facecolor',color,'linestyle',BoxLine);
 end
 h(1) = line(x+[-.5 .5]*xwidth, Gq(3)*[1 1], 'color','k','linewidth',linewidth);
-for j = find( values<Gq(1) | values>Gq(5))'
-    if isempty(j)
-        break
-    end
-    h(4) = plot(x,values(j),'.','color',Outcolor,'markersize',8);
+j = find( values<Gq(1) | values>Gq(5))';
+if ~isempty(j)
+    h(4) = plot(x*ones(size(j)),values(j),'.','color',Outcolor,'markersize',8);
 end
+
+
 h(5) = plot(NaN,NaN,'-','color',color,'linewidth',2*linewidth);
 
 if ~ih
