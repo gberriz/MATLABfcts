@@ -85,7 +85,7 @@ for ik = 1:height(t_keys)
         if all(ismember({'Day0Cnt' 'Ctrlcount'}, subt.Properties.VariableNames));
             fitopt2.ranges = [
                 .975 1.025  %E0
-                min(-subt.Day0Cnt./(subt.Ctrlcount-subt.Day0Cnt))*1.1 1    %Emax
+                min(min(-subt.Day0Cnt./(subt.Ctrlcount-subt.Day0Cnt))*1.1,-.01) 1    %GImax
                 max(min(subt.Conc)*1e-3,1e-7) min(max(subt.Conc)*1e2, 1e3)  %E50
                 .1 5    % HS
                 ]';

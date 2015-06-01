@@ -159,13 +159,13 @@ r2 = gof.rsquare;
 % results
 Area = sum( (1-(g(2:end)+g(1:(end-1)))/2) .* diff(log10(Conc))) / ...
     diff(log10(Conc([1 end])));
-xMax = 1- min(g(end-[1 0]));
+xMax = min(g(end-[1 0]));
 
 if p>=pcutoff || isnan(RSS2) % failure of robust fit
     xI50 = +Inf;
     EC50 = +Inf;
     Hill = 0;
-    Einf = 1- min(g(end-[1 0]));
+    Einf = min(g(end-[1 0]));
     log = [log '**** USING LINEAR FIT **** r2= ' num2str(gof_flat.rsquare,'%.2f')];
     fit_final = fit_res_flat;
     
@@ -176,7 +176,7 @@ else
     
     fit_growth = fit_res(xc);
     
-    Einf = 1- fit_res.b;
+    Einf = fit_res.b;
     Hill = fit_res.d;
     fit_final = fit_res;
     
