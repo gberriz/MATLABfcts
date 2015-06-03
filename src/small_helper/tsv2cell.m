@@ -13,6 +13,8 @@ function cellArray = tsv2cell(fileName)
   fclose(fid);                 %# Close the file
   cellArray = cellArray(1:lineIndex-1);  %# Remove empty cells, if needed
   for iLine = 1:lineIndex-1              %# Loop over lines
+      if isempty(cellArray{iLine}), continue
+      end
     lineData = textscan(cellArray{iLine},'%s',...  %# Read strings
                         'Delimiter','\t');
     lineData = lineData{1};              %# Remove cell encapsulation

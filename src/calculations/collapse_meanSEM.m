@@ -6,7 +6,7 @@ function t_out = collapse_meanSEM(t_in, keys, pre_trans, applied_fcts)
 %   Options:
 %       the value variables can be transformed prior to mean/SEM with the
 %           function pointed by pre_trans
-%       the functions can be chnaged with the optional input applied_fcts
+%       the functions can be changed with the optional input applied_fcts
 %
 
 if iscellstr(keys) || ischar(keys)
