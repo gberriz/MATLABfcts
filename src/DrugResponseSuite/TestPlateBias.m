@@ -41,6 +41,12 @@ else
     barcode = '';
 end
 
+if isvariable(t_data,'Time')
+    Time = unique(t_data.Time);
+    assert(length(Time)==1, 'More than one time point in t_data')
+    barcode = [barcode ' - ' num2str(Time) 'h'];
+end
+
 assert(height(t_data)==height(unique(t_data(:,{'Row' 'Column'}))), ...
     'Multiple values for the same well in t_data');
 
@@ -50,7 +56,7 @@ maxcol = 3*2^ceil(log2(max(t_data.Column)/3));
 t_data.DistEdge = min([(t_data.Row) (maxrow-t_data.Row+1) ...
     (t_data.Column) (maxcol-t_data.Column+1)],[],2);
 
-VarToTest = setdiff(varnames(t_data), {'Row' 'Column' 'DistEdge' 'Barcode'});
+VarToTest = setdiff(varnames(t_data), {'Row' 'Column' 'DistEdge' 'Barcode' 'Time'});
 
 [plate, labels] = table_to_ndarray(t_data, 'keyvars', {'Row' 'Column'}, ...
     'outer', 1, 'valvars', VarToTest);
@@ -181,7 +187,7 @@ for iv = 1:length(VarToTest)
         if plotting==1
             pause
         else
-            pause(4)
+            pause(1)
         end
     
     end

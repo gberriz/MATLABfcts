@@ -22,14 +22,13 @@ if ~exist('plotting','var')
     plotting = .5; % case of plotting is major difference
 end
 
-barcodes = unique(t_annotated.Barcode);
+t_plates = unique(t_annotated(:,{'Barcode','CellLine' 'Time'}));
 t_corrected = t_annotated;
 
-for ib = 1:length(barcodes)
-    idx = find(t_annotated.Barcode==barcodes(ib));
-    t_plateinfo = t_annotated(idx(1),{'Barcode','CellLine','Time'});
+for ip = 1:height(t_plates)
+    idx = eqtable(t_annotated,t_plates(ip,:));
     t_corrected(idx,:) = EdgeCorrection(t_annotated(idx,:), ...
-        numericfields, t_plateinfo, plotting);
+        numericfields, t_plates(ip,:), plotting);
 end
 
 end

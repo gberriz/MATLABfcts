@@ -1,7 +1,7 @@
 
-function [t_mean, t_processed] = Merge_CellCountData(t_annotated, plate_inkeys, ...
+function t_mean = Merge_CellCountData(t_processed, plate_inkeys, ...
     cond_inkeys, plate_reps, numericfields)
-% [t_mean, t_processed] = Merge_CellCountData(t_annotated, plate_inkeys, cond_inkeys, 
+% [t_mean, t_processed] = Merge_CellCountData(t_processed, plate_inkeys, cond_inkeys, 
 %                               plate_reps, numericfields)
 %
 %   process the data from cell count. The data will be split for controls according
@@ -36,22 +36,20 @@ if ~exist('plate_reps','var') || isempty(plate_reps)
 end
 
 cond_keys = [cond_keys ...
-    intersect(varnames(t_annotated), strcat('DrugName', cellfun(@(x) {num2str(x)}, num2cell(2:9)))) ...
-    intersect(varnames(t_annotated), strcat('Conc', cellfun(@(x) {num2str(x)}, num2cell(2:9))))];
+    intersect(varnames(t_processed), strcat('DrugName', cellfun(@(x) {num2str(x)}, num2cell(2:9)))) ...
+    intersect(varnames(t_processed), strcat('Conc', cellfun(@(x) {num2str(x)}, num2cell(2:9))))];
 
-assert(all(ismember([plate_keys cond_keys 'pert_type'], t_annotated.Properties.VariableNames)),...
+assert(all(ismember([plate_keys cond_keys 'pert_type'], t_processed.Properties.VariableNames)),...
     'Column(s) [ %s ] missing from t_data', strjoin(setdiff([plate_keys cond_keys 'pert_type'], ...
-    unique(t_annotated.Properties.VariableNames)),' '))
+    unique(t_processed.Properties.VariableNames)),' '))
 
-% decide if growth inhibition can be calculated (need untreated & time=0)
-EvaluateGI = any(t_annotated.Untrt & t_annotated.Time==0);
 
 
 labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'nRelGrowth' 'DesignNumber' 'Barcode' ...
-    'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
+    'Untrt' 'Cellcount' 'Ctrlcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
 if ~exist('numericfields','var')
-    numericfields = setdiff(t_annotated.Properties.VariableNames( ...
-        all(cellfun(@isnumeric, table2cell(t_annotated)))), [plate_keys cond_keys labelfields]);
+    numericfields = setdiff(t_processed.Properties.VariableNames( ...
+        all(cellfun(@isnumeric, table2cell(t_processed)))), [plate_keys cond_keys labelfields]);
     if ~isempty(numericfields)
         fprintf('\tThese numeric fields will be averaged (set as cond_inkeys to use them as key):\n');
         for i=1:length(numericfields)
@@ -63,60 +61,17 @@ end
 
 % find the number of different of plates to merge and group them based on
 % the plate_keys (with Time==0)
-t_plate = unique(t_annotated(:,plate_keys));
+t_plate = unique(t_processed(:,plate_keys));
 t_plate = t_plate(t_plate.Time~=0,:);
 
-t_processed = table;
 t_mean = table;
 
+Relvars = intersect({'RelCellCnt' 'RelGrowth' 'nRelGrowth'}, varnames(t_processed));
 % loop through the different plates
 for iP = 1:height(t_plate)
     %
-    % find the cell count at day 0
-    if EvaluateGI
-        temp = t_plate(iP,setdiff(plate_keys, {'TreatmentFile'}, 'stable'));
-        temp.Time = 0;
-        idx = eqtable(temp, ...
-            t_annotated(:,setdiff(plate_keys, {'TreatmentFile'}, 'stable')));
-        assert(any(idx), 'No values for Day0 found although some are expected')
-        Day0Cnt = trimmean( t_annotated.Cellcount(idx), 50);
-    else
-        Day0Cnt = NaN;
-    end
     
-        Relvars = {'RelCellCnt' 'RelGrowth' 'nRelGrowth'};
-    t_conditions = t_annotated(eqtable(t_plate(iP,:), t_annotated(:,plate_keys)) , :);
-    
-    % found the control for treated plates (ctl_vehicle)
-    t_ctrl = t_conditions(t_conditions.pert_type=='ctl_vehicle',:);
-    assert(height(t_ctrl)>0, 'No control found for %s --> check ''pert_type''', ...
-        strjoin(strcat(table2cellstr( t_plate(iP,:), 0)), '|'))
-    
-    t_ctrl = collapse(t_ctrl, @(x) trimmean(x,50), 'keyvars', ...
-        {'DesignNumber'}, 'valvars', [{'Cellcount'} numericfields]);
-    t_ctrl.Properties.VariableNames{'Cellcount'} = 'Ctrlcount';
-    for i=1:length(numericfields)
-        t_ctrl.Properties.VariableNames{numericfields{i}} = ['Ctrl_' numericfields{i}];
-    end
-    t_ctrl = [t_ctrl table(repmat(Day0Cnt, height(t_ctrl),1), 'VariableNames', {'Day0Cnt'})];
-    
-    % report the ctrl values in the table
-    t_conditions = innerjoin(t_conditions, t_ctrl);
-    % evaluate the relative cell count/growth
-    t_conditions = [t_conditions array2table([t_conditions.Cellcount./t_conditions.Ctrlcount ...
-        (t_conditions.Cellcount-t_conditions.Day0Cnt)./(t_conditions.Ctrlcount-t_conditions.Day0Cnt) ...
-        2.^(log2(t_conditions.Cellcount./t_conditions.Day0Cnt)./log2(t_conditions.Ctrlcount./t_conditions.Day0Cnt))-1], ...
-        'variablenames', Relvars)];
-    
-    
-    if ~EvaluateGI
-        t_conditions.RelGrowth = [];
-        t_conditions.nRelGrowth = [];
-        t_conditions.Day0Cnt = [];
-        Relvars = {'RelCellCnt'};
-    end
-    
-    t_processed = [t_processed; t_conditions];
+    t_conditions = t_processed(eqtable(t_processed, t_plate(iP,:)),:);
     
     
     %%%%%%%%% maybe move that part out of the loop if there are
@@ -125,7 +80,7 @@ for iP = 1:height(t_plate)
     % collapse the replicates
     temp = collapse(t_conditions(ismember(t_conditions.pert_type, {'trt_cp' 'trt_poscon'}),:), ...
         @mean, 'keyvars', [plate_keys cond_keys], ...
-        'valvars', [Relvars {'Cellcount' 'Ctrlcount'} numericfields strcat('Ctrl_', numericfields)]);
+        'valvars', [Relvars {'Cellcount' 'Ctrlcount'} numericfields]);
     ht = height(temp);
     
     temp2 = unique(t_conditions(:, setdiff(varnames(t_conditions), ...
