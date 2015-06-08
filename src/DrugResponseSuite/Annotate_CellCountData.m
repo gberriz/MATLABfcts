@@ -132,7 +132,23 @@ for iTf = 1:length(Trtfiles)
         temp = AddDrugNameColumn(temp, Ndrugs);
         temp.Untrt(temp.pert_type=='Untrt') = true;
         
-        t_annotated = [t_annotated; temp];
+        if ~isempty(t_annotated)
+            newvars = setdiff(varnames(temp), varnames(t_annotated));
+            for i=1:length(newvars)
+                if isnumeric(temp.(newvars{i}))
+                    t_annotated = [t_annotated ...
+                        table(NaN(height(t_annotated),1), 'variablenames', newvars(i))];
+                else
+                    t_annotated = [t_annotated ...
+                        table(repmat({'-'},height(t_annotated),1), 'variablenames', ...
+                        newvars(i))];
+                end
+            end
+            t_annotated = [t_annotated(:,varnames(temp)); temp];
+        else
+            t_annotated = temp;
+        end
+        
     end
     
 end

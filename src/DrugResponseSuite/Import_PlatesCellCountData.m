@@ -76,7 +76,7 @@ addParameter(p,'NobjField',{'Nuclei_NumberOfObjects'},@(x) ischar(x) || iscellst
 addParameter(p,'Cellcount', [], @(x) isa(x,'function_handle'));
 addParameter(p,'TimeCourse', false, @islogical);
 addParameter(p,'T0shift', 1/4, @isscalar);
-addParameter(p,'T0date', [], @isvector);
+addParameter(p,'T0date', [], @(x) ~isnan(datenum(x)));
 parse(p,varargin{:})
 p = p.Results;
 
