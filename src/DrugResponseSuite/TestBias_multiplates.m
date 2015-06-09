@@ -31,6 +31,8 @@ t_plates = unique(t_data(:,{'Barcode','CellLine' 'Time'}));
 BiasValue = zeros(height(t_plates), 3);
 clear BiasResults;
 
+get_newfigure(999, [40 100 600 400]);
+
 for ip = 1:height(t_plates)
     t_plate = t_data(eqtable(t_data,t_plates(ip,:)),intersect(varnames(t_data), ...
         [{'Barcode' 'Time' 'Column' 'Row' 'Well'} valvars]));

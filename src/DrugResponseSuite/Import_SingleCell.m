@@ -94,7 +94,8 @@ for iPW = 1:height(t_processed)
     
     
     if isempty(files)
-        error(['Missing file for: ' Plate ' ' Well]);
+        warnprintf(['Missing file for: ' Plate ' ' Well]);
+        continue
     end
     
     if ~timecourse || isvariable(t_processed,'Date')
