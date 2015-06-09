@@ -30,29 +30,31 @@ for it = 1:height(t_location)
     % get all time points for each well
     t_temp = sortrows(t_data(eqtable(t_data(:,trace_vars), t_location(it,:)),:),'Time');
     
-    % add a fake 1st point for better smoothing. Could be replace by a
-    % 'day0' if available
-    Time = [t_temp.Time(1)-.5*diff(t_temp.Time(1:2)); ...
-        mean([t_temp.Time(1:(end-1)) t_temp.Time(2:end)],2)];
-    Cellcount = [t_temp.Cellcount(1)
-        mean([t_temp.Cellcount(1:(end-1)) t_temp.Cellcount(2:end)],2)];
+    t_temp = [t_temp(1,:); t_temp];
+    t_temp.Time(1) = 0;
+    if isvariable(t_temp, 'Day0Cnt')
+        t_temp.Cellcount(1) = t_temp.Day0Cnt(1);
+    else
+        t_temp.Cellcount(1) = t_temp.Cellcount(2);
+    end
+        
+    Time = mean([t_temp.Time(1:(end-1)) t_temp.Time(2:end)],2);
+    Cellcount =  mean([t_temp.Cellcount(1:(end-1)) t_temp.Cellcount(2:end)],2);
     dx = diff(t_temp.Cellcount);
     dt = diff(t_temp.Time)/24;
-    DivRate = dx./dt./Cellcount(2:end);
-    DivRate = smooth([mean(DivRate(1:2));DivRate], 3);
+    DivRate = dx./dt./Cellcount;
+    DivRate = smooth(DivRate, 3);
 
     n = NaN(width(t_temp),1);
     for i=1:width(t_temp), n(i) = length(unique(t_temp.(i))); end;
     annotation_vars = setdiff(t_temp.Properties.VariableNames(n==1), ...
         [trace_vars 'RelCellCnt' 'RelGrowth']);
-    
-    % remove the first point used for smoothing
-    Time(1) = [];
-    Cellcount(1) = [];
-    DivRate(1) = [];
-
+    if ~isempty(t_rate)
+        annotation_vars = intersect(varnames(t_rate), annotation_vars,'stable');
+    end
     t_rate = [t_rate;
-        t_temp(2:end, trace_vars) table(Time, Cellcount, DivRate) t_temp(2:end,annotation_vars)];
+        t_temp(2:end, trace_vars) table(Time, Cellcount, DivRate) ...
+        t_temp(2:end,annotation_vars)];
 end
 
 %
