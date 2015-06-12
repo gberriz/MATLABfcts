@@ -124,7 +124,7 @@ if ~isempty(otherVariables)
 end
 if ~isfield(p, 'Cellcount') || isempty(p.Cellcount)
     t_data.Properties.VariableNames{NobjField{1}} = 'Cellcount';
-else
+elseif ~strcmp(p.Cellcount, 'none')
     temp = table2array(t_data(:,NobjField));
     temp = p.Cellcount(temp);
     t_data.Cellcount = temp;

@@ -123,7 +123,18 @@ for iTf = 1:length(Trtfiles)
         end
         t_design = DrugDesignToTable(Designs{iTf}(DNidx), fields, DrugNames);
         idx = find(t_data.TreatmentFile==Trtfiles{iTf} & t_data.DesignNumber==DesignNumbers(iDN));
-        [temp, ia] = innerjoin(t_data(idx,:), t_design, 'keys', 'Well');
+        
+        % could be extended to any variable that is found in both Plate
+        % Info and Design 
+        if isvariable(t_design, 'CellLine')
+            warnprintf('Cell Line is a perurbation; replacing what is found in the PlateInfo: %s', ...
+                strjoin(cellstr(unique(t_data.CellLine(idx))'),';'))
+            varToKeep = setdiff(varnames(t_data), 'CellLine');
+        else
+            varToKeep = varnames(t_data);
+        end
+        
+        [temp, ia] = innerjoin(t_data(idx,varToKeep), t_design, 'keys', 'Well');
         if height(temp)<length(idx)
             warnprintf('Some wells (%s) have no annotations in file %s --> ignored', ...
                 strjoin(cellstr(unique(t_data.Well(idx(setdiff(1:length(idx),ia))))'),', '), ...
