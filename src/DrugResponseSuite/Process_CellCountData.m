@@ -20,7 +20,7 @@ fprintf('Process the cell count data, normalize by controls:\n');
 
 %% assign and control the variables
 if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
-    plate_keys = unique([{'CellLine' 'Time'} plate_inkeys]);
+    plate_keys = unique([{'Barcode' 'CellLine' 'Time'} plate_inkeys]);
 else
     plate_keys = {'Barcode' 'CellLine' 'Time'};
     plate_inkeys = {};
@@ -88,7 +88,7 @@ for iP = 1:height(t_plate)
             subt = t_annotated(eqtable(temp, t_annotated) & ...
                 t_annotated.pert_type=='ctl_vehicle', ...
                 {'Cellcount' 'Time'});
-            subt = sortrows(collapse(subt, @(x) trimmean(x,50), 'keyvars', 'Time'), 2);
+            subt = sortrows(collapse(subt(subt.Time>0,:), @(x) trimmean(x,50), 'keyvars', 'Time'), 'Time');
             if height(subt)<4
                 warnprintf('Expecting a time course, but less than 5 time points --> no Day0')
                 EvaluateGI = false;

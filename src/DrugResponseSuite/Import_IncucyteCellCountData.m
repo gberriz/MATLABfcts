@@ -66,7 +66,8 @@ for iP=1:length(Plates)
         Nheader = find(cellfun(@isempty,temp_data(:,1)),1,'first')+1; % get the position of data
         assert(strcmp(temp_data(Nheader,1), 'Date Time')) % check the headers
         assert(strcmp(temp_data(Nheader,2), 'Elapsed')) % check the headers
-        assert(strcmp(temp_data(Nheader,3), 'A1')) % check the headers
+        assert(ismember(temp_data{Nheader,3}(1),'A':'Q') & ...
+            ismember(temp_data{Nheader,3}(2),'0':'9')) % check the headers
         
         Date = cellfun(@datenum, temp_data((Nheader+1):end,1));
         Time = cellfun(@str2double, temp_data((Nheader+1):end,2));
