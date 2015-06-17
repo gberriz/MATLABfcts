@@ -1,5 +1,5 @@
-function t_rate = TimeCourse_DivRate(t_data, plate_inkeys)
-% t_rate = TimeCourse_DivRate(t_data, plate_inkeys)
+function t_rate = TimeCourse_DivRate(t_data, cond_inkeys)
+% t_rate = TimeCourse_DivRate(t_data, cond_inkeys)
 %
 %   process the data from cell count. The data will be split for controls according
 %   to plate_keys (with 'Barcode' 'CellLine' 'Time' as mandatory and
@@ -13,14 +13,24 @@ function t_rate = TimeCourse_DivRate(t_data, plate_inkeys)
 %   NOTE: not handling a 'real' day 0 --> need to be improved!
 
 % unique identifiers for following timecourse
-trace_vars = {'Barcode' 'Well'};
-
-if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
-    plate_keys = unique([{'CellLine' 'Barcode' 'Time'} plate_inkeys]);
+if ~exist('cond_inkeys', 'var')
+    trace_vars = {};
+else
+     trace_vars = cond_inkeys;
+end
+for iF = ['Barcode' 'Well' 'DrugName' 'Conc' 'CellLine' ...
+        strcat('DrugName',num2cell('2':'9')) strcat('Conc',num2cell('2':'9'))]
+    if isvariable(t_data, iF{:})
+        trace_vars = [trace_vars iF];
+    end
+end
+   
+if exist('plate_inkeys','var') && ~isempty(cond_inkeys)
+    plate_keys = unique([{'CellLine' 'Barcode' 'Time'} cond_inkeys]);
 else
     plate_keys = {'CellLine' 'Barcode' 'Time'};
-    plate_inkeys = {};
 end
+plate_keys = intersect(plate_keys, varnames(t_data), 'stable');
 %%
 
 t_location = unique(t_data(:,trace_vars));

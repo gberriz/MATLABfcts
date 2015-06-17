@@ -10,11 +10,12 @@ else
     cond_inkeys = {};
 end
 
-labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'nRelGrowth' 'DesignNumber' 'Barcode' ...
-    'Untrt' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
+Relvars = intersect({'RelCellCnt' 'RelGrowth' 'nRelGrowth'}, varnames(t_mean));
+labelfields = {'DesignNumber' 'Barcode' ...
+    'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'}; % remove all technical replicate info
 if ~exist('numericfields','var')
     numericfields = setdiff(t_mean.Properties.VariableNames( ...
-        all(cellfun(@isnumeric, table2cell(t_mean)))), [cond_keys labelfields]);
+        all(cellfun(@isnumeric, table2cell(t_mean)))), [cond_keys labelfields Relvars]);
     if ~isempty(numericfields)
         fprintf('\tThese numeric fields will be averaged (set as cond_inkeys to use them as key):\n');
         for i=1:length(numericfields)
@@ -27,8 +28,8 @@ end
 
 % find the number of different of plates to merge and group them based on
 % the plate_keys (with Time==0)
-Relvars = intersect({'RelCellCnt' 'RelGrowth' 'nRelGrowth'}, varnames(t_mean));
-t_cond = unique(t_mean(:,setdiff(varnames(t_mean),['Time' numericfields Relvars], 'stable')));
+t_cond = unique(t_mean(:,setdiff(varnames(t_mean),['Time' numericfields ...
+    Relvars labelfields], 'stable')));
 
 t_Tmean = table;
 
@@ -39,10 +40,11 @@ for iC = 1:height(t_cond)
     t_conditions = sortrows(t_mean(eqtable(t_mean, t_cond(iC,:)),:), 'Time');
     
     % find the best plate grouping
-    Times = t_conditions.Time;
+    Times = unique(t_conditions.Time);
     mindiff = NaN(NTimePlates,1);
     for i=1:NTimePlates
-        mindiff(i) = sum(sum(diff(reshape(Times(i:(end-NTimePlates+i-1)),NTimePlates,[]))));
+        mindiff(i) = sum(sum(diff(reshape(Times(i:(end ...
+            +mod(length(Times)+i,NTimePlates)-NTimePlates+1) ),NTimePlates,[]))));
     end
     
     %%%%%%%%% maybe move that part out of the loop if there are
@@ -52,9 +54,10 @@ for iC = 1:height(t_cond)
     % can be done much smarter and faster by rewriting it as an array and
     % averaging it.
     for iT = 0:ceil(length(Times)/NTimePlates)
-        temp = collapse(t_conditions(max(1,argmin(mindiff)+NTimePlates*(iT-1)):...
-            min(end,argmin(mindiff)+NTimePlates*iT-1),:), ...
-            @mean, 'keyvars', setdiff(varnames(t_mean), [Relvars 'Time' numericfields],'stable'), ...
+        t = Times(max(1,argmin(mindiff)+NTimePlates*(iT-1)):...
+            min(end,argmin(mindiff)+NTimePlates*iT-1));
+        temp = collapse(t_conditions(ismember(t_conditions.Time, t),:), ...
+            @mean, 'keyvars', setdiff(varnames(t_mean), [labelfields Relvars 'Time' numericfields],'stable'), ...
             'valvars', [Relvars 'Time' numericfields]);
         
         t_Tmean = [t_Tmean; temp];
