@@ -51,7 +51,8 @@ labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'nRelGrowth' 'DesignNumber' 
     'Untrt' 'Cellcount' 'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'};
 if ~exist('numericfields','var')
     numericfields = setdiff(t_annotated.Properties.VariableNames( ...
-        all(cellfun(@isnumeric, table2cell(t_annotated)))), [plate_keys cond_keys labelfields]);
+        all(cellfun(@isnumeric, table2cell(t_annotated(1:min(40,end),:))))), ...
+        [plate_keys cond_keys labelfields]);
     if ~isempty(numericfields)
         fprintf('\tThese numeric fields will be averaged (set as cond_inkeys to use them as key):\n');
         for i=1:length(numericfields)
