@@ -43,8 +43,8 @@ for iC = 1:height(t_cond)
     Times = unique(t_conditions.Time);
     mindiff = NaN(NTimePlates,1);
     for i=1:NTimePlates
-        mindiff(i) = sum(sum(diff(reshape(Times(i:(end ...
-            +mod(length(Times)+i,NTimePlates)-NTimePlates+1) ),NTimePlates,[]))));
+        mindiff(i) = sum(sum(diff(reshape(Times(i:(i+...
+            NTimePlates*floor((length(Times)-i)/NTimePlates)-1)),NTimePlates,[]))));
     end
     
     %%%%%%%%% maybe move that part out of the loop if there are
