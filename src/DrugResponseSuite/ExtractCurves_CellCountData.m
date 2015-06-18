@@ -27,10 +27,10 @@ function t_fits = ExtractCurves_CellCountData(t_data, keys, pcutoff)
 %%
 if exist('keys','var')
     keys = intersect(t_data.Properties.VariableNames, ...
-        [{'CellLine' 'DrugName' 'Time' 'Date'} keys]);
+        [{'CellLine' 'DrugName' 'Time' 'Date' 'SeedingNumber' 'SeedingDensity'} keys]);
 else
     keys = intersect(t_data.Properties.VariableNames, ...
-        {'CellLine' 'DrugName' 'Time' 'SeedingNumber' 'Date'});
+        {'CellLine' 'DrugName' 'Time' 'SeedingNumber' 'Date' 'SeedingDensity'});
 end
 
 if ~isempty(setdiff(intersect(varnames(t_data), ...
