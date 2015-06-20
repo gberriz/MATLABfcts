@@ -22,7 +22,7 @@ addParameter(p, 'ytransform', @(x)x, @(x) isa(x,'function_handle') || ...
     all(cellfun(@(y) isa(y,'function_handle'), x)))
 addParameter(p, 'axischanges', @(x) set(x,'fontsize',6), @(x) isa(x,'function_handle'))
 addParameter(p, 'mean_SEM', true, @islogical)
-addParameter(p, 'plotcolors', Plotting_parameters.colors, @isnumeric)
+addParameter(p, 'plotcolors', Plotting_parameters.colors, @(x) isnumeric(x) || isa(x,'function_handle'))
 addParameter(p, 'xspacing', .03, @isnumeric)
 addParameter(p, 'yspacing', .07, @isnumeric)
 addParameter(p, 'yval_lines', [0 1], @isnumeric)
@@ -32,6 +32,9 @@ p = p.Results;
 
 if ischar(p.xplotkey)
     p.xplotkey = {p.xplotkey};
+end
+if isa(p.plotcolors,'function_handle') && ~strcmp(p.colorkey, nocplot)
+    p.plotcolors = p.plotcolors(length(unique(t_data.(p.colorkey))));
 end
 
 xplotkeys = unique(t_data(:,p.xplotkey));

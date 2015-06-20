@@ -21,8 +21,8 @@ function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
 
 
 p = inputParser;
-addParameter(p, 'MinNDiv', .25, @isscalar);
-addParameter(p, 'MinDT',   10, @isscalar);
+addParameter(p, 'MinNDiv', 1/6, @isscalar);
+addParameter(p, 'MinDT',   6, @isscalar);
 addParameter(p, 'MaxDT',   80, @isscalar);
 addParameter(p, 'minT0',    0, @isscalar);
 addParameter(p, 'pcutoff', .1, @isscalar);
@@ -88,8 +88,9 @@ for ik = 1:height(t_keys)
             
             t_nGITime = [t_nGITime;
                 [repmat([t_keys(ik,:), table(Times(iT), Times(idxEnd(iTE)),...
-                diff(Times([iT idxEnd(iTE)])), NDiv(iTE), 'variablenames', ...
-                {'T0' 'Tend' 'DeltaT' 'Ndiv'})], length(Conc),1) ...
+                diff(Times([iT idxEnd(iTE)])), mean(Times([iT idxEnd(iTE)])), ...
+                NDiv(iTE), 'variablenames', ...
+                {'T0' 'Tend' 'DeltaT' 'Tmean' 'Ndiv'})], length(Conc),1) ...
                 table(Conc, nGI)]];
             
             fitopt.pcutoff = p.pcutoff;
@@ -105,7 +106,11 @@ for ik = 1:height(t_keys)
     end
 end
     
+t_nGITime.DeltaT = round(t_nGITime.DeltaT,3);
+t_fitsTime.DeltaT = round(t_fitsTime.DeltaT,3);
     
+t_nGITime.Tmean = round(t_nGITime.Tmean,3);
+t_fitsTime.Tmean = round(t_fitsTime.Tmean,3);
     
     
     
