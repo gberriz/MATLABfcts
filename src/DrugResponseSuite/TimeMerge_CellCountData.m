@@ -4,7 +4,7 @@ function t_Tmean = TimeMerge_CellCountData(t_processed, NTimePlates, plate_inkey
 
 %% assign and control the variables
     plate_keys = {'CellLine'};
-if exist('cond_inkeys','var') && ~isempty(plate_inkeys)
+if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
     plate_keys = unique([plate_keys plate_inkeys]);
 end
 

@@ -21,7 +21,7 @@ function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
 
 
 p = inputParser;
-addParameter(p, 'MinNDiv', 1/6, @isscalar);
+addParameter(p, 'MinNDiv', 1/10, @isscalar);
 addParameter(p, 'MinDT',   6, @isscalar);
 addParameter(p, 'MaxDT',   80, @isscalar);
 addParameter(p, 'minT0',    0, @isscalar);
@@ -47,7 +47,7 @@ t_keys = unique(t_data(t_data.DrugName~='-',setdiff(keys, 'Time')));
 t_fitsTime = table;
 t_nGITime = table;
 for ik = 1:height(t_keys)
-    loop_waitbar(ik, height(t_keys))
+    fprintf([strjoin(table2cellstr(t_keys(ik,:),0),'|') ' :']);
     %%
     subt = t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:);
     t_ctrl = sortrows(collapse(t_data(eqtable(t_keys(ik,:), t_data(:,setdiff(keys,'DrugName'))) & ...
@@ -67,7 +67,7 @@ for ik = 1:height(t_keys)
         NDiv = NDiv(idxEnd);
         Ctrl_AvDivRate = Ctrl_AvDivRate(idxEnd);
         idxEnd = iT + idxEnd;
-        
+        fprintf(sprintf(' %.0f(%i);', Times(iT), length(idxEnd)));
         for iTE = 1:length(idxEnd)
             % treatment
             Conc = intersect(subt.Conc(subt.Time==Times(iT)), ...
@@ -103,7 +103,9 @@ for ik = 1:height(t_keys)
                 table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
                 table({nGI_fit}, {nGI'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})]];            
         end
+        
     end
+    fprintf('\n');
 end
     
 t_nGITime.DeltaT = round(t_nGITime.DeltaT,3);
