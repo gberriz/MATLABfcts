@@ -1,8 +1,20 @@
-function t_data = PlateFilterByFocus(t_data)
+function t_data = PlateFilterByFocus(t_data, varargin)
 % t_data = PlateFilterByFocus(t_data)
 
+
+
+p = inputParser;
+addParameter(p, 'pval', .01, @isnumeric)
+addParameter(p, 'plotting', false, @islogical)
+
+parse(p,varargin{:})
+pval = p.Results.pval;
+plotting = p.Resultsplotting;
+clear p
+
+
 t_data.filtered = false(height(t_data),1);
-t_data.delta = NaN(height(t_data),1);
+t_data.deltafocus = NaN(height(t_data),1);
 
 if ~all(isvariable(t_data, {'Column' 'Row'}))
     [Row,Column] = ConvertWellsToRowCol(cellstr(t_data.Well));
@@ -12,62 +24,57 @@ end
 plates = unique(t_data.Barcode);
 
 for iP = 1:length(plates)
-    
-    subt = t_data(t_data.Barcode == plates(iP),:);
-    
-    maxrow = 2^ceil(log2(max(subt.Row)));
-    maxcol = 3*2^ceil(log2(max(subt.Column)/3));
-    subt.DistEdge = min([(subt.Row) (maxrow-subt.Row+1) ...
-        (subt.Column) (maxcol-subt.Column+1)],[],2);
-    
+    pidx = t_data.Barcode == plates(iP);
+    subt = t_data(pidx,:);
+        
     [data, labels] = table_to_ndarray(subt, 'keyvars', {'Row' 'Column' 'Time'}, ...
-        'outer', 1, 'valvars', {'focus' 'Cellcount'});
+        'outer', 1, 'valvars', 'focus');
     
     %%
-    %     get_newfigure(998,[50 550 900 400])
+    if plotting, get_newfigure(998,[50 550 900 300]), end
     
-    for iT=1:length(labels{3}.Time)
-    plate = data(:,:,iT,1);
-    medp = median(plate(:));
+    for iC=1:length(labels{2}.Column)
         fprintf('.');
-        %     filt = [1 1 1; 1 0 1; 1 1 1]/8;
-        %     filt = ones(5)/25;
-        %     iplate(:,:,iT) = filter2(filt, plate(:,:,iT));
-        
-        [x,y] = meshgrid(labels{2}.Column, labels{1}.Row);
-        x = x(:); y = y(:);
-        focus = reshape(plate-median(plate(:)),[],1);
-        focused = (focus>quantile(focus,.25)) & (focus<quantile(focus,.75));
-        plate_fit = fit([x(focused) y(focused)], focus(focused), ...
-            'poly22', 'robust', 'Bisquare');
-        
-        
-        iplate = reshape(plate_fit(x, y), size(plate));
-        delta = iplate - plate;
-        delta = delta - median(delta(:));
-        
-        diffp = diff(quantile(delta(:),[.25 .75]));
-    
-        %         clf
-        %         subplot(131)
-        %         surf(iplate(:,:,iT));
-        %         hold on
-        %         surf(plate(:,:,iT));
-        %
-        %         subplot(132)
-        %         imagesc(delta, [-4 4])
-        %         colormap( [1 0 0; gray(200); 0 0 1])
-        %
-        %         subplot(133)
-        %         cnt = log10(data(:,:,iT,2));
-        %
-        %         plot(delta(:), cnt(:),'.')
-        %         pause
-        idx1 = t_data.Barcode==plates(iP) & t_data.Time==labels{3}.Time(iT);
-        for iW = 1:numel(delta)
-            idx = idx1 & t_data.Well==ConvertRowColToWells(x(iW), y(iW));
-            t_data.filtered(idx) = (delta(iW)>2*diffp) | (delta(iW)<2*diffp);
-            t_data.delta(idx) = delta(iW)*diffp;
+        for iR=1:length(labels{1}.Row)
+            
+            dist = (abs(labels{1}.Row-labels{1}.Row(iR)))*ones(1,height(labels{2})) + ...
+                ones(height(labels{1}),1)*(.5+abs(labels{2}.Column-labels{2}.Column(iC)))';
+            [test_R, test_C] = find(dist<=quantile(dist(:), 10/numel(dist)));
+            focus = data(test_R, test_C, :);
+            Wfocus = squeeze(data(iR,iC,:));
+            
+            preNdist = fitdist(focus(:), 'normal');
+            Ndist = fitdist(focus( abs(preNdist.cdf(focus(:))-.5)<(.5-pval*2.5)), 'normal');
+            Ndist = fitdist(focus( abs(Ndist.cdf(focus(:))-.5)<(.5-pval*2.5)), 'normal');
+            
+            if plotting,
+                x = min(focus(:)):max(focus(:));
+                prep = preNdist.pdf(x);
+                p = Ndist.pdf(x);
+                n = ksdensity(focus(:), x, 'width', diff(quantile(focus(:),[.48 .52])));
+                nW = ksdensity(Wfocus, x, 'width', diff(quantile(focus(:),[.48 .52])));
+                
+                clf
+                hold on
+                plot(x, n/max(n), '-b')
+                plot(x, nW/max(nW), '-b','linewidth',2)
+                plot(x, prep/max(prep), '-r')
+                plot(x, p/max(p), '-k','linewidth',2)
+                plot([Ndist.icdf(pval)*[1 1] Ndist.icdf(1-pval)*[1 1]], [.5 0 0 .5], '-k')
+                if any(abs(Ndist.cdf(Wfocus)-.5)>=(.5-pval))
+                    plot(squeeze(data(iR,iC,abs(Ndist.cdf(Wfocus)-.5)>=(.5-pval))), .5, '*')
+                    pause
+                end
+            end
+            %%
+            
+            idx = find(pidx & t_data.Row==labels{1}.Row(iR) & ...
+                t_data.Column==labels{2}.Column(iC));
+            [~, idxT] = ismember(labels{3}.Time, t_data.Time(idx));
+            
+            
+            t_data.filtered(idx(idxT)) = abs(Ndist.cdf(Wfocus)-.5)>=(.5-pval);
+            t_data.deltafocus(idx(idxT)) = Wfocus-Ndist.mu;
         end
         %         if any(abs(delta(:))>1)
         %             [filt_Row, filt_Col] = find(abs(delta)>1); true;
