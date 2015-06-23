@@ -63,8 +63,8 @@ for iP=1:length(Plates)
         end
         
         temp_data = tsv2cell(fullfile(folder, PlateFiles{iF}));   % Read the file
-        Nheader = find(cellfun(@isempty,temp_data(:,1)),1,'first')+1; % get the position of data
-        assert(strcmp(temp_data(Nheader,1), 'Date Time')) % check the headers
+        Nheader = find(strcmp(temp_data(:,1), 'Date Time')); % get the position of data
+        assert(length(Nheader)==1)
         assert(strcmp(temp_data(Nheader,2), 'Elapsed')) % check the headers
         assert(ismember(temp_data{Nheader,3}(1),'A':'Q') & ...
             ismember(temp_data{Nheader,3}(2),'0':'9')) % check the headers
