@@ -16,11 +16,12 @@ end
 cond_keys = intersect(cond_keys, varnames(t_processed));
 
 Relvars = intersect({'RelCellCnt' 'RelGrowth' 'nRelGrowth'}, varnames(t_processed));
+Relvars = Relvars(all(cellfun(@(x) isnumeric(x) & isscalar(x), table2cell(t_processed(1:min(40,end),Relvars)))));
 labelfields = {'DesignNumber' 'Barcode' ...
     'Date' 'Row' 'Column' 'Well' 'TreatmentFile' 'Replicate'}; % remove all technical replicate info
 if ~exist('numericfields','var')
     numericfields = setdiff(t_processed.Properties.VariableNames( ...
-        all(cellfun(@isnumeric, table2cell(t_processed(1:min(40,end),:))))), ...
+        all(cellfun(@(x) isnumeric(x) & isscalar(x), table2cell(t_processed(1:min(40,end),:))))), ...
         [plate_keys cond_keys labelfields Relvars]);
     if ~isempty(numericfields)
         fprintf('\tThese numeric fields will be averaged (set as cond_inkeys to use them as key):\n');
