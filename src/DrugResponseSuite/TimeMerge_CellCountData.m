@@ -7,11 +7,13 @@ function t_Tmean = TimeMerge_CellCountData(t_processed, NTimePlates, plate_inkey
 if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
     plate_keys = unique([plate_keys plate_inkeys]);
 end
+plate_keys = intersect(plate_keys, varnames(t_processed));
 
 cond_keys = {'DrugName' 'Conc' 'Time'};
 if exist('cond_inkeys','var') && ~isempty(cond_inkeys)
     cond_keys = unique([cond_keys cond_inkeys]);
 end
+cond_keys = intersect(cond_keys, varnames(t_processed));
 
 Relvars = intersect({'RelCellCnt' 'RelGrowth' 'nRelGrowth'}, varnames(t_processed));
 labelfields = {'DesignNumber' 'Barcode' ...
