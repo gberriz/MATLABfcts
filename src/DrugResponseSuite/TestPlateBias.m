@@ -56,7 +56,7 @@ maxcol = 3*2^ceil(log2(max(t_data.Column)/3));
 t_data.DistEdge = min([(t_data.Row) (maxrow-t_data.Row+1) ...
     (t_data.Column) (maxcol-t_data.Column+1)],[],2);
 
-VarToTest = setdiff(varnames(t_data), {'Row' 'Column' 'DistEdge' 'Barcode' 'Time'});
+VarToTest = setdiff(varnames(t_data), {'Well' 'Row' 'Column' 'DistEdge' 'Barcode' 'Time'});
 
 [plate, labels] = table_to_ndarray(t_data, 'keyvars', {'Row' 'Column'}, ...
     'outer', 1, 'valvars', VarToTest);

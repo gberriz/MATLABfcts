@@ -9,7 +9,7 @@ addParameter(p, 'plotting', false, @islogical)
 
 parse(p,varargin{:})
 pval = p.Results.pval;
-plotting = p.Resultsplotting;
+plotting = p.Results.plotting;
 clear p
 
 
@@ -60,9 +60,11 @@ for iP = 1:length(plates)
                 plot(x, nW/max(nW), '-b','linewidth',2)
                 plot(x, prep/max(prep), '-r')
                 plot(x, p/max(p), '-k','linewidth',2)
-                plot([Ndist.icdf(pval)*[1 1] Ndist.icdf(1-pval)*[1 1]], [.5 0 0 .5], '-k')
-                if any(abs(Ndist.cdf(Wfocus)-.5)>=(.5-pval))
-                    plot(squeeze(data(iR,iC,abs(Ndist.cdf(Wfocus)-.5)>=(.5-pval))), .5, '*')
+                lowerbound = Ndist.icdf(pval)-10;
+                upperbound = Ndist.icdf(1-pval)+10;
+                plot([lowerbound*[1 1] upperbound*[1 1]], [.5 0 0 .5], '-k')
+                if any( (Wfocus<lowerbound) | (Wfocus>upperbound))
+                    plot(squeeze(data(iR,iC,(Wfocus<lowerbound) | (Wfocus>upperbound))), .5, '*')
                     pause
                 end
             end
@@ -73,7 +75,7 @@ for iP = 1:length(plates)
             [~, idxT] = ismember(labels{3}.Time, t_data.Time(idx));
             
             
-            t_data.filtered(idx(idxT)) = abs(Ndist.cdf(Wfocus)-.5)>=(.5-pval);
+            t_data.filtered(idx(idxT)) = (Wfocus<lowerbound) | (Wfocus>upperbound);
             t_data.deltafocus(idx(idxT)) = Wfocus-Ndist.mu;
         end
         %         if any(abs(delta(:))>1)

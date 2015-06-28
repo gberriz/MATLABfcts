@@ -77,7 +77,9 @@ for iP=1:length(Plates)
         plate_data{iF} = table(repmat(Date, length(Wells),1), repmat(Time, length(Wells),1), ...
             reshape(repmat(Wells,length(Date),1),[],1), Data(:), ...
             'VariableNames', [DefaultFields fieldname]);
+        
         plate_data{iF} = TableToCategorical(plate_data{iF});
+        
     end
     
     if length(PlateFiles)>1
