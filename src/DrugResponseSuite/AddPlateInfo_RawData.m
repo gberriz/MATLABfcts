@@ -45,8 +45,13 @@ cnt = 0;
 for iBC = 1:height(t_plateinfo)
     
     idx = find(strcmp(t_raw.Barcode, t_plateinfo.Barcode{iBC}));
-    if isempty(idx)
-        warnprintf('No result found for plate %s', t_plateinfo.Barcode{iBC})
+    if isempty(idx)        
+        idx = find(strfindcell(t_raw.Barcode, t_plateinfo.Barcode{iBC}));
+        if isempty(idx)
+            warnprintf('No result found for plate %s', t_plateinfo.Barcode{iBC})
+        else
+            warnprintf('Partial barcode match for plate %s', t_plateinfo.Barcode{iBC})
+        end
     end
     
     CellLine(idx) = t_plateinfo.CellLine(iBC);
