@@ -126,13 +126,17 @@ for iTf = 1:length(Trtfiles)
         
         % could be extended to any variable that is found in both Plate
         % Info and Design 
-        if isvariable(t_design, 'CellLine')
-            warnprintf('Cell Line is a perurbation; replacing what is found in the PlateInfo: %s', ...
-                strjoin(cellstr(unique(t_data.CellLine(idx))'),';'))
-            varToKeep = setdiff(varnames(t_data), 'CellLine');
-        else
-            varToKeep = varnames(t_data);
+        Common_vars = setdiff(intersect(varnames(t_data), varnames(t_design)), 'Well');
+        for iV = 1:length(Common_vars)
+%         if isvariable(t_design, 'CellLine')
+            warnprintf('%s is a perurbation; replacing what is found in the PlateInfo: %s', ...
+                Common_vars{iV}, strjoin(cellstr(unique(t_data.CellLine(idx))'),';'))
         end
+        varToKeep = setdiff(varnames(t_data), Common_vars);
+%             varToKeep = setdiff(varnames(t_data), 'CellLine');
+%         else
+%             varToKeep = varnames(t_data);
+%         end
         
         [temp, ia] = innerjoin(t_data(idx,varToKeep), t_design, 'keys', 'Well');
         if height(temp)<length(idx)
