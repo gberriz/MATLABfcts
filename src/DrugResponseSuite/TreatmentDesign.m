@@ -135,8 +135,14 @@ end
 %% define the position of the fixed controls
 fprintf('Number of test wells: %i\n',nTreatments);
 ctrl_cnt = nWells - nTreatments;
-assert(ctrl_cnt>5, 'Too many well used (%i out of %i), need at least 6 control wells',...
-    nTreatments, nWells)
+if ctrl_cnt<6
+    warnprintf('Too many well used (%i out of %i), need at least 6 control wells',...
+        nTreatments, nWells)
+    fprintf('Confirm:')
+    pause
+    fprintf('\n')
+end
+
 
 
 if p.edge_ctrl
