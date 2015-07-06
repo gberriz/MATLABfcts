@@ -16,8 +16,8 @@ for i=1:length(Des1)
     layout = cell(length(Drugs),1);
     stock_conc = cell(length(Drugs),1);
     for iD = 1:length(Drugs)
-        HMSLid{iD} = unique({DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).HMSLid});
-        stock_conc{iD} = unique([DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).stock_conc]);
+        HMSLid(iD) = unique({DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).HMSLid});
+        stock_conc{iD} = min([DrugStruct(strcmp({DrugStruct.DrugName}, Drugs{iD})).stock_conc]);
         if ismember(Drugs{iD}, {Des1(i).Drugs.DrugName})
             layout1 = Des1(i).Drugs(strcmp(Drugs(iD), {Des1(i).Drugs.DrugName})).layout;
         else
