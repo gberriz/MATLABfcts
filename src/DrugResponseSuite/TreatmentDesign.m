@@ -135,7 +135,9 @@ end
 %% define the position of the fixed controls
 fprintf('Number of test wells: %i\n',nTreatments);
 ctrl_cnt = nWells - nTreatments;
-if ctrl_cnt<6
+if ctrl_cnt<0
+    error('Too many well used (%i out of %i)', nTreatments, nWells)
+elseif ctrl_cnt<6
     warnprintf('Too many well used (%i out of %i), need at least 6 control wells',...
         nTreatments, nWells)
     fprintf('Confirm:')
@@ -187,7 +189,8 @@ for iR = 1:nReps
         cellfun(@length,SingleDoses)))
     for iCo = 1:size(p.DrugPairs,1)
         assert(sum(sum( all(allDrugs(:,:,p.DrugPairs(iCo,:))>0,3)))== ...
-            length(p.ComboLists{iCo,1})*length(p.ComboLists{iCo,2}))
+            (length(p.ComboLists{iCo,1})*length(p.ComboLists{iCo,2})*...
+            sum(all(p.DrugPairs==(ones(size(p.DrugPairs,1),1)*p.DrugPairs(iCo,:)),2))))
     end
     
 end

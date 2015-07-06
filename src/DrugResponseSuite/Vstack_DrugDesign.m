@@ -1,4 +1,4 @@
-% function Design = Vstack_DrugDesign(Des1, Des2)
+function Design = Vstack_DrugDesign(Des1, Des2)
 
 %%
 assert(length(Des1) == length(Des2))
@@ -33,6 +33,36 @@ for i=1:length(Des1)
     
     Design(i).Drugs = struct('DrugName', Drugs, 'HMSLid', HMSLid, ...
         'stock_conc', stock_conc, 'layout', layout);
+    
+    
+    Perturbations = unique([{Des1(i).Perturbations.Name} {Des2(i).Perturbations.Name}]);    
+    layout = cell(length(Perturbations),1);
+     for iD = 1:length(Perturbations)
+        if ismember(Perturbations{iD}, {Des1(i).Perturbations.Name})
+            layout1 = Des1(i).Perturbations(strcmp(Perturbations(iD), {Des1(i).Perturbations.Name})).layout;
+        else
+            if iscell(Des2(i).Perturbations(strcmp(Perturbations(iD), ...
+                    {Des2(i).Perturbations.Name})).layout)
+                layout1 = cell(Des1(i).plate_dims);
+            else
+                layout1 = zeros(Des1(i).plate_dims);
+            end
+        end
+        if ismember(Perturbations{iD}, {Des2(i).Perturbations.Name})
+            layout2 = Des2(i).Perturbations(strcmp(Perturbations(iD), {Des2(i).Perturbations.Name})).layout;
+        else
+            if iscell(Des1(i).Perturbations(strcmp(Perturbations(iD), ...
+                    {Des1(i).Perturbations.Name})).layout)
+                layout2 = cell(Des2(i).plate_dims);
+            else                
+                layout2 = zeros(Des2(i).plate_dims);
+            end
+        end
+        layout{iD} = [layout1; layout2];
+    end
+    
+    Design(i).Perturbations = struct('Name', Perturbations, 'layout', layout);
+    
     
 end
     
