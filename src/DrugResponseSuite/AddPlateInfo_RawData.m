@@ -9,6 +9,7 @@ function t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p)
 %       - p.TimeCourse
 %       - p.T0date:    Input alternative to T0shift for timecourse:
 %                       date and time of the treatment
+%                      p.T0date is overwritten by information in the plateID file 
 %       - p.T0shift:   [0.25 h] Different in hours between the
 %                       first plate imaged and the treatment
 %       
@@ -73,8 +74,11 @@ for iBC = 1:height(t_plateinfo)
     end
     Untrt(idx) = strcmp(t_plateinfo.TreatmentFile(iBC),'-');
     if isfield(p, 'TimeCourse') && p.TimeCourse
-        % rounded to the 1/100 of hour, 1st value is p.T0shift (default ~15 minutes).
-        if ~isempty(p.T0date)
+        % rounded to the 1/100 of hour, Time = (scan Time) - T0date
+        % if no T0date given, 1st value is p.T0shift (default ~15 minutes)
+        if isvariable(t_plateinfo, 'T0date')
+            Time(idx) = .01*round(100*( 24*(t_raw.Date(idx)-datenum(t_plateinfo.T0date(iBC)) )));
+        elseif ~isempty(p.T0date)
             Time(idx) = .01*round(100*( 24*(t_raw.Date(idx)-datenum(p.T0date) )));
         else
             Time(idx) = .01*round(100*( 24*(t_raw.Date(idx)-min(t_raw.Date)) + p.T0shift ));
