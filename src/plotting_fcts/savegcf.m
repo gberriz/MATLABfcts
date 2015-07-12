@@ -1,3 +1,8 @@
-function savegcf
+function savegcf(filename)
+% savegcf(filename)
 
-saveas(gcf,get(gcf,'FileName'))
+if nargin==0
+    saveas(gcf,get(gcf,'FileName'))
+else
+    saveas(gcf,filename)
+end

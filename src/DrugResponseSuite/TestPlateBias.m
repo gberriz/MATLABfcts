@@ -117,7 +117,7 @@ for iv = 1:length(VarToTest)
         any(row_res(:,1)<-BiasCutoff(3,1) & row_res(:,3)<BiasCutoff(3,2))];
     
     %
-    if plotting==1 || (plotting==.5 && any(biased))
+    if plotting>=1 || (plotting==.5 && any(biased))
         figure(999)
         clf
         set(gcf, 'filename', ['Test_bias' barcode '_' VarToTest{iv} '.pdf'])
@@ -188,6 +188,8 @@ for iv = 1:length(VarToTest)
         
         if plotting==1
             pause
+        elseif plotting==2
+            drawnow
         else
             pause(1)
         end

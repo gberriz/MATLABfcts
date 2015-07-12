@@ -7,6 +7,11 @@ function [BiasValue, BiasResults] = TestBias_multiplates(t_data, BiasCutoff, plo
 %                         default = [.1 .01]
 %                     can be a 3x2 matrix for each condition: 
 %                             edge, column, row
+%
+%           plotting :  = 1 , pause for every plot
+%                       = .5, pause 1s for the biased ones
+%                       = 2 , save everything as a pdf
+%
                             
                             
 if ~exist('BiasCutoff','var') || isempty(BiasCutoff)
@@ -32,7 +37,10 @@ BiasValue = zeros(height(t_plates), 3);
 clear BiasResults;
 
 get_newfigure(999, [40 100 600 400]);
-
+if plotting ==2
+    mkdir temp_pdf
+end
+    
 for ip = 1:height(t_plates)
     t_plate = t_data(eqtable(t_data,t_plates(ip,:)),intersect(varnames(t_data), ...
         [{'Barcode' 'Time' 'Column' 'Row' 'Well'} valvars]));
@@ -42,10 +50,17 @@ for ip = 1:height(t_plates)
     
     BiasResults(ip) = struct('PlateInfo', t_plates(ip,:), 'edge_res', bias_res{1},...
         'col_res', bias_res{2}, 'row_res', bias_res{3});    
+   
+    if plotting == 2
+        savegcf(['./temp_pdf/fig_' num2str(ip,'%03i') '.pdf'])
+    end
     
     for i=find(biased)
         BiasValue(ip,i) = min(BiasValue(ip,i), min(bias_res{i}(...
             bias_res{i}(:,1)<-BiasCutoff(i,1) & bias_res{i}(:,3)<BiasCutoff(i,2),1)));
     end
 end
+
+merge_pdf('./temp_pdf/*pdf', 'TestBias_results.pdf', true)
+rmdir temp_pdf
 
