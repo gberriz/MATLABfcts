@@ -24,6 +24,7 @@ for iF = ['Barcode' 'Well' 'DrugName' 'Conc' 'CellLine' ...
         trace_vars = [trace_vars iF];
     end
 end
+trace_vars = unique(trace_vars);
    
 if exist('plate_inkeys','var') && ~isempty(cond_inkeys)
     plate_keys = unique([{'CellLine' 'Barcode' 'Time'} cond_inkeys]);
@@ -58,7 +59,7 @@ for it = 1:height(t_location)
     n = NaN(width(t_temp),1);
     for i=1:width(t_temp), n(i) = length(unique(t_temp.(i))); end;
     annotation_vars = setdiff(t_temp.Properties.VariableNames(n==1), ...
-        [trace_vars 'RelCellCnt' 'RelGrowth' 'Day0Cnt']);
+        [trace_vars 'RelCellCnt' 'RelGrowth' 'Day0Cnt' 'Cellcount']);
     if ~isempty(t_rate)
         annotation_vars = intersect(varnames(t_rate), annotation_vars,'stable');
     end
