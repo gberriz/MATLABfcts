@@ -1,4 +1,4 @@
-function Design = Vstack_DrugDesign(Des1, Des2)
+function Design = Hstack_DrugDesign(Des1, Des2)
 
 %%
 assert(length(Des1) == length(Des2))
@@ -9,7 +9,7 @@ for i=1:length(Des1)
     assert(Des1(i).well_volume == Des2(i).well_volume)
     Drugs = unique([{Des1(i).Drugs.DrugName} {Des2(i).Drugs.DrugName}])';
     DrugStruct = [Des1(i).Drugs; Des2(i).Drugs];
-    Design(i).treated_wells = [Des1(i).treated_wells; Des2(i).treated_wells];
+    Design(i).treated_wells = [Des1(i).treated_wells Des2(i).treated_wells];
     Design(i).plate_dims = size(Design(i).treated_wells);
     
     HMSLid = cell(length(Drugs),1);
@@ -28,7 +28,7 @@ for i=1:length(Des1)
         else
             layout2 = zeros(Des2(i).plate_dims);
         end
-        layout{iD} = [layout1; layout2];
+        layout{iD} = [layout1 layout2];
     end
     
     Design(i).Drugs = struct('DrugName', Drugs, 'HMSLid', HMSLid, ...
@@ -58,7 +58,7 @@ for i=1:length(Des1)
                 layout2 = zeros(Des2(i).plate_dims);
             end
         end
-        layout{iD} = [layout1; layout2];
+        layout{iD} = [layout1 layout2];
     end
     
     Design(i).Perturbations = struct('Name', Perturbations, 'layout', layout);
