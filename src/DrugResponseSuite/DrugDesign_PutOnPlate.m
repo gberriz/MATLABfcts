@@ -1,5 +1,5 @@
-function Design = PutOnPlate_DrugDesign(smallDesign, plate_dims, topcorner)
-% Design = PutOnPlate_DrugDesign(smallDesign, plate_dims, topcorner)
+function Design = DrugDesign_PutOnPlate(smallDesign, plate_dims, topcorner)
+% Design = DrugDesign_PutOnPlate(smallDesign, plate_dims, topcorner)
 
 %%
 

@@ -45,7 +45,7 @@ addParameter(p,'edge_ctrl',true, @(x) islogical(x) & isscalar(x));
 addParameter(p,'stock_conc',1e4, @(x) isvector(x) && isnumeric(x));     % in uM
 addParameter(p,'well_volume',60, @(x) isscalar(x) && isnumeric(x));       % in uL
 addParameter(p,'plate_dims',[16 24], @(x) isvector(x) && isnumeric(x));
-addParameter(p,'Perturbations',[], @isstruct);
+addParameter(p,'Perturbations',repmat(struct('Name',[],'layout',[]),0,0), @isstruct);
 
 % based on the specifications of the D300
 addParameter(p,'min_volume', 1.3e-5, @(x) isscalar(x) && isnumeric(x)); % minimum volume of 13pl (in uL)
@@ -97,8 +97,8 @@ if p.Seed==0 && nReps>1
     pause
 end
 
-if ~isempty(p.Perturbations)
-    for iP=1:length(p.Perturbations)
+for iP=1:length(p.Perturbations)
+    if ~isempty(p.Perturbations.Name)
         assert(all(size(p.Perturbations(iP).layout)==p.plate_dims), ...
             'Plate dims do not match Perturbation (%s)', p.Perturbations(iP).Name)
     end

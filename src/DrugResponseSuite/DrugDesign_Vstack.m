@@ -1,4 +1,5 @@
-function Design = Vstack_DrugDesign(Des1, Des2)
+function Design = DrugDesign_Vstack(Des1, Des2)
+% Design = DrugDesign_Vstack(Des1, Des2)
 
 %%
 assert(length(Des1) == length(Des2))
