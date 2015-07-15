@@ -128,8 +128,17 @@ warnassert(all(Time(~Untrt)>0), 'Some treated/perturbed wells have Time=0')
 t_data = [table(Barcode, CellLine, TreatmentFile, DesignNumber, Untrt, Time) ...
     t_raw(Usedidx, intersect([{'Well'} NobjField {'Date'}], varnames(t_raw), 'stable'))];
 if ~isempty(otherVariables)
-    fprintf(['\tAdded variable(s): ''' cellstr2str(otherVariables, ''', ''') '''\n'])
-    eval(['t_data = [t_data table(' cellstr2str(otherVariables, ',') ')];'])
+    for i = 1:length(otherVariables)
+        if isvariable(t_data, otherVariables{i})
+            fprintf(['\tReplacing variable(s): ' otherVariables{i} ' by value in Plate info file\n'])
+            eval(['t_data = [t_data(:,setdiff(varnames(t_data),''' otherVariables{i} ''',''stable''))'...
+                ' table(' otherVariables{i} ')];'])
+        else            
+            fprintf(['\tAdding variable(s): ' otherVariables{i} ' from Plate info file\n'])
+            eval(['t_data = [t_data'...
+                ' table(' otherVariables{i} ')];'])
+        end
+    end
 end
 if ~isfield(p, 'Cellcount') || isempty(p.Cellcount)
     t_data.Properties.VariableNames{NobjField{1}} = 'Cellcount';
