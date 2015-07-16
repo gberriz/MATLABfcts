@@ -2,18 +2,18 @@ function [BiasValue, BiasResults] = TestBias_multiplates(t_data, BiasCutoff, plo
 % [BiasValue, BiasResults] = TestBias_multiplates(t_data, BiasCutoff, plotting, valvars)
 % t_data:     need variables 'Well' or 'Row'/'Column'; all other
 %                         columns will be checked against.
-%  
+%
 % BiasCutoff: [minimal drop cutoff      p-value cutoff];
 %                         default = [.1 .01]
-%                     can be a 3x2 matrix for each condition: 
+%                     can be a 3x2 matrix for each condition:
 %                             edge, column, row
 %
 %           plotting :  = 1 , pause for every plot
 %                       = .5, pause 1s for the biased ones
 %                       = 2 , save everything as a pdf
 %
-                            
-                            
+
+
 if ~exist('BiasCutoff','var') || isempty(BiasCutoff)
     BiasCutoff = [1;1;1]*[.1 .01];
 elseif all(size(BiasCutoff)==[1 2])
@@ -40,7 +40,7 @@ get_newfigure(999, [40 100 600 400]);
 if plotting ==2
     mkdir temp_pdf
 end
-    
+
 for ip = 1:height(t_plates)
     t_plate = t_data(eqtable(t_data,t_plates(ip,:)),intersect(varnames(t_data), ...
         [{'Barcode' 'Time' 'Column' 'Row' 'Well'} valvars]));
@@ -49,8 +49,8 @@ for ip = 1:height(t_plates)
     [biased, bias_res{:}] = TestPlateBias(t_plate, BiasCutoff, plotting);
     
     BiasResults(ip) = struct('PlateInfo', t_plates(ip,:), 'edge_res', bias_res{1},...
-        'col_res', bias_res{2}, 'row_res', bias_res{3});    
-   
+        'col_res', bias_res{2}, 'row_res', bias_res{3});
+    
     if plotting == 2
         savegcf(['./temp_pdf/fig_' num2str(ip,'%03i') '.pdf'])
     end
@@ -61,6 +61,7 @@ for ip = 1:height(t_plates)
     end
 end
 
-merge_pdf('./temp_pdf/*pdf', 'TestBias_results.pdf', true)
-rmdir temp_pdf
-
+if plotting == 2
+    merge_pdf('./temp_pdf/*pdf', 'TestBias_results.pdf', true)
+    rmdir temp_pdf
+end

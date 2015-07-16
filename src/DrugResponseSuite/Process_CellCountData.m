@@ -43,8 +43,8 @@ assert(all(ismember([plate_keys cond_keys 'pert_type'], t_annotated.Properties.V
     unique(t_annotated.Properties.VariableNames)),' '))
 
 % decide if growth inhibition can be calculated (need untreated & time=0 OR timecourse)
-EvaluateGI = any(t_annotated.Untrt & t_annotated.Time==0) || ...
-    length(unique(t_annotated.Time(t_annotated.pert_type=='ctl_vehicle')))>=4;
+EvaluateGI = any(t_annotated.pert_type=='ctl_vehicle' & t_annotated.Time==0) || ...
+    length(unique(t_annotated.Time(t_annotated.pert_type=='ctl_vehicle')))>=4; % case for extrapolation
 
 
 labelfields = {'pert_type' 'RelCellCnt' 'RelGrowth' 'nRelGrowth' 'DesignNumber' 'Barcode' ...

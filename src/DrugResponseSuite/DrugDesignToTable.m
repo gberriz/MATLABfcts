@@ -84,7 +84,7 @@ else
     PertNames = {};
 end
 
-if isfield(Design1.Drugs,'HMSLid')
+if isfield(Design1.Drugs,'HMSLid') & ~isempty(Design1.Drugs) 
     HMSLids = {Design1.Drugs.HMSLid};
     t_HMSLids = table([DrugNames {'-'}]', [HMSLids(order) {'-'}]', ...
         'VariableNames', {'DrugName' 'HMSLid'});
