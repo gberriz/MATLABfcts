@@ -5,7 +5,7 @@ function [SingleCell, t_out] = Import_SingleCell(t_processed, folder, fields, ti
 %                       columns that ends with '_MeanPerWell' (otherwise,
 %                       specify 'fields' to select columns in the single
 %                       cell data).
-%                       If column 'Date' exists, it will assume a timecourse 
+%                       If column 'Date' exists, it will assume a timecourse
 %                       and look for corresponding file name (unless
 %                       variable timecourse is false)
 %
@@ -15,12 +15,12 @@ function [SingleCell, t_out] = Import_SingleCell(t_processed, folder, fields, ti
 %
 %   timecourse      time course experiment, multiple time points for the
 %                       same well (optional, default=false)
-%   
+%
 %   filefilter      regular experssion for filtering files in case of
 %                       multiple output files for the same plate/well
 %
 %   SingleCell      structure with the data fields for each plate/well
-%                   
+%
 %   t_out           table with properties for the SingleCell (equal to
 %                       t_processed unless multiple files/times were found)
 %
@@ -51,6 +51,7 @@ for i=1:length(fields)
     SingleCell.(fields{i}) = [];
 end
 SingleCell.Barcode = ''; SingleCell.Well = ''; SingleCell.Date = '';
+SingleCell.Background = [];
 SingleCell = repmat(SingleCell, height(t_processed),1);
 %%
 
@@ -65,7 +66,8 @@ end
 output_cnt = 0;
 
 fprintf('\nReading all conditions (%i total):\n', height(t_processed));
-for iPW = 1:height(t_processed)    
+for iPW = 1:height(t_processed)
+    loop_waitbar(iPW, height(t_processed))
     
     folderlist = dir(folder);
     allfolder = setdiff({folderlist([folderlist.isdir]==1).name}, {'.' '..'});
@@ -84,7 +86,6 @@ for iPW = 1:height(t_processed)
         files = dir([subfolder filesep '*.t*']); % for tsv or txt files
     end
     files = {files([files.isdir]==0).name};
-    files = files(regexpcell(files, 'Whole Image')==0);
     files = files(regexpcell(files, sprintf('result.%s\\[', Well))>0);
     
     if isvariable(t_processed,'Date') && timecourse
@@ -98,19 +99,18 @@ for iPW = 1:height(t_processed)
         continue
     end
     
+    files_WI = files(regexpcell(files, 'Whole Image')>0);
+    files = files(regexpcell(files, 'Whole Image')==0);
     if ~timecourse || isvariable(t_processed,'Date')
-       assert(length(files)==1, ['Too many files: ' strjoin(files,' - ')])
+        assert(length(files)==1, ['Too many files: ' strjoin(files,' - ')])
     end
-    fprintf('%-4i/%i Reading Plate %s, well %3s: ', iPW, height(t_processed), Plate, Well)
-        
+    
     for it = 1:length(files)
         date = regexp(files{it},'^([0-9\-]*)T','tokens');
         time = regexp(files{it}, '^[0-9\-]*T([0-9]*)\-', 'tokens');
         Date = datenum([date{1}{1} '-' time{1}{1}], 'yyyy-mm-dd-HHMMSS');
         
         t_ss = tsv2table([subfolder filesep files{it}]);
-        
-        fprintf(' %2i (date %s)', it, [date{1}{1} '-' time{1}{1}]);
         
         output_cnt = output_cnt+1;
         
@@ -119,6 +119,13 @@ for iPW = 1:height(t_processed)
         else
             t_out(output_cnt,:) = [t_processed(iPW,:) table(Date)];
         end
+        if ~isempty(files_WI)
+            t_bkgrd = tsv2table([subfolder filesep files_WI{it}]);
+            bck_fields = varnames(t_bkgrd);
+            SingleCell(output_cnt).Background = t_bkgrd(:,['Field' ...
+                bck_fields(regexpcell(bck_fields, '[0-9]*Mean')>0)]);
+        end
+        
         SingleCell(output_cnt).Barcode = Plate;
         SingleCell(output_cnt).Well = Well;
         SingleCell(output_cnt).Date = Date;
@@ -132,9 +139,8 @@ for iPW = 1:height(t_processed)
             SingleCell(output_cnt).(fields{i}) = t_ss.(fields{i});
         end
     end
-    fprintf(' ; Done with plate\n')
     
 end
 
-fprintf('\n\n');
+fprintf('\n');
 
