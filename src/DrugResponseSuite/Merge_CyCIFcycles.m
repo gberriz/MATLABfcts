@@ -73,15 +73,17 @@ for iW = 1:length(SingleCelldata);
             
 %             figure(4)
 %             imshowpair(test_mask_corr, ref_mask, 'Scaling','joint');
-%             drawnow
+%             pause
             
             d2 = pdist2(ref_pos, test_pos_corr);
+            % hard cutoff
+            d2(d2>40) = Inf;
             %%
             ref2test = argmin(d2,[],2);
             test2ref = argmin(d2);
             test2ref_idx = NaN*test2ref';
             for i=1:length(test2ref)
-                if ref2test(test2ref(i))==i
+                if d2(test2ref(i),i)<Inf && ref2test(test2ref(i))==i
                     test2ref_idx(i) = test2ref(i) + Fidx;
                 end
             end
