@@ -140,13 +140,7 @@ if ~isempty(otherVariables)
         end
     end
 end
-if ~isfield(p, 'Cellcount') || isempty(p.Cellcount)
-    t_data.Properties.VariableNames{NobjField{1}} = 'Cellcount';
-elseif ~strcmp(p.Cellcount, 'none')
-    temp = table2array(t_data(:,NobjField));
-    temp = p.Cellcount(temp);
-    t_data.Cellcount = temp;
-end
+
 t_data = TableToCategorical(t_data);
 
 fprintf('\n')

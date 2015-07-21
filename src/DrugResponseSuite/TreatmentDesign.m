@@ -98,7 +98,7 @@ if p.Seed==0 && nReps>1
 end
 
 for iP=1:length(p.Perturbations)
-    if ~isempty(p.Perturbations.Name)
+    if ~isempty(p.Perturbations(iP).Name)
         assert(all(size(p.Perturbations(iP).layout)==p.plate_dims), ...
             'Plate dims do not match Perturbation (%s)', p.Perturbations(iP).Name)
     end

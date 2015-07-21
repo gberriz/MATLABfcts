@@ -77,10 +77,10 @@ for iW = 1:length(SingleCelldata);
             
             d2 = pdist2(ref_pos, test_pos_corr);
             % hard cutoff
-            d2(d2>40) = Inf;
+            d2(d2>20) = Inf;
             %%
             ref2test = argmin(d2,[],2);
-            test2ref = argmin(d2);
+            test2ref = argmin(d2,[],1);
             test2ref_idx = NaN*test2ref';
             for i=1:length(test2ref)
                 if d2(test2ref(i),i)<Inf && ref2test(test2ref(i))==i

@@ -98,7 +98,6 @@ else
     end
 end
 
-t_plateinfo = ImportCheckPlateInfo(plateinfo, p);
 
 %% load the cell count data
 
@@ -186,9 +185,27 @@ if length(unique(t_raw.NumberOfAnalyzedFields))>1
 end
 
 t_raw.Well = CorrectWellsTo0xY(t_raw.Well);
-%%
-t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p);
 
+if ~isfield(p, 'Cellcount') || isempty(p.Cellcount)
+    t_raw.Properties.VariableNames{NobjField{1}} = 'Cellcount';
+elseif ~strcmp(p.Cellcount, 'none')
+    temp = table2array(t_raw(:,NobjField));
+    temp = p.Cellcount(temp);
+    t_raw.Cellcount = temp;
+end
+
+%%
+
+try
+    t_plateinfo = ImportCheckPlateInfo(plateinfo, p);
+catch err
+    warnprintf('Error with the plate info file (from function ImportCheckPlateInfo):')
+    warning(err.message)
+    warnprintf(' --> Annotation discarded; output is raw data')
+    t_data = TableToCategorical(t_raw);
+    return
+end
+t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p);
 
 fprintf('\n')
 end
