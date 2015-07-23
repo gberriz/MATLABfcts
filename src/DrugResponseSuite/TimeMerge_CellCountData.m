@@ -38,6 +38,13 @@ end
 
 t_plates = unique(t_processed(:,plate_keys));
 t_Tmean = table;
+var50 = varnames(t_processed); 
+var50 = var50(regexpcell(var50,'50$')>0);
+for iV = 1:length(var50)
+    fprintf('  -> %s mean is performed in the log10 domain\n', var50{iV});
+    t_processed.(var50{iV}) = log10(t_processed.(var50{iV}));
+end
+
 
 for iP = 1:height(t_plates)
     
@@ -60,9 +67,18 @@ for iP = 1:height(t_plates)
     Time = round(Time,1);
     temp = [table(Time) subt(:,setdiff(varnames(subt),'Time','stable'))];
     
-    t_Tmean = [t_Tmean; collapse(temp, ...
-        @mean, 'keyvars', setdiff([cond_keys varnames(temp)], [labelfields Relvars numericfields],'stable'), ...
-        'valvars', [Relvars numericfields])];
+    otherkeys = setdiff(varnames(temp), [cond_keys plate_keys], 'stable');
+    otherkeys = otherkeys(all(cellfun(@(x) (isnumeric(x) | ischar(x) | iscategorical(x)) & length(x)==1, ...
+        table2cell(temp(1:min(10,end),otherkeys)))));
+    otherkeys = otherkeys(colfun_array(@(x) height(unique(x))==1, ...
+        temp(:,otherkeys))==1);
+    t_Tmean = [t_Tmean; collapse(temp, @mean, 'keyvars', setdiff([cond_keys plate_keys otherkeys], ...
+         [labelfields Relvars numericfields],'stable'), 'valvars', [Relvars numericfields])];
+end
+
+
+for iV = 1:length(var50)
+    t_Tmean.(var50{iV}) = 10.^(t_Tmean.(var50{iV}));
 end
 
 t_Tmean = sortrows(t_Tmean, plate_keys);

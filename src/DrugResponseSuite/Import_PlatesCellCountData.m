@@ -186,14 +186,6 @@ end
 
 t_raw.Well = CorrectWellsTo0xY(t_raw.Well);
 
-if ~isfield(p, 'Cellcount') || isempty(p.Cellcount)
-    t_raw.Properties.VariableNames{NobjField{1}} = 'Cellcount';
-elseif ~strcmp(p.Cellcount, 'none')
-    temp = table2array(t_raw(:,NobjField));
-    temp = p.Cellcount(temp);
-    t_raw.Cellcount = temp;
-end
-
 %%
 
 try
@@ -202,7 +194,7 @@ catch err
     warnprintf('Error with the plate info file (from function ImportCheckPlateInfo):')
     warning(err.message)
     warnprintf(' --> Annotation discarded; output is raw data')
-    t_data = TableToCategorical(t_raw);
+    t_data = TableToCategorical(DefineCellcount(t_raw, NobjField, p));
     return
 end
 t_data = AddPlateInfo_RawData(t_raw, t_plateinfo, NobjField, p);

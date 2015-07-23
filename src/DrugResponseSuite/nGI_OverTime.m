@@ -99,7 +99,7 @@ for ik = 1:height(t_keys)
                 t_fitsTime = [t_fitsTime;
                     [t_keys(ik,:) table(Times(iT), Times(idxEnd(iTE)), diff(Times([iT idxEnd(iTE)])), ...
                     mean(Times([iT idxEnd(iTE)])), NDiv(iTE), 'variablenames', ...
-                    {'T0' 'Tend' 'DeltaT' 'Tmean' 'Ndiv'}), ...
+                    {'T0' 'Tend' 'DeltaT' 'Time' 'Ndiv'}), ...
                     table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
                     table({nGI_fit}, {nGI'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})]];
             end
@@ -112,8 +112,8 @@ end
 t_nGITime.DeltaT = round(t_nGITime.DeltaT,3);
 t_fitsTime.DeltaT = round(t_fitsTime.DeltaT,3);
     
-t_nGITime.Tmean = round(t_nGITime.Tmean,3);
-t_fitsTime.Tmean = round(t_fitsTime.Tmean,3);
+t_nGITime.Time = round(t_nGITime.Time,3);
+t_fitsTime.Time = round(t_fitsTime.Time,3);
     
     
     
