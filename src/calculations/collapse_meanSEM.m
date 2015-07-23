@@ -1,5 +1,5 @@
-function t_out = collapse_meanSEM(t_in, keys, pre_trans, applied_fcts)
-% t_out = collapse_meanSEM(t_in, keys, pre_trans, applied_fcts)
+function t_out = collapse_meanSEM(t_in, keys, valvars, pre_trans, applied_fcts)
+% t_out = collapse_meanSEM(t_in, keys, valvars, pre_trans, applied_fcts)
 %   based on collpase function; by default the @mean and @SEM is perfomed
 %   on each value variable (i.e. not key varaible)
 %
@@ -14,8 +14,13 @@ if iscellstr(keys) || ischar(keys)
 else
     keyidx = keys;
 end
-validx = setdiff(1:size(t_in,2), keyidx);
-
+if exist('valvars','var') && ~isempty(valvars) && (iscellstr(valvars) || ischar(valvars))
+    validx = find(ismember(t_in.Properties.VariableNames, valvars));
+else   
+    validx = setdiff(1:size(t_in,2), keyidx);
+    validx = validx(all(cell2mat(cellfun2(@(x) isnumeric(x) && isscalar(x), ...
+        table2cell(t_in(1:min(end,5), validx))))));
+end
 if exist('pre_trans','var') && ~isempty(pre_trans)
     for i=1:length(validx)
         t_in.(validx(i)) = pre_trans(t_in.(validx(i)));
