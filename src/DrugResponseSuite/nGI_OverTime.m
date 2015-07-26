@@ -22,8 +22,8 @@ function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
 
 p = inputParser;
 addParameter(p, 'MinNDiv', 1/10, @isscalar);
-addParameter(p, 'MinDT',   6, @isscalar);
-addParameter(p, 'MaxDT',   80, @isscalar);
+addParameter(p, 'MinDT',   8, @isscalar);
+addParameter(p, 'MaxDT',   96, @isscalar);
 addParameter(p, 'minT0',    0, @isscalar);
 addParameter(p, 'pcutoff', .1, @isscalar);
 parse(p,varargin{:})
@@ -32,10 +32,10 @@ p = p.Results;
 
 if exist('keys','var') && ~isempty(keys)
     keys = intersect(t_data.Properties.VariableNames, ...
-        [{'CellLine' 'DrugName' 'Time' 'Date' 'SeedingNumber' 'SeedingDensity'} keys]);
+        [{'CellLine' 'DrugName' 'Time' 'Date' 'Barcode' 'SeedingDensity'} keys]);
 else
     keys = intersect(t_data.Properties.VariableNames, ...
-        {'CellLine' 'DrugName' 'Time' 'SeedingNumber' 'Date' 'SeedingDensity'});
+        {'CellLine' 'DrugName' 'Time' 'Date' 'Barcode' 'SeedingDensity'});
 end
 
 t_keys = unique(t_data(t_data.DrugName~='-',setdiff(keys, {'Time' 'Date'})));
@@ -88,9 +88,8 @@ for ik = 1:height(t_keys)
             
             t_nGITime = [t_nGITime;
                 [repmat([t_keys(ik,:), table(Times(iT), Times(idxEnd(iTE)),...
-                diff(Times([iT idxEnd(iTE)])), mean(Times([iT idxEnd(iTE)])), ...
-                NDiv(iTE), 'variablenames', ...
-                {'T0' 'Tend' 'DeltaT' 'Time' 'Ndiv'})], length(Conc),1) ...
+                diff(Times([iT idxEnd(iTE)])),  NDiv(iTE), ...
+                'variablenames', {'T0' 'Tend' 'DeltaT' 'Ndiv'})], length(Conc),1) ...
                 table(Conc, nGI)]];
             if length(Conc) > 4
                 fitopt.pcutoff = p.pcutoff;
@@ -98,8 +97,7 @@ for ik = 1:height(t_keys)
                     ICcurve_fit(Conc, nGI, 'nGI50', fitopt);
                 t_fitsTime = [t_fitsTime;
                     [t_keys(ik,:) table(Times(iT), Times(idxEnd(iTE)), diff(Times([iT idxEnd(iTE)])), ...
-                    mean(Times([iT idxEnd(iTE)])), NDiv(iTE), 'variablenames', ...
-                    {'T0' 'Tend' 'DeltaT' 'Time' 'Ndiv'}), ...
+                     NDiv(iTE), 'variablenames', {'T0' 'Tend' 'DeltaT' 'Ndiv'}), ...
                     table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
                     table({nGI_fit}, {nGI'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})]];
             end
@@ -109,12 +107,37 @@ for ik = 1:height(t_keys)
     fprintf('\n');
 end
     
-t_nGITime.DeltaT = round(t_nGITime.DeltaT,2);
-t_fitsTime.DeltaT = round(t_fitsTime.DeltaT,2);
-    
-t_nGITime.Time = round(t_nGITime.Time,2);
-t_fitsTime.Time = round(t_fitsTime.Time,2);
-    
+% matching the times to avoid rounding issues
+uDt = unique(t_nGITime.DeltaT);
+matchDt = [uDt cumsum([0;diff(uDt)>.5])];
+for i=1:max(matchDt(:,2))
+    t_nGITime.DeltaT(ismember(t_nGITime.DeltaT, matchDt(matchDt(:,2)==i,1))) = ...
+        round(mean(matchDt(matchDt(:,2)==i,1)),2);
+end
+t_nGITime.Time = t_nGITime.T0 + t_nGITime.DeltaT/2;
+uDt = unique(t_nGITime.Time);
+matchDt = [uDt cumsum([0;diff(uDt)>.5])];
+for i=1:max(matchDt(:,2))
+    t_nGITime.Time(ismember(t_nGITime.Time, matchDt(matchDt(:,2)==i,1))) = ...
+        round(mean(matchDt(matchDt(:,2)==i,1)),2);
+end
+
+
+uDt = unique(t_fitsTime.DeltaT);
+matchDt = [uDt cumsum([0;diff(uDt)>.5])];
+for i=1:max(matchDt(:,2))
+    t_fitsTime.DeltaT(ismember(t_fitsTime.DeltaT, matchDt(matchDt(:,2)==i,1))) = ...
+        round(mean(matchDt(matchDt(:,2)==i,1)),2);
+end
+t_fitsTime.Time = t_fitsTime.T0 + t_fitsTime.DeltaT/2;
+uDt = unique(t_fitsTime.Time);
+matchDt = [uDt cumsum([0;diff(uDt)>.5])];
+for i=1:max(matchDt(:,2))
+    t_fitsTime.Time(ismember(t_fitsTime.Time, matchDt(matchDt(:,2)==i,1))) = ...
+        round(mean(matchDt(matchDt(:,2)==i,1)),2);
+end
+
+
     
     
     

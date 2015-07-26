@@ -3,13 +3,13 @@ function t_Tmean = TimeMerge_CellCountData(t_processed, NTimePlates, plate_inkey
 % t_Tmean = TimeMerge_CellCountData(t_processed, NTimePlates, plate_inkeys, cond_inkeys, numericfields)
 
 %% assign and control the variables
-    plate_keys = {'CellLine'};
+plate_keys = {'CellLine' 'DeltaT'};
 if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
     plate_keys = unique([plate_keys plate_inkeys]);
 end
 plate_keys = intersect(plate_keys, varnames(t_processed));
 
-cond_keys = {'DrugName' 'Conc' 'Time' 'DeltaT'};
+cond_keys = {'DrugName' 'Conc' 'Time'};
 if exist('cond_inkeys','var') && ~isempty(cond_inkeys)
     cond_keys = unique([cond_keys cond_inkeys]);
 end
@@ -38,10 +38,13 @@ end
 if isvariable(t_processed,'Time')
     t_processed.Time = round(t_processed.Time,2);
 end
+if isvariable(t_processed,'DeltaT')
+    t_processed.DeltaT = round(t_processed.DeltaT,1);
+end
 
 t_plates = unique(t_processed(:,plate_keys));
 t_Tmean = table;
-var50 = varnames(t_processed); 
+var50 = varnames(t_processed);
 var50 = var50(regexpcell(var50,'50$')>0);
 for iV = 1:length(var50)
     fprintf('  -> %s mean is performed in the log10 domain\n', var50{iV});
@@ -76,7 +79,7 @@ for iP = 1:height(t_plates)
     otherkeys = otherkeys(colfun_array(@(x) height(unique(x))==1, ...
         temp(:,otherkeys))==1);
     t_Tmean = [t_Tmean; collapse(temp, @mean, 'keyvars', setdiff([cond_keys plate_keys otherkeys], ...
-         [labelfields Relvars numericfields],'stable'), 'valvars', [Relvars numericfields])];
+        [labelfields Relvars numericfields],'stable'), 'valvars', [Relvars numericfields])];
 end
 
 
