@@ -109,11 +109,11 @@ for ik = 1:height(t_keys)
     fprintf('\n');
 end
     
-t_nGITime.DeltaT = round(t_nGITime.DeltaT,3);
-t_fitsTime.DeltaT = round(t_fitsTime.DeltaT,3);
+t_nGITime.DeltaT = round(t_nGITime.DeltaT,2);
+t_fitsTime.DeltaT = round(t_fitsTime.DeltaT,2);
     
-t_nGITime.Time = round(t_nGITime.Time,3);
-t_fitsTime.Time = round(t_fitsTime.Time,3);
+t_nGITime.Time = round(t_nGITime.Time,2);
+t_fitsTime.Time = round(t_fitsTime.Time,2);
     
     
     

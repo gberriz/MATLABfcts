@@ -9,7 +9,7 @@ if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
 end
 plate_keys = intersect(plate_keys, varnames(t_processed));
 
-cond_keys = {'DrugName' 'Conc' 'Time'};
+cond_keys = {'DrugName' 'Conc' 'Time' 'DeltaT'};
 if exist('cond_inkeys','var') && ~isempty(cond_inkeys)
     cond_keys = unique([cond_keys cond_inkeys]);
 end
@@ -35,6 +35,9 @@ end
 
 % find the number of different of plates to merge and group them based on
 % the plate_keys (with Time==0)
+if isvariable(t_processed,'Time')
+    t_processed.Time = round(t_processed.Time,2);
+end
 
 t_plates = unique(t_processed(:,plate_keys));
 t_Tmean = table;
@@ -64,7 +67,7 @@ for iP = 1:height(t_plates)
             min(end,argmin(mindiff)+NTimePlates*iT-1));
         Time(ismember(subt.Time, t)) = mean(t);
     end
-    Time = round(Time,1);
+    Time = round(Time,2);
     temp = [table(Time) subt(:,setdiff(varnames(subt),'Time','stable'))];
     
     otherkeys = setdiff(varnames(temp), [cond_keys plate_keys], 'stable');
@@ -81,4 +84,10 @@ for iV = 1:length(var50)
     t_Tmean.(var50{iV}) = 10.^(t_Tmean.(var50{iV}));
 end
 
+% round the DeltaT to avoid artifacts
+if isvariable(t_Tmean, 'DeltaT')
+    t_Tmean.DeltaT = round(t_Tmean.DeltaT,2);
+    t_Tmean.T0 = round(t_Tmean.Time - .5*t_Tmean.DeltaT,2);
+    t_Tmean.Tend = round(t_Tmean.Time + .5*t_Tmean.DeltaT,2);
+end
 t_Tmean = sortrows(t_Tmean, plate_keys);

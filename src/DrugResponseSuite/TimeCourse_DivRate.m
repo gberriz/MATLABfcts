@@ -77,6 +77,7 @@ for i = 1:height(t_ctrl)
     idx = eqtable(t_ctrl(i,plate_keys), t_rate(:,plate_keys));
     t_rate.RelDivRate( idx ) = t_rate.DivRate( idx )./t_ctrl.DivRate(i);
 end
-t_rate.RelDivRate = max(min(t_rate.RelDivRate, 4), -2);
+t_rate.RelDivRate(~isnan(t_rate.RelDivRate)) = ...
+    max(min(t_rate.RelDivRate(~isnan(t_rate.RelDivRate)), 4), -2);
 
 
