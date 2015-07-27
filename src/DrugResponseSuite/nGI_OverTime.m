@@ -115,13 +115,6 @@ for i=1:max(matchDt(:,2))
         round(mean(matchDt(matchDt(:,2)==i,1)),2);
 end
 t_nGITime.Time = t_nGITime.T0 + t_nGITime.DeltaT/2;
-uDt = unique(t_nGITime.Time);
-matchDt = [uDt cumsum([0;diff(uDt)>.5])];
-for i=1:max(matchDt(:,2))
-    t_nGITime.Time(ismember(t_nGITime.Time, matchDt(matchDt(:,2)==i,1))) = ...
-        round(mean(matchDt(matchDt(:,2)==i,1)),2);
-end
-
 
 uDt = unique(t_fitsTime.DeltaT);
 matchDt = [uDt cumsum([0;diff(uDt)>.5])];
@@ -130,12 +123,6 @@ for i=1:max(matchDt(:,2))
         round(mean(matchDt(matchDt(:,2)==i,1)),2);
 end
 t_fitsTime.Time = t_fitsTime.T0 + t_fitsTime.DeltaT/2;
-uDt = unique(t_fitsTime.Time);
-matchDt = [uDt cumsum([0;diff(uDt)>.5])];
-for i=1:max(matchDt(:,2))
-    t_fitsTime.Time(ismember(t_fitsTime.Time, matchDt(matchDt(:,2)==i,1))) = ...
-        round(mean(matchDt(matchDt(:,2)==i,1)),2);
-end
 
 
     
