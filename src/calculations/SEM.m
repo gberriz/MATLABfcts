@@ -25,6 +25,6 @@ if length(values)>2
 elseif length(values)==2
     SEM_value = abs(diff(values)/2);
 else
-    SEM_value = NaN(size(values));
+    SEM_value = NaN;
 end
 
