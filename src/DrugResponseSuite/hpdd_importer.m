@@ -36,12 +36,12 @@ assert(strcmp(protocol.find('ConcentrationUnit').text, ...
 
 DrugNames = cell(length(Drugstruct),1);
 stock_conc = cell(length(Drugstruct),1);
-DrugOrder = NaN(length(Drugstruct),1);
+DrugIdxes = NaN(length(Drugstruct),1);
 
 for i = 1:length(Drugstruct)
     
     % check for the proper ordering (necessary for indexing)
-    DrugOrder(i) = Drugstruct(1).attributes(strcmp({Drugstruct(1).attributes.name},'ID')).value+1;
+    DrugIdxes(i) = str2double(Drugstruct(i).attributes(strcmp({Drugstruct(i).attributes.name},'ID')).value);
     
     DrugNames{i} = Drugstruct(i).find('Name').text;
     
@@ -62,8 +62,7 @@ for i = 1:length(Drugstruct)
     
 end
 
-stock_conc = stock_conc(sortidx(DrugOrder,'ascend'));
-[DrugNames, HMSLids] = splitHMSLid(DrugNames(sortidx(DrugOrder,'ascend')));
+[DrugNames, HMSLids] = splitHMSLid(DrugNames);
 
 Drugs = struct('DrugName',DrugNames, 'stock_conc',stock_conc, ...
     'layout', []);
@@ -168,7 +167,7 @@ for iP = 1:length(plates)
         
         fluids = well.iter('Fluid');
         for iD = 1:length(fluids)
-            Didx = str2double(fluids(iD).get('ID'))+1;
+            Didx = find( str2double(fluids(iD).get('ID')) == DrugIdxes);
             assert(Didx>0 && Didx<=length(Design(iP).Drugs))
             usedDrug(Didx) = true;
             Design(iP).Drugs(Didx).layout(row, col) = str2double(fluids(iD).text);
