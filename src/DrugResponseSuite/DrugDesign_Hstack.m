@@ -37,7 +37,7 @@ for i=1:length(Des1)
     
     
     Perturbations = unique([{Des1(i).Perturbations.Name} {Des2(i).Perturbations.Name}])';    
-    layout = cell(length(Perturbations),1);
+    layout = cell(1,length(Perturbations));
      for iD = 1:length(Perturbations)
         if ismember(Perturbations{iD}, {Des1(i).Perturbations.Name})
             layout1 = Des1(i).Perturbations(strcmp(Perturbations(iD), {Des1(i).Perturbations.Name})).layout;
