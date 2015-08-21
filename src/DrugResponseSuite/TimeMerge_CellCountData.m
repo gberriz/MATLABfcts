@@ -9,7 +9,7 @@ if exist('plate_inkeys','var') && ~isempty(plate_inkeys)
 end
 plate_keys = intersect(plate_keys, varnames(t_processed));
 
-cond_keys = {'DrugName' 'Conc' 'Time'};
+cond_keys = {'DrugName' 'Conc' 'Time' 'HMSLid' 'pert_type'};
 if exist('cond_inkeys','var') && ~isempty(cond_inkeys)
     cond_keys = unique([cond_keys cond_inkeys]);
 end

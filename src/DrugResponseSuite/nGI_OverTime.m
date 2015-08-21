@@ -1,8 +1,8 @@
 function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
 % [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
-%   Normalized relative growth for different time intervals. 
+%   Normalized relative growth for different time intervals.
 %   Sigmoidal fit on the drug response data (expect concentration in uM) to
-%   extract the following parameters:   
+%   extract the following parameters:
 %       - GI50
 %       - GIinf
 %   All the outputs are saved in a table with annotations including drug
@@ -17,6 +17,8 @@ function [t_nGITime, t_fitsTime] = nGI_OverTime(t_data, keys, varargin)
 %               - 'T0date'      Input alternative to T0shift for timecourse:
 %                                   date and time of the treatment
 %               - 'pcutoff'     [0.1] cutoff for the p-value of a F-test against a flat line.
+%               - 'forcefit'    [false], force a fit by adding value a low
+%                                   concentrations, 
 %
 
 
@@ -26,6 +28,7 @@ addParameter(p, 'MinDT',   8, @isscalar);
 addParameter(p, 'MaxDT',   96, @isscalar);
 addParameter(p, 'minT0',    0, @isscalar);
 addParameter(p, 'pcutoff', .1, @isscalar);
+addParameter(p, 'forcefit', false, @isscalar);
 parse(p,varargin{:})
 p = p.Results;
 
@@ -91,13 +94,19 @@ for ik = 1:height(t_keys)
                 diff(Times([iT idxEnd(iTE)])),  NDiv(iTE), ...
                 'variablenames', {'T0' 'Tend' 'DeltaT' 'Ndiv'})], length(Conc),1) ...
                 table(Conc, nGI)]];
-            if length(Conc) > 4
+            if length(Conc) > 4 || p.forcefit>0
+                if length(Conc) <= 4
+                    n = 4-length(Conc)+ceil(p.forcefit);
+                    Conc = [min(Conc).*(10.^(-n:-1)'); Conc];
+                    nGI = [ones(n,1)*mean([1 max(nGI)]); nGI];
+                end
+                    
                 fitopt.pcutoff = p.pcutoff;
                 [nGI50, ~, nGIinf, nGImax, nGIArea, nGI_r2, ~, nGI_fit] = ...
                     ICcurve_fit(Conc, nGI, 'nGI50', fitopt);
                 t_fitsTime = [t_fitsTime;
                     [t_keys(ik,:) table(Times(iT), Times(idxEnd(iTE)), diff(Times([iT idxEnd(iTE)])), ...
-                     NDiv(iTE), 'variablenames', {'T0' 'Tend' 'DeltaT' 'Ndiv'}), ...
+                    NDiv(iTE), 'variablenames', {'T0' 'Tend' 'DeltaT' 'Ndiv'}), ...
                     table(nGI50, nGIinf, nGImax, nGIArea, nGI_r2) ...
                     table({nGI_fit}, {nGI'}, 'VariableNames', {'nGI_fit' 'nRelGrowth'})]];
             end
@@ -106,7 +115,7 @@ for ik = 1:height(t_keys)
     end
     fprintf('\n');
 end
-    
+
 % matching the times to avoid rounding issues
 uDt = unique(t_nGITime.DeltaT);
 matchDt = [uDt cumsum([0;diff(uDt)>.5])];
@@ -116,15 +125,16 @@ for i=1:max(matchDt(:,2))
 end
 t_nGITime.Time = t_nGITime.T0 + t_nGITime.DeltaT/2;
 
-uDt = unique(t_fitsTime.DeltaT);
-matchDt = [uDt cumsum([0;diff(uDt)>.5])];
-for i=1:max(matchDt(:,2))
-    t_fitsTime.DeltaT(ismember(t_fitsTime.DeltaT, matchDt(matchDt(:,2)==i,1))) = ...
-        round(mean(matchDt(matchDt(:,2)==i,1)),2);
+if ~isempty(t_fitsTime)
+    uDt = unique(t_fitsTime.DeltaT);
+    matchDt = [uDt cumsum([0;diff(uDt)>.5])];
+    for i=1:max(matchDt(:,2))
+        t_fitsTime.DeltaT(ismember(t_fitsTime.DeltaT, matchDt(matchDt(:,2)==i,1))) = ...
+            round(mean(matchDt(matchDt(:,2)==i,1)),2);
+    end
+    t_fitsTime.Time = t_fitsTime.T0 + t_fitsTime.DeltaT/2;
 end
-t_fitsTime.Time = t_fitsTime.T0 + t_fitsTime.DeltaT/2;
 
 
-    
-    
-    
+
+

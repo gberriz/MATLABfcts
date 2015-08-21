@@ -142,7 +142,9 @@ end
 
 % correction of some variable names
 CorrectionVarNames = {
-    'WellName' 'Well'};
+    'WellName' 'Well'
+    'PlateName' 'Barcode'
+    'MeasurementDate' 'Date'};
 for i=1:size(CorrectionVarNames,1)
     if isvariable(t_raw, CorrectionVarNames{i,1})
         t_raw.Properties.VariableNames{CorrectionVarNames{i,1}} = ...

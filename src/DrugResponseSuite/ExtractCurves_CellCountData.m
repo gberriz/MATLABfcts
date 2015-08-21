@@ -59,7 +59,8 @@ t_fits = table;
 for ik = 1:height(t_keys)
     loop_waitbar(ik, height(t_keys))
     %%
-    subt = t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:);
+    subt = sortrows(t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:),'Conc');
+%     subt = t_data(eqtable(t_keys(ik,:), t_data(:,keys)),:);
     
     if height(subt)<4
         warnprintf(['Not enough data point for ' strjoin(table2cellstr(t_keys(ik,:),0))])

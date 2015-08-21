@@ -22,7 +22,7 @@ addParameter(p, 'ytransform', @(x)x, @(x) isa(x,'function_handle') || ...
     all(cellfun(@(y) isa(y,'function_handle'), x)))
 addParameter(p, 'axischanges', @(x) set(x,'fontsize',6), @(x) isa(x,'function_handle'))
 addParameter(p, 'mean_SEM', true, @islogical)
-addParameter(p, 'plotcolors', Plotting_parameters.colors, @(x) isnumeric(x) || isa(x,'function_handle'))
+addParameter(p, 'plotcolors', @jet, @(x) isnumeric(x) || isa(x,'function_handle'))
 addParameter(p, 'xspacing', .03, @isnumeric)
 addParameter(p, 'yspacing', .07, @isnumeric)
 addParameter(p, 'yval_lines', [0 1], @isnumeric)
